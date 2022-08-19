@@ -1,0 +1,36 @@
+*.class
+*.iml
+*.idea
+.settings
+.project
+*.sass-cache
+target
+.java-version
+*.releaseBackup
+release.properties
+README.html
+
+# Package Files #
+*.jar
+*.war
+*.ear
+*.iml
+
+.settings/*
+api/.classpath
+api/.project
+api/.settings/*
+api/target/*
+api/bin/
+omod/.classpath
+omod/.project
+omod/.settings/*
+omod/target/*
+/.settings
+omod/bin/
+
+# OS X auto-generated files #
+.DS_Store
+
+ *.css
+omod/src/main/compass/sass-external/*
