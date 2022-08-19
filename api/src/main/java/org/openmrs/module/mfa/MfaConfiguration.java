@@ -60,7 +60,7 @@ public class MfaConfiguration {
 			return cache;
 		}
 		Properties properties = new Properties();
-		File propertiesFile = new File(OpenmrsUtil.getApplicationDataDirectoryAsFile(), MFA_PROPERTIES_FILE_NAME);
+		File propertiesFile = new File(OpenmrsUtil.getApplicationDataDirectory(), MFA_PROPERTIES_FILE_NAME);
 		if (propertiesFile.exists()) {
 			OpenmrsUtil.loadProperties(properties, propertiesFile);
 		}

@@ -53,7 +53,7 @@ public class AuthenticationFilter implements Filter {
 	
 	public AuthenticationFilter() {
 		matcher = new AntPathMatcher();
-		matcher.setCaseSensitive(false);
+		// matcher.setCaseSensitive(false); This is only available in Spring versions included in 2.5.x+
 		matcher.setTrimTokens(true);
 		configuration = new MfaConfiguration();
 	}
