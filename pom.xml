@@ -22,8 +22,10 @@
 	</scm>
 
 	<properties>
-		<!-- Target minimum version of 2.3.4 initially, which covers almost all PIH distributions -->
-		<openmrsVersion>2.3.4</openmrsVersion>
+		<!-- Target increased 2.6.0-SNAPSHOT version test test on latest included Spring -->
+		<openmrsVersion>2.6.0-SNAPSHOT</openmrsVersion>
+		<!-- Use the latest version of Spring security, compatible with the version of Spring above -->
+		<springSecurityVersion>5.7.2</springSecurityVersion>
 		<!-- Other configuration -->
 		<MODULE_ID>${project.artifactId}</MODULE_ID>
 		<MODULE_NAME>${project.name}</MODULE_NAME>
@@ -36,6 +38,18 @@
 		<module>api</module>
 		<module>omod</module>
 	</modules>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>org.springframework.security</groupId>
+				<artifactId>spring-security-bom</artifactId>
+				<version>${springSecurityVersion}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<build>
 
