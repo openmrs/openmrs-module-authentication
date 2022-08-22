@@ -23,7 +23,7 @@ This determines whether the Authentication Filter is enabled, which will redirec
 
 **Default value**:  none
 
-If ```filter.enabled = true```, then this is a comma-delimited list of URL patterns that should be served without redirect to the configured login page.  This follows the ANT pattern-matching system.  One difference, for ease of configuration, is that any pattern that starts with "*" is assumed to be an "ends with" pattern match, and will match on any url that ends with the specified pattern.  It essentially turns it into an ANT "/**/*..." match, meaning that any url that ends with the given pattern will be matched at any level of the hierarchy.
+If ```filter.enabled = true```, then this is a comma-delimited list of URL patterns that should be served without redirect to the configured login page.  This follows the ANT pattern-matching system.  One difference, for ease of configuration, is that any pattern that starts with "\*" is assumed to be an "ends with" pattern match, and will match on any url that ends with the specified pattern.  It essentially turns it into an ANT "/**/*..." match, meaning that any url that ends with the given pattern will be matched at any level of the hierarchy.
 
 For example, what would otherwise require specifying patterns like this:
 ```/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png```
