@@ -19,9 +19,10 @@ import java.util.Properties;
 public interface Authenticator {
 
     /**
+     * @param instanceName - the unique name that this Authenticator instance is configured with
      * @param config - implementations should use this method to construct an Authenticator instance from configuration
      */
-    void configure(Properties config);
+    void configure(String instanceName, Properties config);
 
     /**
      * Implementations of this method are expected to validate the given AuthenticatorCredentials and return a User

@@ -34,4 +34,18 @@ public class MfaPropertiesTest {
 		assertThat(urls.get(2), equalTo("*.jpg"));
 		assertThat(urls.get(3), equalTo("*.png"));
 	}
+
+	@Test
+	public void shouldGetPropertiesWithPrefix() {
+		MfaProperties config = new MfaProperties(new Properties());
+		config.setProperty("prefs.color", "red");
+		config.setProperty("prefs.season", "fall");
+		config.setProperty("prefs.timeOfDay", "morning");
+		config.setProperty("preferences.prefs.timeOfDay", "evening");
+		Properties p = config.getSubsetWithPrefix("prefs.", true);
+		assertThat(p.size(), equalTo(3));
+		assertThat(p.getProperty("color"), equalTo("red"));
+		assertThat(p.getProperty("season"), equalTo("fall"));
+		assertThat(p.getProperty("timeOfDay"), equalTo("morning"));
+	}
 }

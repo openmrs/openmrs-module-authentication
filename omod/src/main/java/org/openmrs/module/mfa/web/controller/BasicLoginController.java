@@ -15,26 +15,16 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
-
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 @Controller
-public class MfaController {
+public class BasicLoginController {
 	
 	protected final Log log = LogFactory.getLog(getClass());
 
-	public static final String DEFAULT_LOGIN_URL = "/login.htm";
-	public static final String DEFAULT_LOGIN_SUCCESS_URL = "/index.htm";
-	
-	@RequestMapping(value = "/module/mfa/primary.htm", method = GET)
-	public ModelAndView get(HttpServletRequest request, HttpServletResponse response) throws IOException {
-
-
-		return new ModelAndView("redirect:" + DEFAULT_LOGIN_SUCCESS_URL);
+	@RequestMapping(value = "/module/mfa/basicLogin.htm", method = GET)
+	public ModelAndView basicLogin() {
+		log.debug("basicLogin.htm");
+		return new ModelAndView("/module/mfa/basicLogin");
 	}
-
-
 }

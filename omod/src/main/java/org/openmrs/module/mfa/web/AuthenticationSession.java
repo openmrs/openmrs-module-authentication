@@ -49,6 +49,10 @@ public class AuthenticationSession {
         }
     }
 
+    public String getRequestParam(String name) {
+        return request.getParameter(name);
+    }
+
     public void setAuthenticationContext(AuthenticationContext authenticationContext) {
         request.getSession().setAttribute(CONTEXT_SESSION_KEY, authenticationContext);
     }

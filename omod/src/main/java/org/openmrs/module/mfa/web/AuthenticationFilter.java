@@ -13,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.mfa.AuthenticationContext;
 import org.openmrs.module.mfa.Authenticator;
 import org.openmrs.module.mfa.AuthenticatorCredentials;
@@ -81,12 +82,13 @@ public class AuthenticationFilter implements Filter {
 			AuthenticationContext context = session.getAuthenticationContext();
 			MfaProperties config = context.getConfig();
 
+			if (config.isConfigurationCacheDisabled()) {
+				config.reloadConfig();
+			}
+
 			if (config.isMfaEnabled()) {
 
-				boolean requiresAuth = true;
-				for (String pattern : config.getUnauthenticatedUrlPatterns()) {
-					requiresAuth = requiresAuth && !matchesPath(request, pattern);
-				}
+				boolean requiresAuth = !isUnauthenticatedUrlPattern(request, config);
 				if (requiresAuth) {
 					if (log.isDebugEnabled()) {
 						log.debug("Requested Servlet path: " + request.getServletPath());
@@ -95,16 +97,15 @@ public class AuthenticationFilter implements Filter {
 
 					// If no primary authentication has taken place, ensure the primary authenticator passes
 					User candidateUser = null;
+					WebAuthenticator primaryAuthenticator = validate(context.getPrimaryAuthenticator());
 					if (!context.isPrimaryAuthenticationComplete()) {
-						WebAuthenticator primaryAuthenticator = validate(context.getPrimaryAuthenticator());
-
 						// Attempt to authenticate and if unable to do so, initiate challenge
 						AuthenticatorCredentials credentials = primaryAuthenticator.getCredentials(session);
 						if (credentials != null) {
 							candidateUser = primaryAuthenticator.authenticate(credentials);
 						}
 						if (candidateUser == null) {
-							primaryAuthenticator.challenge(session);
+							response.sendRedirect(primaryAuthenticator.getChallengeUrl(session));
 						}
 						else {
 							context.setPrimaryAuthenticationComplete(new MfaUser(candidateUser), credentials);
@@ -120,14 +121,24 @@ public class AuthenticationFilter implements Filter {
 						if (secondaryAuthenticator != null) {
 							AuthenticatorCredentials credentials = secondaryAuthenticator.getCredentials(session);
 							if (credentials == null) {
-								secondaryAuthenticator.challenge(session);
+								response.sendRedirect(secondaryAuthenticator.getChallengeUrl(session));
 							}
 						}
 
 						// If here, that means that primary authentication is complete and secondary authentication
 						// is either not enabled for this user, or credentials have been retrieved.  Authenticate.
 
-						Context.authenticate(context.getCredentials());
+						try {
+							Context.authenticate(context.getCredentials());
+						}
+						catch (ContextAuthenticationException e) {
+							String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
+							if (secondaryAuthenticator != null) {
+								challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
+							}
+							// TODO: Add message as request or session attribute here??
+							response.sendRedirect(challengeUrl);
+						}
 
 						// Once authenticated,  clear the authentication session
 						session.reset();
@@ -135,8 +146,19 @@ public class AuthenticationFilter implements Filter {
 				}
 			}
 		}
-		
-		chain.doFilter(servletRequest, servletResponse);
+
+		if (!response.isCommitted()) {
+			chain.doFilter(servletRequest, servletResponse);
+		}
+	}
+
+	protected boolean isUnauthenticatedUrlPattern(HttpServletRequest request, MfaProperties config) {
+		for (String pattern : config.getUnauthenticatedUrlPatterns()) {
+			if (matchesPath(request, pattern)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	/**

@@ -27,9 +27,8 @@ public interface WebAuthenticator extends Authenticator {
     AuthenticatorCredentials getCredentials(AuthenticationSession session);
 
     /**
-     * This method is intended to be used by implementations to redirect the user to a challenge url
-     * where they will have the opportunity to enter their credentials against this Authenticator
+     * This method is intended to be used by implementations to indicate the url for a user authentication challenge
      * @param session the current AuthenticationSession
      */
-    void challenge(AuthenticationSession session);
+    String getChallengeUrl(AuthenticationSession session);
 }

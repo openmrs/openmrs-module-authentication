@@ -18,9 +18,9 @@ import org.openmrs.util.OpenmrsUtil;
 import java.io.File;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Loads all configuration settings for the module from mfa.properties
@@ -30,38 +30,44 @@ public class MfaProperties implements Serializable {
     // Available configuration parameters in mfa.properties
     public static final String MFA_PROPERTIES_FILE_NAME = "mfa.properties";
     public static final String MFA_ENABLED = "mfa.enabled";
+    public static final String MFA_DISABLE_CONFIGURATION_CACHE = "mfa.disableConfigurationCache";
     public static final String MFA_UNAUTHENTICATED_URLS = "mfa.unauthenticatedUrls";
     public static final String AUTHENTICATORS_PRIMARY = "authenticators.primary";
     public static final String AUTHENTICATORS_SECONDARY= "authenticators.secondary";
     public static final String AUTH_NAME_VARIABLE = "{authName}";
     public static final String AUTHENTICATOR_TYPE = "authenticator." + AUTH_NAME_VARIABLE + ".type";
-    public static final String AUTHENTICATOR_CONFIG = "authenticator." + AUTH_NAME_VARIABLE + ".config";
+    public static final String AUTHENTICATOR_CONFIG = "authenticator." + AUTH_NAME_VARIABLE + ".config.";
 
     private static final Log log = LogFactory.getLog(MfaProperties.class);
 
     private Properties config;
 
     public MfaProperties() {
-        config = new Properties();
-        File propertiesFile = new File(OpenmrsUtil.getApplicationDataDirectory(), MFA_PROPERTIES_FILE_NAME);
-        if (propertiesFile.exists()) {
-            OpenmrsUtil.loadProperties(config, propertiesFile);
-        }
-        else {
-            log.warn("No mfa.properties file has been defined.  MFA will not be enabled.");
-        }
+        config = getPropertiesFromFile();
     }
 
     public MfaProperties(Properties config) {
         this.config = config;
     }
 
+    public String getProperty(String key) {
+        return getConfig().getProperty(key);
+    }
+
+    public String getProperty(String key, String defaultValue) {
+        return getConfig().getProperty(key, defaultValue);
+    }
+
     public void setProperty(String key, String value) {
-        config.setProperty(key, value);
+        getConfig().setProperty(key, value);
+    }
+
+    public Set<String> getKeys() {
+        return getConfig().stringPropertyNames();
     }
 
     public boolean getBoolean(String key, boolean defaultValue) {
-        String val = config.getProperty(key);
+        String val = getProperty(key);
         if (StringUtils.isBlank(val)) {
             return defaultValue;
         }
@@ -70,7 +76,7 @@ public class MfaProperties implements Serializable {
 
     public List<String> getStringList(String key) {
         List<String> ret = new ArrayList<>();
-        String val = config.getProperty(key);
+        String val = getProperty(key);
         if (StringUtils.isNotBlank(val)) {
             for (String s : val.split(",")) {
                 ret.add(s);
@@ -81,13 +87,14 @@ public class MfaProperties implements Serializable {
 
     public Properties getSubsetWithPrefix(String prefix, boolean stripPrefix) {
         Properties c = new Properties();
-        for (Iterator<String> i = config.stringPropertyNames().iterator(); i.hasNext();) {
-            String key = i.next();
-            String value = config.getProperty(key);
-            if (stripPrefix) {
-                key = key.substring(prefix.length());
+        for (String key : getKeys()) {
+            if (key.startsWith(prefix)) {
+                String value = getProperty(key);
+                if (stripPrefix) {
+                    key = key.substring(prefix.length());
+                }
+                c.put(key, value);
             }
-            c.put(key, value);
         }
         return c;
     }
@@ -98,16 +105,20 @@ public class MfaProperties implements Serializable {
         return getBoolean(MFA_ENABLED, false);
     }
 
+    public boolean isConfigurationCacheDisabled() {
+        return getBoolean(MFA_DISABLE_CONFIGURATION_CACHE, false);
+    }
+
     public List<String> getUnauthenticatedUrlPatterns() {
         return getStringList(MFA_UNAUTHENTICATED_URLS);
     }
 
     public String getPrimaryAuthenticatorOption() {
-        return config.getProperty(AUTHENTICATORS_PRIMARY);
+        return getProperty(AUTHENTICATORS_PRIMARY);
     }
 
     public Authenticator getPrimaryAuthenticator() {
-        return getAuthenticator(AUTHENTICATORS_PRIMARY);
+        return getAuthenticator(getPrimaryAuthenticatorOption());
     }
 
     public List<String> getSecondaryAuthenticatorOptions() {
@@ -117,7 +128,7 @@ public class MfaProperties implements Serializable {
     public Authenticator getAuthenticator(String authName) {
         Authenticator authenticator = null;
         String authenticatorPropertyName = AUTHENTICATOR_TYPE.replace(AUTH_NAME_VARIABLE, authName);
-        String authenticatorType = config.getProperty(authenticatorPropertyName);
+        String authenticatorType = getProperty(authenticatorPropertyName);
         if (StringUtils.isNotBlank(authenticatorType)) {
             try {
                 Class<?> clazz = Context.loadClass(authenticatorType);
@@ -128,7 +139,33 @@ public class MfaProperties implements Serializable {
             }
         }
         String authenticatorConfigProp = AUTHENTICATOR_CONFIG.replace(AUTH_NAME_VARIABLE, authName);
-        authenticator.configure(getSubsetWithPrefix(authenticatorConfigProp, true));
+        authenticator.configure(authName, getSubsetWithPrefix(authenticatorConfigProp, true));
         return authenticator;
+    }
+
+    // Loading
+
+    public synchronized Properties getConfig() {
+        if (config == null) {
+            config = getPropertiesFromFile();
+        }
+        return config;
+    }
+
+    public synchronized Properties reloadConfig() {
+        this.config = null;
+        return getConfig();
+    }
+
+    public Properties getPropertiesFromFile() {
+        Properties p = new Properties();
+        File propertiesFile = new File(OpenmrsUtil.getApplicationDataDirectory(), MFA_PROPERTIES_FILE_NAME);
+        if (propertiesFile.exists()) {
+            OpenmrsUtil.loadProperties(p, propertiesFile);
+        }
+        else {
+            log.warn("No mfa.properties file has been defined");
+        }
+        return p;
     }
 }
