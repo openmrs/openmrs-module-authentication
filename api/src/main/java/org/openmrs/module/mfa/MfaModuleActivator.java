@@ -12,17 +12,13 @@ package org.openmrs.module.mfa;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.BaseModuleActivator;
-import org.openmrs.module.DaemonToken;
-import org.openmrs.module.DaemonTokenAware;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
  */
-public class MfaModuleActivator extends BaseModuleActivator implements DaemonTokenAware {
+public class MfaModuleActivator extends BaseModuleActivator {
 	
 	private final Log log = LogFactory.getLog(getClass());
-	
-	private DaemonToken token;
 	
 	@Override
 	public void started() {
@@ -32,10 +28,5 @@ public class MfaModuleActivator extends BaseModuleActivator implements DaemonTok
 	@Override
 	public void stopped() {
 		log.info("Stopped mfa module");
-	}
-	
-	@Override
-	public void setDaemonToken(DaemonToken token) {
-		this.token = token;
 	}
 }
