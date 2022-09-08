@@ -50,4 +50,8 @@ public class MfaUser implements Serializable {
     public void setMfaPropertyValue(String type, String key, String value) {
         user.setUserProperty(MFA + DOT + CONFIG + DOT + type + DOT + key, value);
     }
+
+    public User getUser() {
+        return user;
+    }
 }

@@ -58,8 +58,8 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 		}
 
 		// Authenticate with secondary authenticator
-		Authenticator secondaryAuthenticator = mfaCredentials.getPrimaryAuthenticator();
-		AuthenticatorCredentials secondaryCredentials = mfaCredentials.getPrimaryCredentials();
+		Authenticator secondaryAuthenticator = mfaCredentials.getSecondaryAuthenticator();
+		AuthenticatorCredentials secondaryCredentials = mfaCredentials.getSecondaryCredentials();
 		if (secondaryAuthenticator != null) {
 			if (secondaryCredentials == null) {
 				throw new ContextAuthenticationException("The credentials provided are invalid");

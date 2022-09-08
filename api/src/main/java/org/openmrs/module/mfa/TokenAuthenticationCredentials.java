@@ -10,18 +10,19 @@
 package org.openmrs.module.mfa;
 
 /**
- * Credentials supporting basic authentication - username and password
+ * Credentials supporting token-based authentication.
+ * This is expected to be a second authentication factor, and thus does not need to contain a username
  */
-public class BasicAuthenticatorCredentials implements AuthenticatorCredentials {
+public class TokenAuthenticationCredentials implements AuthenticatorCredentials {
 
     private String authenticatorName;
-    private String username;
-    private String password;
+    private MfaUser mfaUser;
+    private String token;
 
-    public BasicAuthenticatorCredentials(String authenticatorName, String username, String password) {
+    public TokenAuthenticationCredentials(String authenticatorName, MfaUser mfaUser, String token) {
         this.authenticatorName = authenticatorName;
-        this.username = username;
-        this.password = password;
+        this.mfaUser = mfaUser;
+        this.token = token;
     }
 
     @Override
@@ -36,26 +37,14 @@ public class BasicAuthenticatorCredentials implements AuthenticatorCredentials {
 
     @Override
     public String getClientName() {
-        return username;
+        return mfaUser.getUser().getUsername();
     }
 
-    public void setAuthenticatorName(String authenticatorName) {
-        this.authenticatorName = authenticatorName;
+    public MfaUser getMfaUser() {
+        return mfaUser;
     }
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
+    public String getToken() {
+        return token;
     }
 }

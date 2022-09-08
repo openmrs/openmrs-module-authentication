@@ -14,7 +14,6 @@ import org.openmrs.module.mfa.MfaProperties;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
 
 /**
  * Wrapper class for an HttpSession that provides access to the MfaCredentials
@@ -38,15 +37,6 @@ public class AuthenticationSession {
             setAuthenticationContext(context);
         }
         return context;
-    }
-
-    public void sendRedirect(String url) {
-        try {
-            response.sendRedirect(url);
-        }
-        catch (IOException ioe) {
-            throw new RuntimeException("Unable to send redirect to url '"+ url + "'", ioe);
-        }
     }
 
     public String getRequestParam(String name) {

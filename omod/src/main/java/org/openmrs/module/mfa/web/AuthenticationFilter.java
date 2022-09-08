@@ -75,11 +75,12 @@ public class AuthenticationFilter implements Filter {
 		
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
+
+		AuthenticationSession session = new AuthenticationSession(request, response);
+		AuthenticationContext context = session.getAuthenticationContext();
 		
 		if (!Context.isAuthenticated()) {
 
-			AuthenticationSession session = new AuthenticationSession(request, response);
-			AuthenticationContext context = session.getAuthenticationContext();
 			MfaProperties config = context.getConfig();
 
 			if (config.isConfigurationCacheDisabled()) {
@@ -123,28 +124,32 @@ public class AuthenticationFilter implements Filter {
 							if (credentials == null) {
 								response.sendRedirect(secondaryAuthenticator.getChallengeUrl(session));
 							}
+							else {
+								context.getCredentials().setSecondaryCredentials(credentials);
+							}
 						}
 
 						// If here, that means that primary authentication is complete and secondary authentication
 						// is either not enabled for this user, or credentials have been retrieved.  Authenticate.
-
-						try {
-							Context.authenticate(context.getCredentials());
-						}
-						catch (ContextAuthenticationException e) {
-							String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
-							if (secondaryAuthenticator != null) {
-								challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
+						if (context.isReadyToAuthenticate()) {
+							try {
+								Context.authenticate(context.getCredentials());
+							} catch (ContextAuthenticationException e) {
+								String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
+								if (secondaryAuthenticator != null) {
+									challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
+								}
+								// TODO: Add message as request or session attribute here??
+								response.sendRedirect(challengeUrl);
 							}
-							// TODO: Add message as request or session attribute here??
-							response.sendRedirect(challengeUrl);
 						}
-
-						// Once authenticated,  clear the authentication session
-						session.reset();
 					}
 				}
 			}
+		}
+		else {
+			// If authenticated, reset the authentication session
+			session.reset();
 		}
 
 		if (!response.isCommitted()) {

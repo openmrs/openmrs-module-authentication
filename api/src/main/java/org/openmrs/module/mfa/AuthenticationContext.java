@@ -10,6 +10,7 @@
 package org.openmrs.module.mfa;
 
 import org.apache.commons.lang.StringUtils;
+import org.openmrs.api.context.Context;
 
 import java.io.Serializable;
 
@@ -77,5 +78,12 @@ public class AuthenticationContext implements Serializable {
             }
         }
         return authenticator;
+    }
+
+    public boolean isReadyToAuthenticate() {
+        if (Context.isAuthenticated() || !isPrimaryAuthenticationComplete()) {
+            return false;
+        }
+        return getSecondaryAuthenticator() == null || credentials.getSecondaryCredentials() != null;
     }
 }
