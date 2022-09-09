@@ -7,26 +7,26 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.mfa.web;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.module.BaseModuleActivator;
+
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 /**
- * This class contains the logic that is run every time this module is either started or shutdown
+ * LoginServlet
  */
-public class MfaModuleActivator extends BaseModuleActivator {
-	
-	private final Log log = LogFactory.getLog(getClass());
-	
+public class MfaLoginServlet extends HttpServlet {
+
+	protected final Log log = LogFactory.getLog(getClass());
+
 	@Override
-	public void started() {
-		log.info("Started mfa module");
-	}
-	
-	@Override
-	public void stopped() {
-		log.info("Stopped mfa module");
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
+		log.debug("loginServlet");
+		res.sendRedirect(req.getContextPath() + "/");
 	}
 }

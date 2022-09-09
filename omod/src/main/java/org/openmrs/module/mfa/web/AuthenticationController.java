@@ -11,30 +11,24 @@ package org.openmrs.module.mfa.web;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.module.mfa.MfaConfiguration;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.Properties;
-
-import static org.openmrs.module.mfa.MfaConfiguration.LOGIN_URL;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 
 @Controller
-public class LoginController {
+public class AuthenticationController {
 	
 	protected final Log log = LogFactory.getLog(getClass());
 
-	public static final String DEFAULT_LOGIN_URL = "/login.htm";
-	
-	@Autowired
-	private MfaConfiguration configuration;
-	
-	@RequestMapping(value = "/module/login/login.htm", method = GET)
-	public ModelAndView login() {
-		return new ModelAndView("redirect:" + configuration.getString(LOGIN_URL, DEFAULT_LOGIN_URL));
+	@RequestMapping(value = "/module/mfa/basic.htm", method = GET)
+	public ModelAndView basicLogin() {
+		return new ModelAndView("/module/mfa/basic");
+	}
+
+	@RequestMapping(value = "/module/mfa/token.htm", method = GET)
+	public ModelAndView tokenChallenge() {
+		return new ModelAndView("/module/mfa/token");
 	}
 }

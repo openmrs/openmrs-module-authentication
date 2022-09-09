@@ -12,6 +12,11 @@
 
 	<require_version>${openmrsVersion}</require_version>
 
+	<servlet>
+		<servlet-name>mfaLoginServlet</servlet-name>
+		<servlet-class>org.openmrs.module.mfa.web.MfaLoginServlet</servlet-class>
+	</servlet>
+
 	<filter>
 		<filter-name>authenticationFilter</filter-name>
 		<filter-class>org.openmrs.module.mfa.web.AuthenticationFilter</filter-class>

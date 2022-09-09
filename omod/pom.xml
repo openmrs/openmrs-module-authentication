@@ -8,7 +8,7 @@
     </parent>
 
     <artifactId>mfa-omod</artifactId>
-    <name>mfa-omod</name>
+    <name>Multi-Factor Authentication OMOD</name>
     <description>OMOD for mfa module</description>
 
     <dependencies>

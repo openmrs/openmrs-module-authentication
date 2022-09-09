@@ -6,7 +6,7 @@
 	<artifactId>mfa</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>mfa</name>
+	<name>Multi-Factor Authentication</name>
 	<description>Multi-factor authentication support for OpenMRS</description>
 
 	<organization>

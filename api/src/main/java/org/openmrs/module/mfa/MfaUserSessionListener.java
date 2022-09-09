@@ -11,22 +11,20 @@ package org.openmrs.module.mfa;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.module.BaseModuleActivator;
+import org.openmrs.User;
+import org.openmrs.UserSessionListener;
+import org.springframework.stereotype.Component;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
  */
-public class MfaModuleActivator extends BaseModuleActivator {
+@Component
+public class MfaUserSessionListener implements UserSessionListener {
 	
 	private final Log log = LogFactory.getLog(getClass());
-	
+
 	@Override
-	public void started() {
-		log.info("Started mfa module");
-	}
-	
-	@Override
-	public void stopped() {
-		log.info("Stopped mfa module");
+	public void loggedInOrOut(User user, Event event, Status status) {
+		log.warn(event.name() + " " + status.name() + ": " + user.getUsername());
 	}
 }

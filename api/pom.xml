@@ -8,7 +8,7 @@
 
 	<artifactId>mfa-api</artifactId>
 	<packaging>jar</packaging>
-	<name>mfa-api</name>
+	<name>Multi-Factor Authentication API</name>
 	<description>API for mfa module</description>
 
 	<dependencies>
