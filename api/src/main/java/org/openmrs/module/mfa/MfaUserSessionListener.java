@@ -13,6 +13,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.UserSessionListener;
+import org.openmrs.api.context.Context;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,6 +26,9 @@ public class MfaUserSessionListener implements UserSessionListener {
 
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
-		log.warn(event.name() + " " + status.name() + ": " + user.getUsername());
+		log.debug("Context.isSessionOpen(): " + Context.isSessionOpen());
+		log.debug("Context.isAuthenticated(): " + Context.isAuthenticated());
+		log.debug("Context.getAuthenticatedUser(): " + Context.getAuthenticatedUser());
+		log.info(event.name() + " " + status.name() + ": " + user.getUsername());
 	}
 }

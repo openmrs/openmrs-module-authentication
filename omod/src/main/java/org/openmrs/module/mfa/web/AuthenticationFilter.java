@@ -98,7 +98,9 @@ public class AuthenticationFilter implements Filter {
 
 					// If no primary authentication has taken place, ensure the primary authenticator passes
 					User candidateUser = null;
-					WebAuthenticator primaryAuthenticator = validate(context.getPrimaryAuthenticator());
+					// TODO: Currently we always use the default primary authenticator.
+					// TODO: If we want to allow users to choose their primary authenticator, would need to change this
+					WebAuthenticator primaryAuthenticator = validate(context.getDefaultPrimaryAuthenticator());
 					if (!context.isPrimaryAuthenticationComplete()) {
 						// Attempt to authenticate and if unable to do so, initiate challenge
 						AuthenticatorCredentials credentials = primaryAuthenticator.getCredentials(session);

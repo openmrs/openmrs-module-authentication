@@ -56,8 +56,8 @@ public class AuthenticationContext implements Serializable {
 
     // Authentication
 
-    public Authenticator getPrimaryAuthenticator() {
-        return config.getPrimaryAuthenticator();
+    public Authenticator getDefaultPrimaryAuthenticator() {
+        return config.getDefaultPrimaryAuthenticator();
     }
 
     public boolean isPrimaryAuthenticationComplete() {

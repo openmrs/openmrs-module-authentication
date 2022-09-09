@@ -113,12 +113,15 @@ public class MfaProperties implements Serializable {
         return getStringList(MFA_UNAUTHENTICATED_URLS);
     }
 
-    public String getPrimaryAuthenticatorOption() {
-        return getProperty(AUTHENTICATORS_PRIMARY);
+    public List<String> getPrimaryAuthenticatorOptions() {
+        return getStringList(AUTHENTICATORS_PRIMARY);
     }
 
-    public Authenticator getPrimaryAuthenticator() {
-        return getAuthenticator(getPrimaryAuthenticatorOption());
+    public Authenticator getDefaultPrimaryAuthenticator() {
+        if (getPrimaryAuthenticatorOptions().isEmpty()) {
+            return null;
+        }
+        return getAuthenticator(getPrimaryAuthenticatorOptions().get(0));
     }
 
     public List<String> getSecondaryAuthenticatorOptions() {
