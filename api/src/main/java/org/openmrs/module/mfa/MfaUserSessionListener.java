@@ -24,18 +24,18 @@ public class MfaUserSessionListener implements UserSessionListener {
 		MfaLogger.Event e = null;
 		if (event == Event.LOGIN) {
 			if (status == Status.SUCCESS) {
-				e = MfaLogger.Event.LOGIN_SUCCEEDED;
+				e = MfaLogger.Event.MFA_LOGIN_SUCCEEDED;
 			}
 			else if (status == Status.FAIL) {
-				e = MfaLogger.Event.LOGIN_FAILED;
+				e = MfaLogger.Event.MFA_LOGIN_FAILED;
 			}
 		}
 		else if (event == Event.LOGOUT) {
 			if (status == Status.SUCCESS) {
-				e = MfaLogger.Event.LOGOUT_SUCCEEDED;
+				e = MfaLogger.Event.MFA_LOGOUT_SUCCEEDED;
 			}
 			else if (status == Status.FAIL) {
-				e = MfaLogger.Event.LOGOUT_FAILED;
+				e = MfaLogger.Event.MFA_LOGOUT_FAILED;
 			}
 		}
 		MfaLogger.logEvent(e);

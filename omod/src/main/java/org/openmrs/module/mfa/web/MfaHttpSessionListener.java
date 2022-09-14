@@ -26,13 +26,13 @@ public class MfaHttpSessionListener implements HttpSessionListener {
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
 		MfaLogger.addToContext(MfaLogger.SESSION_ID, session.getId());
-		MfaLogger.logEvent(MfaLogger.Event.SESSION_CREATED, session.getId());
+		MfaLogger.logEvent(MfaLogger.Event.MFA_SESSION_CREATED, session.getId());
 	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
-		MfaLogger.logEvent(MfaLogger.Event.SESSION_DESTROYED, session.getId());
+		MfaLogger.logEvent(MfaLogger.Event.MFA_SESSION_DESTROYED, session.getId());
 		MfaLogger.clearContext();
 	}
 }

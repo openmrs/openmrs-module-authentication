@@ -19,6 +19,7 @@ import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.mfa.AuthenticatorCredentials;
 import org.openmrs.module.mfa.BasicAuthenticatorCredentials;
+import org.openmrs.module.mfa.MfaLogger;
 
 import java.util.Properties;
 
@@ -72,6 +73,7 @@ public class BasicWebAuthenticator implements WebAuthenticator {
                 BasicAuthenticatorCredentials bac = (BasicAuthenticatorCredentials) credentials;
                 UsernamePasswordCredentials c = new UsernamePasswordCredentials(bac.getUsername(), bac.getPassword());
                 try {
+                    MfaLogger.addToContext(MfaLogger.USERNAME, bac.getUsername());
                     Authenticated authenticated = new UsernamePasswordAuthenticationScheme().authenticate(c);
                     user = authenticated.getUser();
                 }

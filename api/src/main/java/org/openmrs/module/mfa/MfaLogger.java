@@ -24,7 +24,7 @@ public class MfaLogger {
 
     private static final Logger logger = LogManager.getLogger(MfaLogger.class);
 
-    private static final Marker AUTHENTICATION_MARKER = MarkerManager.getMarker("AUTHENTICATION");
+    private static final Marker MFA_EVENT_MARKER = MarkerManager.getMarker("MFA_EVENT");
 
     public static final String SESSION_ID = "sessionId";
     public static final String IP_ADDRESS = "ipAddress";
@@ -32,18 +32,18 @@ public class MfaLogger {
     public static final String USER_ID = "userId";
 
     public enum Event {
-        SERVER_STARTED,
-        SESSION_CREATED,
-        PRIMARY_AUTH_SUCCEEDED,
-        PRIMARY_AUTH_FAILED,
-        SECONDARY_AUTH_SUCCEEDED,
-        SECONDARY_AUTH_FAILED,
-        LOGIN_SUCCEEDED,
-        LOGIN_FAILED,
-        LOGOUT_SUCCEEDED,
-        LOGOUT_FAILED,
-        SESSION_DESTROYED,
-        SERVER_SHUTDOWN
+        MFA_MODULE_STARTED,
+        MFA_SESSION_CREATED,
+        MFA_PRIMARY_AUTH_SUCCEEDED,
+        MFA_PRIMARY_AUTH_FAILED,
+        MFA_SECONDARY_AUTH_SUCCEEDED,
+        MFA_SECONDARY_AUTH_FAILED,
+        MFA_LOGIN_SUCCEEDED,
+        MFA_LOGIN_FAILED,
+        MFA_LOGOUT_SUCCEEDED,
+        MFA_LOGOUT_FAILED,
+        MFA_SESSION_DESTROYED,
+        MFA_MODULE_STOPPED
     }
 
     public static void addUserToContext(User user) {
@@ -74,7 +74,7 @@ public class MfaLogger {
     }
 
     public static void logEvent(Event event, String message) {
-        Marker marker = MarkerManager.getMarker(event.name()).setParents(AUTHENTICATION_MARKER);
+        Marker marker = MarkerManager.getMarker(event.name()).setParents(MFA_EVENT_MARKER);
         logger.info(marker, message);
     }
 

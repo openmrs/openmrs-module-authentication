@@ -82,9 +82,9 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 							throw new ContextAuthenticationException("Primary and secondary authentication do not match");
 						}
 						MfaLogger.addUserToContext(secondaryUser);
-						MfaLogger.logAuthEvent(MfaLogger.Event.SECONDARY_AUTH_SUCCEEDED, secondaryCredentials);
+						MfaLogger.logAuthEvent(MfaLogger.Event.MFA_SECONDARY_AUTH_SUCCEEDED, secondaryCredentials);
 					} catch (ContextAuthenticationException e) {
-						MfaLogger.logAuthEvent(MfaLogger.Event.SECONDARY_AUTH_FAILED, secondaryCredentials);
+						MfaLogger.logAuthEvent(MfaLogger.Event.MFA_SECONDARY_AUTH_FAILED, secondaryCredentials);
 						throw e;
 					}
 				} else {

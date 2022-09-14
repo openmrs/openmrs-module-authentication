@@ -114,9 +114,9 @@ public class AuthenticationFilter implements Filter {
 								candidateUser = primaryAuthenticator.authenticate(credentials);
 								if (candidateUser != null) {
 									MfaLogger.addUserToContext(candidateUser);
-									MfaLogger.logAuthEvent(MfaLogger.Event.PRIMARY_AUTH_SUCCEEDED, credentials);
+									MfaLogger.logAuthEvent(MfaLogger.Event.MFA_PRIMARY_AUTH_SUCCEEDED, credentials);
 								} else {
-									MfaLogger.logAuthEvent(MfaLogger.Event.PRIMARY_AUTH_FAILED, credentials);
+									MfaLogger.logAuthEvent(MfaLogger.Event.MFA_PRIMARY_AUTH_FAILED, credentials);
 								}
 							}
 							if (candidateUser == null) {
