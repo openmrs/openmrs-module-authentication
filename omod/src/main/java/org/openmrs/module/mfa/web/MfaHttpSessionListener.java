@@ -9,10 +9,7 @@
  */
 package org.openmrs.module.mfa.web;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openmrs.api.context.UserContext;
-import org.openmrs.web.WebConstants;
+import org.openmrs.module.mfa.MfaLogger;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpSession;
@@ -24,23 +21,18 @@ import javax.servlet.http.HttpSessionListener;
  */
 @Component
 public class MfaHttpSessionListener implements HttpSessionListener {
-	
-	private static final Log log = LogFactory.getLog(MfaHttpSessionListener.class);
 
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
-		UserContext userCtx = (UserContext) session.getAttribute(WebConstants.OPENMRS_USER_CONTEXT_HTTPSESSION_ATTR);
-		log.debug(session.getId() + ": sessionCreated");
-		log.debug(session.getId() + ": username = " + session.getAttribute("username"));
-		log.debug(session.getId() + ": userContext = " + (userCtx == null ? "null" : userCtx.getAuthenticatedUser()));
+		MfaLogger.addToContext(MfaLogger.SESSION_ID, session.getId());
+		MfaLogger.logEvent(MfaLogger.Event.SESSION_CREATED, session.getId());
 	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
-		UserContext userCtx = (UserContext) session.getAttribute(WebConstants.OPENMRS_USER_CONTEXT_HTTPSESSION_ATTR);
-		log.info(session.getId() + ": sessionDestroyed; username = " + session.getAttribute("username"));
-		log.debug(session.getId() + ": userContext = " + (userCtx == null ? "null" : userCtx.getAuthenticatedUser()));
+		MfaLogger.logEvent(MfaLogger.Event.SESSION_DESTROYED, session.getId());
+		MfaLogger.clearContext();
 	}
 }

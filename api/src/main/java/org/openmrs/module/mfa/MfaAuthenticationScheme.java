@@ -31,51 +31,77 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 	@Override
 	public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 
-		// Support situation where module has been installed, but either not configured, or explicitly disabled
-		// In this case, fall back to standard OpenMRS authentication
-		if (credentials instanceof UsernamePasswordCredentials) {
-			MfaProperties mfaProperties = new MfaProperties();
-			if (!mfaProperties.isMfaEnabled()) {
-				return new UsernamePasswordAuthenticationScheme().authenticate(credentials);
+		Authenticated authenticated;
+
+		try {
+			// Support situation where module has been installed, but either not configured, or explicitly disabled
+			// In this case, fall back to standard OpenMRS authentication
+			if (credentials instanceof UsernamePasswordCredentials) {
+				MfaProperties mfaProperties = new MfaProperties();
+				if (!mfaProperties.isMfaEnabled()) {
+					authenticated = new UsernamePasswordAuthenticationScheme().authenticate(credentials);
+				}
+				else {
+					throw new ContextAuthenticationException("The credentials provided are invalid.");
+				}
+			}
+			else {
+				if (!(credentials instanceof MfaAuthenticationCredentials)) {
+					throw new ContextAuthenticationException("The credentials provided are invalid.");
+				}
+
+				MfaAuthenticationCredentials mfaCredentials = (MfaAuthenticationCredentials) credentials;
+
+				// Authenticate with primary authenticator
+				Authenticator primaryAuthenticator = mfaCredentials.getPrimaryAuthenticator();
+				AuthenticatorCredentials primaryCredentials = mfaCredentials.getPrimaryCredentials();
+				if (primaryAuthenticator == null || primaryCredentials == null) {
+					throw new ContextAuthenticationException("Primary authentication has not been completed");
+				}
+				User primaryUser = primaryAuthenticator.authenticate(primaryCredentials);
+				if (primaryUser == null) {
+					throw new ContextAuthenticationException("Primary authentication failed");
+				}
+				else {
+					MfaLogger.addUserToContext(primaryUser);
+				}
+
+				// Authenticate with secondary authenticator
+				Authenticator secondaryAuthenticator = mfaCredentials.getSecondaryAuthenticator();
+				AuthenticatorCredentials secondaryCredentials = mfaCredentials.getSecondaryCredentials();
+				if (secondaryAuthenticator != null) {
+					if (secondaryCredentials == null) {
+						throw new ContextAuthenticationException("Secondary authentication has not been completed");
+					}
+					User secondaryUser = secondaryAuthenticator.authenticate(secondaryCredentials);
+					try {
+						if (secondaryUser == null) {
+							throw new ContextAuthenticationException("Secondary authentication failed");
+						}
+						if (!primaryUser.equals(secondaryUser)) {
+							throw new ContextAuthenticationException("Primary and secondary authentication do not match");
+						}
+						MfaLogger.addUserToContext(secondaryUser);
+						MfaLogger.logAuthEvent(MfaLogger.Event.SECONDARY_AUTH_SUCCEEDED, secondaryCredentials);
+					} catch (ContextAuthenticationException e) {
+						MfaLogger.logAuthEvent(MfaLogger.Event.SECONDARY_AUTH_FAILED, secondaryCredentials);
+						throw e;
+					}
+				} else {
+					if (secondaryCredentials != null) {
+						throw new ContextAuthenticationException("Secondary credentials provided without authenticator");
+					}
+				}
+
+				// If the user's match, return a successful Authenticated user
+				authenticated = new BasicAuthenticated(primaryUser, credentials.getAuthenticationScheme());
+				MfaLogger.addUserToContext(authenticated.getUser());
 			}
 		}
-
-		if (!(credentials instanceof MfaAuthenticationCredentials)) {
-			throw new ContextAuthenticationException("The credentials provided are invalid.");
+		catch (ContextAuthenticationException e) {
+			throw e;
 		}
 
-		MfaAuthenticationCredentials mfaCredentials = (MfaAuthenticationCredentials) credentials;
-
-		// Authenticate with primary authenticator
-		Authenticator primaryAuthenticator = mfaCredentials.getPrimaryAuthenticator();
-		AuthenticatorCredentials primaryCredentials = mfaCredentials.getPrimaryCredentials();
-		if (primaryAuthenticator == null || primaryCredentials == null) {
-			throw new ContextAuthenticationException("The credentials provided are invalid");
-		}
-		User primaryUser = primaryAuthenticator.authenticate(primaryCredentials);
-		if (primaryUser == null) {
-			throw new ContextAuthenticationException("The credentials provided are invalid");
-		}
-
-		// Authenticate with secondary authenticator
-		Authenticator secondaryAuthenticator = mfaCredentials.getSecondaryAuthenticator();
-		AuthenticatorCredentials secondaryCredentials = mfaCredentials.getSecondaryCredentials();
-		if (secondaryAuthenticator != null) {
-			if (secondaryCredentials == null) {
-				throw new ContextAuthenticationException("The credentials provided are invalid");
-			}
-			User secondaryUser = secondaryAuthenticator.authenticate(secondaryCredentials);
-			if (!primaryUser.equals(secondaryUser)) {
-				throw new ContextAuthenticationException("The credentials provided are invalid");
-			}
-		}
-		else {
-			if (secondaryCredentials != null) {
-				throw new ContextAuthenticationException("The credentials provided are invalid");
-			}
-		}
-
-		// If the user's match, return a successful Authenticated user
-		return new BasicAuthenticated(primaryUser, credentials.getAuthenticationScheme());
+		return authenticated;
 	}
 }

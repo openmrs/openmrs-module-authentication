@@ -17,6 +17,7 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.mfa.AuthenticationContext;
 import org.openmrs.module.mfa.Authenticator;
 import org.openmrs.module.mfa.AuthenticatorCredentials;
+import org.openmrs.module.mfa.MfaLogger;
 import org.openmrs.module.mfa.MfaProperties;
 import org.openmrs.module.mfa.MfaUser;
 import org.springframework.util.AntPathMatcher;
@@ -78,84 +79,96 @@ public class AuthenticationFilter implements Filter {
 
 		AuthenticationSession session = new AuthenticationSession(request, response);
 		AuthenticationContext context = session.getAuthenticationContext();
-		
-		if (!Context.isAuthenticated()) {
 
-			MfaProperties config = context.getConfig();
+		try {
+			MfaLogger.addToContext(MfaLogger.SESSION_ID, request.getSession().getId());
+			MfaLogger.addToContext(MfaLogger.IP_ADDRESS, request.getRemoteAddr());
+			MfaLogger.addUserToContext(Context.getAuthenticatedUser());
 
-			if (config.isConfigurationCacheDisabled()) {
-				config.reloadConfig();
-			}
+			if (!Context.isAuthenticated()) {
 
-			if (config.isMfaEnabled()) {
+				MfaProperties config = context.getConfig();
 
-				boolean requiresAuth = !isUnauthenticatedUrlPattern(request, config);
-				if (requiresAuth) {
-					if (log.isDebugEnabled()) {
-						log.debug("Requested Servlet path: " + request.getServletPath());
-						log.debug("Requested Request URI: " + request.getRequestURI());
-					}
+				if (config.isConfigurationCacheDisabled()) {
+					config.reloadConfig();
+				}
 
-					// If no primary authentication has taken place, ensure the primary authenticator passes
-					User candidateUser = null;
-					// TODO: Currently we always use the default primary authenticator.
-					// TODO: If we want to allow users to choose their primary authenticator, would need to change this
-					WebAuthenticator primaryAuthenticator = validate(context.getDefaultPrimaryAuthenticator());
-					if (!context.isPrimaryAuthenticationComplete()) {
-						// Attempt to authenticate and if unable to do so, initiate challenge
-						AuthenticatorCredentials credentials = primaryAuthenticator.getCredentials(session);
-						if (credentials != null) {
-							candidateUser = primaryAuthenticator.authenticate(credentials);
-						}
-						if (candidateUser == null) {
-							response.sendRedirect(primaryAuthenticator.getChallengeUrl(session));
-						}
-						else {
-							context.setPrimaryAuthenticationComplete(new MfaUser(candidateUser), credentials);
-						}
-					}
+				if (config.isMfaEnabled()) {
 
-					// If here, this means that primary authentication was successful, and there is a candidate user
-					// Check if this user has a secondary authentication configured
-					// If they do, attempt to retrieve credentials, otherwise, redirect to challenge for them.
-
-					if (context.isPrimaryAuthenticationComplete()) {
-						WebAuthenticator secondaryAuthenticator = validate(context.getSecondaryAuthenticator());
-						if (secondaryAuthenticator != null) {
-							AuthenticatorCredentials credentials = secondaryAuthenticator.getCredentials(session);
-							if (credentials == null) {
-								response.sendRedirect(secondaryAuthenticator.getChallengeUrl(session));
-							}
-							else {
-								context.getCredentials().setSecondaryCredentials(credentials);
-							}
+					boolean requiresAuth = !isUnauthenticatedUrlPattern(request, config);
+					if (requiresAuth) {
+						if (log.isDebugEnabled()) {
+							log.debug("Requested Servlet path: " + request.getServletPath());
+							log.debug("Requested Request URI: " + request.getRequestURI());
 						}
 
-						// If here, that means that primary authentication is complete and secondary authentication
-						// is either not enabled for this user, or credentials have been retrieved.  Authenticate.
-						if (context.isReadyToAuthenticate()) {
-							try {
-								Context.authenticate(context.getCredentials());
-							} catch (ContextAuthenticationException e) {
-								String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
-								if (secondaryAuthenticator != null) {
-									challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
+						// If no primary authentication has taken place, ensure the primary authenticator passes
+						User candidateUser = null;
+						// TODO: Currently we always use the default primary authenticator.
+						// TODO: If we want to allow users to choose their primary authenticator, would need to change this
+						WebAuthenticator primaryAuthenticator = validate(context.getDefaultPrimaryAuthenticator());
+						if (!context.isPrimaryAuthenticationComplete()) {
+							// Attempt to authenticate and if unable to do so, initiate challenge
+							AuthenticatorCredentials credentials = primaryAuthenticator.getCredentials(session);
+							if (credentials != null) {
+								candidateUser = primaryAuthenticator.authenticate(credentials);
+								if (candidateUser != null) {
+									MfaLogger.addUserToContext(candidateUser);
+									MfaLogger.logAuthEvent(MfaLogger.Event.PRIMARY_AUTH_SUCCEEDED, credentials);
+								} else {
+									MfaLogger.logAuthEvent(MfaLogger.Event.PRIMARY_AUTH_FAILED, credentials);
 								}
-								// TODO: Add message as request or session attribute here??
-								response.sendRedirect(challengeUrl);
+							}
+							if (candidateUser == null) {
+								response.sendRedirect(primaryAuthenticator.getChallengeUrl(session));
+							} else {
+								context.setPrimaryAuthenticationComplete(new MfaUser(candidateUser), credentials);
+							}
+						}
+
+						// If here, this means that primary authentication was successful, and there is a candidate user
+						// Check if this user has a secondary authentication configured
+						// If they do, attempt to retrieve credentials, otherwise, redirect to challenge for them.
+
+						if (context.isPrimaryAuthenticationComplete()) {
+							WebAuthenticator secondaryAuthenticator = validate(context.getSecondaryAuthenticator());
+							if (secondaryAuthenticator != null) {
+								AuthenticatorCredentials credentials = secondaryAuthenticator.getCredentials(session);
+								if (credentials == null) {
+									response.sendRedirect(secondaryAuthenticator.getChallengeUrl(session));
+								} else {
+									context.getCredentials().setSecondaryCredentials(credentials);
+								}
+							}
+
+							// If here, that means that primary authentication is complete and secondary authentication
+							// is either not enabled for this user, or credentials have been retrieved.  Authenticate.
+							if (context.isReadyToAuthenticate()) {
+								try {
+									Context.authenticate(context.getCredentials());
+								} catch (ContextAuthenticationException e) {
+									String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
+									if (secondaryAuthenticator != null) {
+										challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
+									}
+									// TODO: Add message as request or session attribute here??
+									response.sendRedirect(challengeUrl);
+								}
 							}
 						}
 					}
 				}
+			} else {
+			// If authenticated, reset the authentication session
+				session.reset();
+			}
+
+			if (!response.isCommitted()) {
+				chain.doFilter(servletRequest, servletResponse);
 			}
 		}
-		else {
-			// If authenticated, reset the authentication session
-			session.reset();
-		}
-
-		if (!response.isCommitted()) {
-			chain.doFilter(servletRequest, servletResponse);
+		finally {
+			MfaLogger.clearContext();
 		}
 	}
 

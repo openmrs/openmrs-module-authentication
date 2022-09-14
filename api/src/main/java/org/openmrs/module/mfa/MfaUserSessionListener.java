@@ -9,11 +9,8 @@
  */
 package org.openmrs.module.mfa;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.UserSessionListener;
-import org.openmrs.api.context.Context;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,14 +18,26 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class MfaUserSessionListener implements UserSessionListener {
-	
-	private final Log log = LogFactory.getLog(getClass());
 
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
-		log.debug("Context.isSessionOpen(): " + Context.isSessionOpen());
-		log.debug("Context.isAuthenticated(): " + Context.isAuthenticated());
-		log.debug("Context.getAuthenticatedUser(): " + Context.getAuthenticatedUser());
-		log.info(event.name() + " " + status.name() + ": " + user.getUsername());
+		MfaLogger.Event e = null;
+		if (event == Event.LOGIN) {
+			if (status == Status.SUCCESS) {
+				e = MfaLogger.Event.LOGIN_SUCCEEDED;
+			}
+			else if (status == Status.FAIL) {
+				e = MfaLogger.Event.LOGIN_FAILED;
+			}
+		}
+		else if (event == Event.LOGOUT) {
+			if (status == Status.SUCCESS) {
+				e = MfaLogger.Event.LOGOUT_SUCCEEDED;
+			}
+			else if (status == Status.FAIL) {
+				e = MfaLogger.Event.LOGOUT_FAILED;
+			}
+		}
+		MfaLogger.logEvent(e);
 	}
 }

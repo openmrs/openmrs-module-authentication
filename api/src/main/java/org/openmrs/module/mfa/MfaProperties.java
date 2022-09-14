@@ -85,6 +85,34 @@ public class MfaProperties implements Serializable {
         return ret;
     }
 
+    public <T> T getClassInstance(String key, Class<T> type) {
+        T ret = null;
+        Class<? extends T> clazz = getClass(key, type);
+        if (clazz != null) {
+            try {
+                ret = (T) clazz.getDeclaredConstructor().newInstance();
+            }
+            catch (Exception e) {
+                throw new RuntimeException("Unable to instantiate class " + type);
+            }
+        }
+        return ret;
+    }
+
+    public <T> Class<? extends T> getClass(String key, Class<T> type) {
+        Class<? extends T> ret = null;
+        try {
+            String className = config.getProperty(key);
+            if (StringUtils.isNotBlank(className)) {
+                ret = (Class<? extends T>) Context.loadClass(className);
+            }
+        }
+        catch (Exception e) {
+            throw new RuntimeException("Unable to load class " + type);
+        }
+        return ret;
+    }
+
     public Properties getSubsetWithPrefix(String prefix, boolean stripPrefix) {
         Properties c = new Properties();
         for (String key : getKeys()) {
@@ -129,19 +157,9 @@ public class MfaProperties implements Serializable {
     }
 
     public Authenticator getAuthenticator(String authName) {
-        Authenticator authenticator = null;
         String authenticatorPropertyName = AUTHENTICATOR_TYPE.replace(AUTH_NAME_VARIABLE, authName);
-        String authenticatorType = getProperty(authenticatorPropertyName);
-        if (StringUtils.isNotBlank(authenticatorType)) {
-            try {
-                Class<?> clazz = Context.loadClass(authenticatorType);
-                authenticator = (Authenticator) clazz.getDeclaredConstructor().newInstance();
-            }
-            catch (Exception e) {
-                throw new RuntimeException("Unable to construct authenticator type: " + authenticatorType, e);
-            }
-        }
         String authenticatorConfigProp = AUTHENTICATOR_CONFIG.replace(AUTH_NAME_VARIABLE, authName);
+        Authenticator authenticator = getClassInstance(authenticatorPropertyName, Authenticator.class);
         authenticator.configure(authName, getSubsetWithPrefix(authenticatorConfigProp, true));
         return authenticator;
     }
