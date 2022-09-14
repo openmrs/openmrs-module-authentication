@@ -12,6 +12,7 @@ package org.openmrs.module.mfa;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.ThreadContext;
 import org.openmrs.User;
@@ -22,6 +23,8 @@ import org.openmrs.User;
 public class MfaLogger {
 
     private static final Logger logger = LogManager.getLogger(MfaLogger.class);
+
+    private static final Marker AUTHENTICATION_MARKER = MarkerManager.getMarker("AUTHENTICATION");
 
     public static final String SESSION_ID = "sessionId";
     public static final String IP_ADDRESS = "ipAddress";
@@ -71,7 +74,8 @@ public class MfaLogger {
     }
 
     public static void logEvent(Event event, String message) {
-        logger.info(MarkerManager.getMarker(event.name()), message);
+        Marker marker = MarkerManager.getMarker(event.name()).setParents(AUTHENTICATION_MARKER);
+        logger.info(marker, message);
     }
 
     public static void logEvent(Event event) {
