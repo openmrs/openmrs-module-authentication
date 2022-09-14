@@ -10,21 +10,18 @@
 package org.openmrs.module.mfa;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.MarkerManager;
+import org.apache.logging.log4j.ThreadContext;
 import org.openmrs.User;
-import org.openmrs.util.OpenmrsUtil;
-
-import java.util.Properties;
 
 /**
  * This class is responsible for logging Mfa events
- * This uses the tinylog framework for logging.  Configuration documentation can be found here:
- * <a href="https://tinylog.org/v2/configuration">Configuration</a>
  */
 public class MfaLogger {
 
-    private static final Log log = LogFactory.getLog(MfaLogger.class);
+    private static final Logger logger = LogManager.getLogger(MfaLogger.class);
 
     public static final String SESSION_ID = "sessionId";
     public static final String IP_ADDRESS = "ipAddress";
@@ -46,38 +43,10 @@ public class MfaLogger {
         SERVER_SHUTDOWN
     }
 
-    // Set to true when this class has been initialized from MfaProperties
-    private static boolean isInitialized = false;
-
-    public static void initialize() {
-        initialize(new MfaProperties());
-    }
-
-    /**
-     * Initializes logging from mfa.properties.
-     * All configuration are prefixed with mfa.logging.<property>=<value>,
-     * where <property> and <value> represent valid configuration properties for tinylog
-     * @param config
-     */
-    public static synchronized void initialize(MfaProperties config) {
-        if (!isInitialized) {
-            Properties loggingProperties = config.getSubsetWithPrefix("logger.", true);
-            for (String property : loggingProperties.stringPropertyNames()) {
-                String val = loggingProperties.getProperty(property, "");
-                val = val.replace("{app-data-dir}", OpenmrsUtil.getApplicationDataDirectory());
-                // TODO: Initialize logging framework with property
-            }
-            isInitialized = true;
-        }
-        else {
-            log.warn("MfaLogger already initialized, not re-initializing");
-        }
-    }
-
     public static void addUserToContext(User user) {
         if (user != null) {
             addToContext(USERNAME, StringUtils.defaultIfBlank(user.getUsername(), user.getSystemId()));
-            addToContext(USER_ID, user.getId());
+            addToContext(USER_ID, user.getId().toString());
         }
         else {
             removeUserFromContext();
@@ -89,24 +58,20 @@ public class MfaLogger {
         removeFromContext(USER_ID);
     }
 
-    public static void addToContext(String key, Object value) {
-        // TODO: Add to context
+    public static void addToContext(String key, String value) {
+        ThreadContext.put(key, value);
     }
 
     public static void removeFromContext(String key) {
-        // TODO: Remove from context
+        ThreadContext.remove(key);
     }
 
     public static void clearContext() {
-        // TODO: Clear context
+        ThreadContext.clearAll();
     }
 
     public static void logEvent(Event event, String message) {
-        if (!isInitialized) {
-            initialize();
-        }
-        // TODO: Log event message
-        log.debug(event.name() + " - " + message);
+        logger.info(MarkerManager.getMarker(event.name()), message);
     }
 
     public static void logEvent(Event event) {

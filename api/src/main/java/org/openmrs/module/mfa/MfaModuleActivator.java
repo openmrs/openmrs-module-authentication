@@ -22,14 +22,11 @@ public class MfaModuleActivator extends BaseModuleActivator {
 	
 	@Override
 	public void started() {
-		log.info("Started mfa module");
-		MfaLogger.initialize();
 		MfaLogger.logEvent(MfaLogger.Event.SERVER_STARTED);
 	}
 	
 	@Override
 	public void stopped() {
-		log.info("Stopped mfa module");
 		MfaLogger.logEvent(MfaLogger.Event.SERVER_SHUTDOWN);
 	}
 }
