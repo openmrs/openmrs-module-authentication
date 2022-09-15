@@ -18,12 +18,10 @@ import java.io.Serializable;
  */
 public class MfaAuthenticationCredentials implements Credentials, Serializable {
 
-    private MfaProperties config;
     private AuthenticatorCredentials primaryCredentials;
     private AuthenticatorCredentials secondaryCredentials;
 
-    public MfaAuthenticationCredentials(MfaProperties config) {
-        this.config = config;
+    public MfaAuthenticationCredentials() {
     }
 
     @Override
@@ -38,7 +36,7 @@ public class MfaAuthenticationCredentials implements Credentials, Serializable {
 
     public Authenticator getPrimaryAuthenticator() {
         if (primaryCredentials != null && primaryCredentials.getAuthenticatorName() != null) {
-            return config.getAuthenticator(primaryCredentials.getAuthenticatorName());
+            return MfaProperties.getAuthenticator(primaryCredentials.getAuthenticatorName());
         }
         return null;
     }
@@ -53,7 +51,7 @@ public class MfaAuthenticationCredentials implements Credentials, Serializable {
 
     public Authenticator getSecondaryAuthenticator() {
         if (secondaryCredentials != null && secondaryCredentials.getAuthenticatorName() != null) {
-            return config.getAuthenticator(secondaryCredentials.getAuthenticatorName());
+            return MfaProperties.getAuthenticator(secondaryCredentials.getAuthenticatorName());
         }
         return null;
     }

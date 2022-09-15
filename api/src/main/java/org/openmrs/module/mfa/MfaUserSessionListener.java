@@ -21,6 +21,7 @@ public class MfaUserSessionListener implements UserSessionListener {
 
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
+		MfaLogger.addUserToContext(user);
 		MfaLogger.Event e = null;
 		if (event == Event.LOGIN) {
 			if (status == Status.SUCCESS) {

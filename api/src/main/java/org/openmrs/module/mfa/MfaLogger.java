@@ -49,7 +49,9 @@ public class MfaLogger {
     public static void addUserToContext(User user) {
         if (user != null) {
             addToContext(USERNAME, StringUtils.defaultIfBlank(user.getUsername(), user.getSystemId()));
-            addToContext(USER_ID, user.getId().toString());
+            if (user.getUserId() != null) {
+                addToContext(USER_ID, user.getId().toString());
+            }
         }
         else {
             removeUserFromContext();

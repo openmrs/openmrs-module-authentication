@@ -1,11 +1,9 @@
 package org.openmrs.module.mfa;
 
+import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.User;
-import org.openmrs.util.OpenmrsUtil;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Properties;
 
@@ -17,42 +15,42 @@ import static org.openmrs.module.mfa.MfaProperties.AUTHENTICATORS_PRIMARY;
 import static org.openmrs.module.mfa.MfaProperties.AUTHENTICATORS_SECONDARY;
 import static org.openmrs.module.mfa.MfaProperties.MFA_DISABLE_CONFIGURATION_CACHE;
 import static org.openmrs.module.mfa.MfaProperties.MFA_ENABLED;
-import static org.openmrs.module.mfa.MfaProperties.MFA_PROPERTIES_FILE_NAME;
 import static org.openmrs.module.mfa.MfaProperties.MFA_UNAUTHENTICATED_URLS;
 
 public class MfaPropertiesTest {
 
+	@Before
+	public void setup() {
+		MfaProperties.setConfig(new Properties());
+	}
+
 	@Test
 	public void shouldGetAndSetKeysAndProperties() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(MFA_ENABLED, "false");
-		config.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css");
-		assertThat(config.getConfig().size(), equalTo(2));
-		assertThat(config.getProperty(MFA_ENABLED), equalTo("false"));
-		assertThat(config.getProperty(MFA_UNAUTHENTICATED_URLS), equalTo("*.css"));
-		assertThat(config.getProperty(MFA_DISABLE_CONFIGURATION_CACHE), nullValue());
-		assertThat(config.getProperty(MFA_DISABLE_CONFIGURATION_CACHE, "true"), equalTo("true"));
-		assertThat(config.getKeys().size(), equalTo(2));
-		assertThat(config.getKeys().contains(MFA_ENABLED), equalTo(true));
-		assertThat(config.getKeys().contains(MFA_UNAUTHENTICATED_URLS), equalTo(true));
-		assertThat(config.getKeys().contains(MFA_DISABLE_CONFIGURATION_CACHE), equalTo(false));
+		MfaProperties.setProperty(MFA_ENABLED, "false");
+		MfaProperties.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css");
+		assertThat(MfaProperties.getKeys().size(), equalTo(2));
+		assertThat(MfaProperties.getProperty(MFA_ENABLED), equalTo("false"));
+		assertThat(MfaProperties.getProperty(MFA_UNAUTHENTICATED_URLS), equalTo("*.css"));
+		assertThat(MfaProperties.getProperty(MFA_DISABLE_CONFIGURATION_CACHE), nullValue());
+		assertThat(MfaProperties.getProperty(MFA_DISABLE_CONFIGURATION_CACHE, "true"), equalTo("true"));
+		assertThat(MfaProperties.getKeys().contains(MFA_ENABLED), equalTo(true));
+		assertThat(MfaProperties.getKeys().contains(MFA_UNAUTHENTICATED_URLS), equalTo(true));
+		assertThat(MfaProperties.getKeys().contains(MFA_DISABLE_CONFIGURATION_CACHE), equalTo(false));
 	}
 
 	@Test
 	public void shouldGetBooleanProperty() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(MFA_ENABLED, "false");
-		assertThat(config.getBoolean(MFA_ENABLED, true), equalTo(false));
-		config.setProperty(MFA_ENABLED, "true");
-		assertThat(config.getBoolean(MFA_ENABLED, false), equalTo(true));
+		MfaProperties.setProperty(MFA_ENABLED, "false");
+		assertThat(MfaProperties.getBoolean(MFA_ENABLED, true), equalTo(false));
+		MfaProperties.setProperty(MFA_ENABLED, "true");
+		assertThat(MfaProperties.getBoolean(MFA_ENABLED, false), equalTo(true));
 	}
 
 	@Test
 	public void shouldGetStringListProperty() {
-		MfaProperties config = new MfaProperties(new Properties());
-		assertThat(config.getStringList(MFA_UNAUTHENTICATED_URLS).size(), equalTo(0));
-		config.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css,*.gif,*.jpg,*.png");
-		List<String> urls = config.getStringList(MFA_UNAUTHENTICATED_URLS);
+		assertThat(MfaProperties.getStringList(MFA_UNAUTHENTICATED_URLS).size(), equalTo(0));
+		MfaProperties.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css,*.gif,*.jpg,*.png");
+		List<String> urls = MfaProperties.getStringList(MFA_UNAUTHENTICATED_URLS);
 		assertThat(urls.size(), equalTo(4));
 		assertThat(urls.get(0), equalTo("*.css"));
 		assertThat(urls.get(1), equalTo("*.gif"));
@@ -62,31 +60,28 @@ public class MfaPropertiesTest {
 
 	@Test
 	public void shouldGetClassInstance() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty("user", "org.openmrs.User");
-		User user = config.getClassInstance("user", User.class);
+		MfaProperties.setProperty("user", "org.openmrs.User");
+		User user = MfaProperties.getClassInstance("user", User.class);
 		assertThat(user, notNullValue());
 		assertThat(user.getClass(), equalTo(User.class));
 	}
 
 	@Test
 	public void shouldGetClass() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty("user", "org.openmrs.User");
-		Class<? extends User> userClass = config.getClass("user", User.class);
+		MfaProperties.setProperty("user", "org.openmrs.User");
+		Class<? extends User> userClass = MfaProperties.getClass("user", User.class);
 		assertThat(userClass, notNullValue());
 		assertThat(userClass, equalTo(User.class));
 	}
 
 	@Test
 	public void shouldGetPropertiesWithPrefix() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty("prefs.color", "red");
-		config.setProperty("prefs.season", "fall");
-		config.setProperty("prefs.timeOfDay", "morning");
-		config.setProperty("preferences.prefs.timeOfDay", "evening");
+		MfaProperties.setProperty("prefs.color", "red");
+		MfaProperties.setProperty("prefs.season", "fall");
+		MfaProperties.setProperty("prefs.timeOfDay", "morning");
+		MfaProperties.setProperty("preferences.prefs.timeOfDay", "evening");
 		{
-			Properties p = config.getSubsetWithPrefix("prefs.", true);
+			Properties p = MfaProperties.getSubsetWithPrefix("prefs.", true);
 			assertThat(p.size(), equalTo(3));
 			assertThat(p.getProperty("prefs.color"), nullValue());
 			assertThat(p.getProperty("prefs.season"), nullValue());
@@ -96,7 +91,7 @@ public class MfaPropertiesTest {
 			assertThat(p.getProperty("timeOfDay"), equalTo("morning"));
 		}
 		{
-			Properties p = config.getSubsetWithPrefix("prefs.", false);
+			Properties p = MfaProperties.getSubsetWithPrefix("prefs.", false);
 			assertThat(p.size(), equalTo(3));
 			assertThat(p.getProperty("prefs.color"), equalTo("red"));
 			assertThat(p.getProperty("prefs.season"), equalTo("fall"));
@@ -109,27 +104,24 @@ public class MfaPropertiesTest {
 
 	@Test
 	public void shouldGetMfaEnabled() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(MFA_ENABLED, "false");
-		assertThat(config.isMfaEnabled(), equalTo(false));
-		config.setProperty(MFA_ENABLED, "true");
-		assertThat(config.isMfaEnabled(), equalTo(true));
+		MfaProperties.setProperty(MFA_ENABLED, "false");
+		assertThat(MfaProperties.isMfaEnabled(), equalTo(false));
+		MfaProperties.setProperty(MFA_ENABLED, "true");
+		assertThat(MfaProperties.isMfaEnabled(), equalTo(true));
 	}
 
 	@Test
 	public void shouldGetDisableConfigurationCache() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(MFA_DISABLE_CONFIGURATION_CACHE, "true");
-		assertThat(config.isConfigurationCacheDisabled(), equalTo(true));
-		config.setProperty(MFA_DISABLE_CONFIGURATION_CACHE, "false");
-		assertThat(config.isConfigurationCacheDisabled(), equalTo(false));
+		MfaProperties.setProperty(MFA_DISABLE_CONFIGURATION_CACHE, "true");
+		assertThat(MfaProperties.isConfigurationCacheDisabled(), equalTo(true));
+		MfaProperties.setProperty(MFA_DISABLE_CONFIGURATION_CACHE, "false");
+		assertThat(MfaProperties.isConfigurationCacheDisabled(), equalTo(false));
 	}
 
 	@Test
 	public void shouldGetUnauthenticatedUrlPatterns() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css,*.gif,*.jpg");
-		List<String> patterns = config.getUnauthenticatedUrlPatterns();
+		MfaProperties.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css,*.gif,*.jpg");
+		List<String> patterns = MfaProperties.getUnauthenticatedUrlPatterns();
 		assertThat(patterns.size(), equalTo(3));
 		assertThat(patterns.get(0), equalTo("*.css"));
 		assertThat(patterns.get(1), equalTo("*.gif"));
@@ -138,9 +130,8 @@ public class MfaPropertiesTest {
 
 	@Test
 	public void shouldGetPrimaryAuthenticatorOptions() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
-		List<String> options = config.getPrimaryAuthenticatorOptions();
+		MfaProperties.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
+		List<String> options = MfaProperties.getPrimaryAuthenticatorOptions();
 		assertThat(options.size(), equalTo(2));
 		assertThat(options.get(0), equalTo("basic"));
 		assertThat(options.get(1), equalTo("sms"));
@@ -148,9 +139,8 @@ public class MfaPropertiesTest {
 
 	@Test
 	public void shouldGetSecondaryAuthenticatorOptions() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(AUTHENTICATORS_SECONDARY, "basic,sms");
-		List<String> options = config.getSecondaryAuthenticatorOptions();
+		MfaProperties.setProperty(AUTHENTICATORS_SECONDARY, "basic,sms");
+		List<String> options = MfaProperties.getSecondaryAuthenticatorOptions();
 		assertThat(options.size(), equalTo(2));
 		assertThat(options.get(0), equalTo("basic"));
 		assertThat(options.get(1), equalTo("sms"));
@@ -158,35 +148,19 @@ public class MfaPropertiesTest {
 
 	@Test
 	public void shouldGetDefaultPrimaryAuthenticator() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
-		config.setProperty("authenticator.basic.type", "org.openmrs.module.mfa.TestAuthenticator");
-		Authenticator authenticator = config.getDefaultPrimaryAuthenticator();
+		MfaProperties.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
+		MfaProperties.setProperty("mfa.authenticator.basic.type", "org.openmrs.module.mfa.TestAuthenticator");
+		Authenticator authenticator = MfaProperties.getDefaultPrimaryAuthenticator();
 		assertThat(authenticator, notNullValue());
 		assertThat(authenticator.getClass(), equalTo(TestAuthenticator.class));
 	}
 
 	@Test
 	public void shouldGetAuthenticator() {
-		MfaProperties config = new MfaProperties(new Properties());
-		config.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
-		config.setProperty("authenticator.sms.type", "org.openmrs.module.mfa.TestAuthenticator");
-		Authenticator authenticator = config.getAuthenticator("sms");
+		MfaProperties.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
+		MfaProperties.setProperty("mfa.authenticator.sms.type", "org.openmrs.module.mfa.TestAuthenticator");
+		Authenticator authenticator = MfaProperties.getAuthenticator("sms");
 		assertThat(authenticator, notNullValue());
 		assertThat(authenticator.getClass(), equalTo(TestAuthenticator.class));
-	}
-
-	@Test
-	public void shouldGetPropertiesFromFile() throws Exception {
-		File file = new File(OpenmrsUtil.getApplicationDataDirectory(), MFA_PROPERTIES_FILE_NAME);
-		file.deleteOnExit();
-		Properties p = new Properties();
-		p.setProperty(MFA_ENABLED, "false");
-		p.setProperty(MFA_UNAUTHENTICATED_URLS, "*.css");
-		p.store(new FileOutputStream(file), "");
-		MfaProperties config = new MfaProperties();
-		assertThat(config.getKeys().size(), equalTo(2));
-		assertThat(config.getProperty(MFA_ENABLED), equalTo("false"));
-		assertThat(config.getProperty(MFA_UNAUTHENTICATED_URLS), equalTo("*.css"));
 	}
 }

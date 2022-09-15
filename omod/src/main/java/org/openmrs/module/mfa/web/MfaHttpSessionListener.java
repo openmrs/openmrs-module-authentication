@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.mfa.web;
 
+import org.openmrs.api.context.Context;
 import org.openmrs.module.mfa.MfaLogger;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +26,9 @@ public class MfaHttpSessionListener implements HttpSessionListener {
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
+		if (Context.isSessionOpen()) {
+			MfaLogger.addUserToContext(Context.getAuthenticatedUser());
+		}
 		MfaLogger.addToContext(MfaLogger.SESSION_ID, session.getId());
 		MfaLogger.logEvent(MfaLogger.Event.MFA_SESSION_CREATED, session.getId());
 	}
@@ -32,6 +36,7 @@ public class MfaHttpSessionListener implements HttpSessionListener {
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
+		MfaLogger.addUserToContext(Context.getAuthenticatedUser());
 		MfaLogger.logEvent(MfaLogger.Event.MFA_SESSION_DESTROYED, session.getId());
 		MfaLogger.clearContext();
 	}

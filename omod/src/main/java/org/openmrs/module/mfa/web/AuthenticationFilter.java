@@ -20,6 +20,7 @@ import org.openmrs.module.mfa.AuthenticatorCredentials;
 import org.openmrs.module.mfa.MfaLogger;
 import org.openmrs.module.mfa.MfaProperties;
 import org.openmrs.module.mfa.MfaUser;
+import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
 import javax.servlet.Filter;
@@ -87,15 +88,13 @@ public class AuthenticationFilter implements Filter {
 
 			if (!Context.isAuthenticated()) {
 
-				MfaProperties config = context.getConfig();
-
-				if (config.isConfigurationCacheDisabled()) {
-					config.reloadConfig();
+				if (MfaProperties.isConfigurationCacheDisabled()) {
+					MfaProperties.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
 
-				if (config.isMfaEnabled()) {
+				if (MfaProperties.isMfaEnabled()) {
 
-					boolean requiresAuth = !isUnauthenticatedUrlPattern(request, config);
+					boolean requiresAuth = !isUnauthenticatedUrlPattern(request);
 					if (requiresAuth) {
 						if (log.isDebugEnabled()) {
 							log.debug("Requested Servlet path: " + request.getServletPath());
@@ -172,8 +171,8 @@ public class AuthenticationFilter implements Filter {
 		}
 	}
 
-	protected boolean isUnauthenticatedUrlPattern(HttpServletRequest request, MfaProperties config) {
-		for (String pattern : config.getUnauthenticatedUrlPatterns()) {
+	protected boolean isUnauthenticatedUrlPattern(HttpServletRequest request) {
+		for (String pattern : MfaProperties.getUnauthenticatedUrlPatterns()) {
 			if (matchesPath(request, pattern)) {
 				return true;
 			}

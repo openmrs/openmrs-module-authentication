@@ -37,8 +37,7 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 			// Support situation where module has been installed, but either not configured, or explicitly disabled
 			// In this case, fall back to standard OpenMRS authentication
 			if (credentials instanceof UsernamePasswordCredentials) {
-				MfaProperties mfaProperties = new MfaProperties();
-				if (!mfaProperties.isMfaEnabled()) {
+				if (!MfaProperties.isMfaEnabled()) {
 					authenticated = new UsernamePasswordAuthenticationScheme().authenticate(credentials);
 				}
 				else {

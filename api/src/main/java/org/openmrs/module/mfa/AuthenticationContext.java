@@ -19,24 +19,14 @@ import java.io.Serializable;
  */
 public class AuthenticationContext implements Serializable {
 
-    private MfaProperties config;
     private MfaUser candidateUser;
     private MfaAuthenticationCredentials credentials;
 
-    public AuthenticationContext(MfaProperties config) {
-        this.config = config;
-        this.credentials = new MfaAuthenticationCredentials(config);
+    public AuthenticationContext() {
+        this.credentials = new MfaAuthenticationCredentials();
     }
 
     // Accessors
-
-    public MfaProperties getConfig() {
-        return config;
-    }
-
-    public void setConfig(MfaProperties config) {
-        this.config = config;
-    }
 
     public MfaUser getCandidateUser() {
         return candidateUser;
@@ -57,7 +47,7 @@ public class AuthenticationContext implements Serializable {
     // Authentication
 
     public Authenticator getDefaultPrimaryAuthenticator() {
-        return config.getDefaultPrimaryAuthenticator();
+        return MfaProperties.getDefaultPrimaryAuthenticator();
     }
 
     public boolean isPrimaryAuthenticationComplete() {
@@ -74,7 +64,7 @@ public class AuthenticationContext implements Serializable {
         if (candidateUser != null) {
             String secondaryName = candidateUser.getMfaSecondaryType();
             if (StringUtils.isNotBlank(secondaryName)) {
-                authenticator = config.getAuthenticator(secondaryName);
+                authenticator = MfaProperties.getAuthenticator(secondaryName);
             }
         }
         return authenticator;

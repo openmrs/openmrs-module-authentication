@@ -10,7 +10,6 @@
 package org.openmrs.module.mfa.web;
 
 import org.openmrs.module.mfa.AuthenticationContext;
-import org.openmrs.module.mfa.MfaProperties;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,7 +32,7 @@ public class AuthenticationSession {
     public AuthenticationContext getAuthenticationContext() {
         AuthenticationContext context = (AuthenticationContext) request.getSession().getAttribute(CONTEXT_SESSION_KEY);
         if (context == null) {
-            context = new AuthenticationContext(new MfaProperties());
+            context = new AuthenticationContext();
             setAuthenticationContext(context);
         }
         return context;
