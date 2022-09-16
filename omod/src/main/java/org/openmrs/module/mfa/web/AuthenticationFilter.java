@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.mfa.web;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
@@ -31,7 +32,10 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Properties;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the
@@ -145,7 +149,14 @@ public class AuthenticationFilter implements Filter {
 							if (context.isReadyToAuthenticate()) {
 								try {
 									Context.authenticate(context.getCredentials());
-								} catch (ContextAuthenticationException e) {
+
+									// If Authentication is successful, we regenerate session
+									regenerateSession(request);
+
+									// Redirect to appropriate success url
+									response.sendRedirect(determineSuccessRedirectUrl(request));
+								}
+								catch (ContextAuthenticationException e) {
 									String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
 									if (secondaryAuthenticator != null) {
 										challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
@@ -211,5 +222,60 @@ public class AuthenticationFilter implements Filter {
 			}
 		}
 		return ret;
+	}
+
+	/**
+	 * This regenerates the session associated with a request, by invalidating existing session, and creating a new
+	 * session that contains the same attributes as the existing session.
+	 * See:  <a href="https://stackoverflow.com/questions/8162646/how-to-refresh-jsessionid-cookie-after-login">SO</a>
+	 * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
+	 * @param request the request containing the session to regenerate
+	 */
+	protected HttpSession regenerateSession(HttpServletRequest request) {
+		Properties sessionAttributes = new Properties();
+		HttpSession existingSession = request.getSession(false);
+		if (existingSession != null) {
+			Enumeration<?> attrNames = existingSession.getAttributeNames();
+			if (attrNames != null) {
+				while (attrNames.hasMoreElements()) {
+					String attribute = (String) attrNames.nextElement();
+					sessionAttributes.put(attribute, existingSession.getAttribute(attribute));
+				}
+			}
+			existingSession.invalidate();
+		}
+		HttpSession newSession = request.getSession(true);
+		Enumeration<Object> attrNames = sessionAttributes.keys();
+		if (attrNames != null) {
+			while (attrNames.hasMoreElements()) {
+				String attribute = (String) attrNames.nextElement();
+				newSession.setAttribute(attribute, sessionAttributes.get(attribute));
+			}
+		}
+		return newSession;
+	}
+
+	private String determineSuccessRedirectUrl(HttpServletRequest request) {
+		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
+		String redirect = request.getParameter("redirect");
+		if (StringUtils.isNotBlank(redirect)) {
+			redirect = request.getParameter("refererURL");
+		}
+		if (StringUtils.isBlank(redirect)) {
+			redirect = "/";
+		}
+
+		// If the redirect is not absolute URL, add the context path
+		if (redirect.startsWith("/")) {
+			redirect = request.getContextPath() + redirect;
+		}
+		// If the redirect is outside the context path, use the home page
+		else if (!redirect.startsWith(request.getContextPath())) {
+			redirect = request.getContextPath();
+		}
+
+		log.debug("Going to use redirect: '" + redirect + "'");
+
+		return redirect;
 	}
 }
