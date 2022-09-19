@@ -1,31 +1,35 @@
-# OpenMRS MFA (Multi-factor authentication) Module
+# OpenMRS Authentication Module
 
 ## Description
-This module provides support for enabling 2FA (two-factor authentication) and/or MFA (multi-factor authentication) into the OpenMRS login process.  It is intended to be configurable, to enable MFA to be enabled and/or required on a per-system and per-user basis, and to support various pluggable methods of MFA
+This module provides support for enhanced authentication features in OpenMRS and intends to fulfill the following goals:
+
+* Harvest best practice authentication support from existing application frameworks
+* Enable consistent backend authentication that is independent of UI or application (1.x, 2.x, 3.x etc)
+* Support additional authentication factors beyond basic (username/password) authentication (2FA, MFA)
+* Support fully configurable and extensible authentication, at both the application and user level
+* Support additional authentication logging, to enable auditing and tracking of user access over time
 
 ## Configuration
 
-The operation of this module is fully configured using OpenMRS runtime properties.  All properties are prefixed with `mfa.`
+The operation of this module is fully configured using OpenMRS runtime properties.  All properties are prefixed with `authentication.`
 
-### Overall Settings ###
+### authentication.settings.cached ###
 
-#### mfa.enabled ####
+**Default value**:  true
 
-**Default value**:  false
+This controls whether configuration properties should be cached at startup to optimize performance, or whether they should not be cached to enable quick testing of runtime changes.  Typically, all production instances should leave this at the default value of true, but this may be helpful during development and initial testing phases to more rapidly test and troubleshoot configuration settings without the need for continuous server restarts.
 
-This determines whether the Authentication Filter is enabled, which will redirect users to authenticate if they have not already done so.  The default value is false, to ensure that simply installing this module does not impact existing systems.  Setting this value to true should be done once other properties are configured to enable a functional login workflow.
-
-#### mfa.disableConfigurationCache ####
+### authentication.filter.enabled ###
 
 **Default value**:  false
 
-This controls whether configuration properties should be cached re-read from the mfa.properties file for each request.  By default, properties are cached in order to ensure performance is not adversely impacted.  However, this value is particularly helpful to set to "true" when developing and testing new features, in order to more rapidly test and troubleshoot configuration settings without the need to constantly restart OpenMRS to do so.
+This determines whether the Authentication Filter is enabled, which will redirect all HTTP requests to authenticate if they have not already done so.  The default value is false, to enable system administrators to install the module without immediately impacting user requests, and then enable this along with other related settings when ready.
 
-#### mfa.unauthenticatedUrls ####
+#### authentication.filter.skipPatterns ####
 
 **Default value**:  none
 
-If ```mfa.enabled = true```, then this is a comma-delimited list of URL patterns that should be served without redirect to the configured login page.  This follows the ANT pattern-matching system.  One difference, for ease of configuration, is that any pattern that starts with "\*" is assumed to be an "ends with" pattern match, and will match on any url that ends with the specified pattern.  It essentially turns it into an ANT "/**/*..." match, meaning that any url that ends with the given pattern will be matched at any level of the hierarchy.
+If ```authentication.filter.enabled = true```, then this is a comma-delimited list of URL patterns that should be served without requiring a login redirect if the current user is not authenticated.  The main purpose of this is to enable login pages, along with images and other resources, to be served witout redirection for authentication.  The expected URL patterns follow the ANT pattern-matching system.  One difference, for ease of configuration, is that any pattern that starts with "\*" is assumed to be an "ends with" pattern match, and will match on any url that ends with the specified pattern.  It essentially turns it into an ANT "/**/*..." match, meaning that any url that ends with the given pattern will be matched at any level of the hierarchy.
 
 For example, what would otherwise require specifying patterns like this:
 ```/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png```
@@ -35,19 +39,21 @@ Can instead be specified like this:
 
 As a starting point, if one wants to allow the 1.x (legacyui) login page to load successfully, along with all resources and the appropriate login servlets, the following configuration value can be used:
 
-```mfa.unauthenticatedUrls=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png```
+```authentication.filter.skipPatterns=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png```
 
 ### Authenticators ###
 
+TODO: Update the below
+
 For each Authenticator configuration supported by the system, a series of properties should be added that identify the type of this authenticator, and it's configuration properties.
 
-#### mfa.authenticator.<name> and authenticator.<name>.config.<propertyName> ###
+#### authentication.authenticator.<name> and authenticator.<name>.config.<propertyName> ###
 
 For example, to configure the default BasicWebAuthenticator that is included in this module:
 
 ```properties
-authenticator.basic.type=org.openmrs.module.mfa.web.BasicWebAuthenticator
-authenticator.basic.config.loginPage=/module/mfa/basic.htm
+authenticator.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticator
+authenticator.basic.config.loginPage=/module/authentication/basic.htm
 ```
 
 * This indicates that the unique `name` of this Authenticator instance is `basic`
@@ -56,7 +62,7 @@ authenticator.basic.config.loginPage=/module/mfa/basic.htm
 * One can specify 0-N configuration properties.  All are prefixed by `authenticator.<name>.config.<propertyName>`
 * The `BasicWebAuthenticator` in the above example supports a single parameter named `loginPage`
 
-#### mfa.authenticators.primary ####
+#### authentication.authenticators.primary ####
 
 **Default value**:  none
 
@@ -64,7 +70,7 @@ This is the `name` of the authenticator that should be used as the primary authe
 
 `authenticators.primary = basic`
 
-#### mfa.authenticators.secondary ####
+#### authentication.authenticators.secondary ####
 
 **Default value**:  none
 
@@ -73,35 +79,27 @@ This is a comma-separated list of authenticator `name` that should be made avail
 ### Sample configuration for filtering and redirecting to 1.x (legacyui) login page
 
 ```properties
-mfa.enabled=true
-mfa.unauthenticatedUrls=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png
+authentication.filter.enabled=true
+authentication.filter.skipPatterns=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png
 ```
 
 ### Sample configuration that can be used to demonstrate multi-factor authentication
 
 ```properties
-mfa.enabled=true
-mfa.unauthenticatedUrls=/**/mfa/basic.htm,/**/mfa/token.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
+authentication.filter.enabled=true
+authentication.filter.skipPatterns=/**/authentication/basic.htm,/**/authentication/token.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
 authenticators.primary=basic
 authenticators.secondary=dummy
 
-authenticator.basic.type=org.openmrs.module.mfa.web.BasicWebAuthenticator
-authenticator.basic.config.loginPage=/module/mfa/basic.htm
+authenticator.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticator
+authenticator.basic.config.loginPage=/module/authentication/basic.htm
 
-authenticator.dummy.type=org.openmrs.module.mfa.web.TokenWebAuthenticator
-authenticator.dummy.config.loginPage=/module/mfa/token.htm
+authenticator.dummy.type=org.openmrs.module.authentication.web.TokenWebAuthenticator
+authenticator.dummy.config.loginPage=/module/authentication/token.htm
 ```
 
 ## Background
-
-This module intends to fulfill the following goals:
-
-* Harvest best practice authentication support from existing application frameworks
-* Enable consistent backend authentication that is independent of UI or application (1.x, 2.x, 3.x etc)
-* Support additional authentication factors beyond basic (username/password) authentication
-* Support fully configurable and extensible authentication, at both the application and user level
-* Support authentication logging, to enable auditing and tracking of user access over time
 
 ### Core authentication
 

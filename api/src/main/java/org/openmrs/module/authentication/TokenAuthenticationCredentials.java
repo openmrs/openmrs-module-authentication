@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 /**
  * Credentials supporting token-based authentication.
@@ -16,12 +16,12 @@ package org.openmrs.module.mfa;
 public class TokenAuthenticationCredentials implements AuthenticatorCredentials {
 
     private String authenticatorName;
-    private MfaUser mfaUser;
+    private CandidateUser candidateUser;
     private String token;
 
-    public TokenAuthenticationCredentials(String authenticatorName, MfaUser mfaUser, String token) {
+    public TokenAuthenticationCredentials(String authenticatorName, CandidateUser candidateUser, String token) {
         this.authenticatorName = authenticatorName;
-        this.mfaUser = mfaUser;
+        this.candidateUser = candidateUser;
         this.token = token;
     }
 
@@ -37,11 +37,11 @@ public class TokenAuthenticationCredentials implements AuthenticatorCredentials 
 
     @Override
     public String getClientName() {
-        return mfaUser.getUser().getUsername();
+        return candidateUser.getUser().getUsername();
     }
 
-    public MfaUser getMfaUser() {
-        return mfaUser;
+    public CandidateUser getCandidateUser() {
+        return candidateUser;
     }
 
     public String getToken() {

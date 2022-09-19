@@ -7,10 +7,10 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
-import org.openmrs.module.mfa.Authenticator;
-import org.openmrs.module.mfa.AuthenticatorCredentials;
+import org.openmrs.module.authentication.Authenticator;
+import org.openmrs.module.authentication.AuthenticatorCredentials;
 
 /**
  * Represents a particular method of authentication.

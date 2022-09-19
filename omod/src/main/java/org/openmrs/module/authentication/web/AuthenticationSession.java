@@ -7,19 +7,19 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
-import org.openmrs.module.mfa.AuthenticationContext;
+import org.openmrs.module.authentication.AuthenticationContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 /**
- * Wrapper class for an HttpSession that provides access to the MfaCredentials
+ * Wrapper class for an HttpSession that provides access to the AuthenticationContext
  */
 public class AuthenticationSession {
 
-    public static final String CONTEXT_SESSION_KEY = "__mfa_authentication_context";
+    public static final String CONTEXT_SESSION_KEY = "__authentication_context";
 
     private HttpServletRequest request;
     private HttpServletResponse response;

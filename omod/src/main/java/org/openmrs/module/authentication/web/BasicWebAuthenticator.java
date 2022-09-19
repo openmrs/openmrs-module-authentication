@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -17,9 +17,9 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
-import org.openmrs.module.mfa.AuthenticatorCredentials;
-import org.openmrs.module.mfa.BasicAuthenticatorCredentials;
-import org.openmrs.module.mfa.MfaLogger;
+import org.openmrs.module.authentication.AuthenticatorCredentials;
+import org.openmrs.module.authentication.BasicAuthenticatorCredentials;
+import org.openmrs.module.authentication.AuthenticationLogger;
 
 import java.util.Properties;
 
@@ -44,7 +44,7 @@ public class BasicWebAuthenticator implements WebAuthenticator {
     @Override
     public void configure(String instanceName, Properties config) {
         this.instanceName = instanceName;
-        loginPage = config.getProperty(LOGIN_PAGE, "/module/mfa/basicLogin.htm");
+        loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/basicLogin.htm");
         usernameParam = config.getProperty(USERNAME_PARAM, "uname");
         passwordParam = config.getProperty(PASSWORD_PARAM, "pw");
     }
@@ -73,7 +73,7 @@ public class BasicWebAuthenticator implements WebAuthenticator {
                 BasicAuthenticatorCredentials bac = (BasicAuthenticatorCredentials) credentials;
                 UsernamePasswordCredentials c = new UsernamePasswordCredentials(bac.getUsername(), bac.getPassword());
                 try {
-                    MfaLogger.addToContext(MfaLogger.USERNAME, bac.getUsername());
+                    AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, bac.getUsername());
                     Authenticated authenticated = new UsernamePasswordAuthenticationScheme().authenticate(c);
                     user = authenticated.getUser();
                 }

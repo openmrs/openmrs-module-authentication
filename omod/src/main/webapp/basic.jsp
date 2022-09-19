@@ -3,7 +3,7 @@
 		<title>Login</title>
 	</head>
 	<body>
-		<form action="${pageContext.request.contextPath}/ms/mfa/mfaLoginServlet" method="post" style="padding:15px; width: 300px;" autocomplete="off">
+		<form action="${pageContext.request.contextPath}/ms/authentication/authenticationServlet" method="post" style="padding:15px; width: 300px;" autocomplete="off">
 			<table>
 				<tr>
 					<td>User:</td>

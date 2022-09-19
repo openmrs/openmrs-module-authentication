@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
@@ -23,9 +23,9 @@ import org.springframework.stereotype.Component;
  * An authentication scheme that supports multiple authentication factors
  */
 @Component
-public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
+public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme {
 
-	public MfaAuthenticationScheme() {
+	public MultiFactorAuthenticationScheme() {
 	}
 	
 	@Override
@@ -37,7 +37,7 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 			// Support situation where module has been installed, but either not configured, or explicitly disabled
 			// In this case, fall back to standard OpenMRS authentication
 			if (credentials instanceof UsernamePasswordCredentials) {
-				if (!MfaProperties.isMfaEnabled()) {
+				if (!AuthenticationConfig.isFilterEnabled()) {
 					authenticated = new UsernamePasswordAuthenticationScheme().authenticate(credentials);
 				}
 				else {
@@ -45,15 +45,15 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 				}
 			}
 			else {
-				if (!(credentials instanceof MfaAuthenticationCredentials)) {
+				if (!(credentials instanceof AuthenticationCredentials)) {
 					throw new ContextAuthenticationException("The credentials provided are invalid.");
 				}
 
-				MfaAuthenticationCredentials mfaCredentials = (MfaAuthenticationCredentials) credentials;
+				AuthenticationCredentials authCredentials = (AuthenticationCredentials) credentials;
 
 				// Authenticate with primary authenticator
-				Authenticator primaryAuthenticator = mfaCredentials.getPrimaryAuthenticator();
-				AuthenticatorCredentials primaryCredentials = mfaCredentials.getPrimaryCredentials();
+				Authenticator primaryAuthenticator = authCredentials.getPrimaryAuthenticator();
+				AuthenticatorCredentials primaryCredentials = authCredentials.getPrimaryCredentials();
 				if (primaryAuthenticator == null || primaryCredentials == null) {
 					throw new ContextAuthenticationException("Primary authentication has not been completed");
 				}
@@ -62,12 +62,12 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 					throw new ContextAuthenticationException("Primary authentication failed");
 				}
 				else {
-					MfaLogger.addUserToContext(primaryUser);
+					AuthenticationLogger.addUserToContext(primaryUser);
 				}
 
 				// Authenticate with secondary authenticator
-				Authenticator secondaryAuthenticator = mfaCredentials.getSecondaryAuthenticator();
-				AuthenticatorCredentials secondaryCredentials = mfaCredentials.getSecondaryCredentials();
+				Authenticator secondaryAuthenticator = authCredentials.getSecondaryAuthenticator();
+				AuthenticatorCredentials secondaryCredentials = authCredentials.getSecondaryCredentials();
 				if (secondaryAuthenticator != null) {
 					if (secondaryCredentials == null) {
 						throw new ContextAuthenticationException("Secondary authentication has not been completed");
@@ -80,10 +80,10 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 						if (!primaryUser.equals(secondaryUser)) {
 							throw new ContextAuthenticationException("Primary and secondary authentication do not match");
 						}
-						MfaLogger.addUserToContext(secondaryUser);
-						MfaLogger.logAuthEvent(MfaLogger.Event.MFA_SECONDARY_AUTH_SUCCEEDED, secondaryCredentials);
+						AuthenticationLogger.addUserToContext(secondaryUser);
+						AuthenticationLogger.logAuthEvent(AuthenticationLogger.Event.AUTHENTICATION_SECONDARY_AUTH_SUCCEEDED, secondaryCredentials);
 					} catch (ContextAuthenticationException e) {
-						MfaLogger.logAuthEvent(MfaLogger.Event.MFA_SECONDARY_AUTH_FAILED, secondaryCredentials);
+						AuthenticationLogger.logAuthEvent(AuthenticationLogger.Event.AUTHENTICATION_SECONDARY_AUTH_FAILED, secondaryCredentials);
 						throw e;
 					}
 				} else {
@@ -94,7 +94,7 @@ public class MfaAuthenticationScheme extends DaoAuthenticationScheme {
 
 				// If the user's match, return a successful Authenticated user
 				authenticated = new BasicAuthenticated(primaryUser, credentials.getAuthenticationScheme());
-				MfaLogger.addUserToContext(authenticated.getUser());
+				AuthenticationLogger.addUserToContext(authenticated.getUser());
 			}
 		}
 		catch (ContextAuthenticationException e) {

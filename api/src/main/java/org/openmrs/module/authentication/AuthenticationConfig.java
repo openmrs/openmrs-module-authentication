@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.context.Context;
@@ -15,20 +15,24 @@ import org.openmrs.util.OpenmrsUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
 /**
- * Loads all configuration settings for the module from mfa.properties
+ * Loads all configuration settings for the module from runtime properties
  */
-public class MfaProperties implements Serializable {
+public class AuthenticationConfig implements Serializable {
 
-    // Available configuration parameters in mfa.properties
-    public static final String PREFIX = "mfa.";
-    public static final String MFA_ENABLED = PREFIX + "enabled";
-    public static final String MFA_DISABLE_CONFIGURATION_CACHE = PREFIX + "disableConfigurationCache";
-    public static final String MFA_UNAUTHENTICATED_URLS = PREFIX + "unauthenticatedUrls";
+    // Available configuration parameters in runtime properties
+    public static final String PREFIX = "authentication.";
+    public static final String SETTINGS_PREFIX = PREFIX + "settings.";
+    public static final String SETTINGS_CACHED = SETTINGS_PREFIX + "cached";
+    public static final String FILTER_PREFIX = PREFIX + "filter.";
+    public static final String FILTER_ENABLED = FILTER_PREFIX + "enabled";
+    public static final String FILTER_SKIP_PATTERNS = FILTER_PREFIX + "skipPatterns";
+
     public static final String AUTHENTICATORS_PRIMARY = PREFIX + "authenticators.primary";
     public static final String AUTHENTICATORS_SECONDARY= PREFIX + "authenticators.secondary";
     public static final String AUTH_NAME_VARIABLE = "{authName}";
@@ -45,7 +49,7 @@ public class MfaProperties implements Serializable {
     }
 
     public static void setConfig(Properties config) {
-        MfaProperties.config = config;
+        AuthenticationConfig.config = config;
     }
 
     public static String getProperty(String key) {
@@ -76,9 +80,7 @@ public class MfaProperties implements Serializable {
         List<String> ret = new ArrayList<>();
         String val = getProperty(key);
         if (StringUtils.isNotBlank(val)) {
-            for (String s : val.split(",")) {
-                ret.add(s);
-            }
+            ret.addAll(Arrays.asList(val.split(",")));
         }
         return ret;
     }
@@ -117,16 +119,16 @@ public class MfaProperties implements Serializable {
 
     // Configuration
 
-    public static boolean isMfaEnabled() {
-        return getBoolean(MFA_ENABLED, false);
+    public static boolean isFilterEnabled() {
+        return getBoolean(FILTER_ENABLED, false);
     }
 
-    public static boolean isConfigurationCacheDisabled() {
-        return getBoolean(MFA_DISABLE_CONFIGURATION_CACHE, false);
+    public static boolean isConfigurationCached() {
+        return getBoolean(SETTINGS_CACHED, true);
     }
 
-    public static List<String> getUnauthenticatedUrlPatterns() {
-        return getStringList(MFA_UNAUTHENTICATED_URLS);
+    public static List<String> getFilterSkipPatterns() {
+        return getStringList(FILTER_SKIP_PATTERNS);
     }
 
     public static List<String> getPrimaryAuthenticatorOptions() {

@@ -7,10 +7,10 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
 import org.openmrs.api.context.Context;
-import org.openmrs.module.mfa.MfaLogger;
+import org.openmrs.module.authentication.AuthenticationLogger;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpSession;
@@ -21,27 +21,27 @@ import javax.servlet.http.HttpSessionListener;
  * Called each time a http session is created or destroyed
  */
 @Component
-public class MfaHttpSessionListener implements HttpSessionListener {
+public class AuthenticationHttpSessionListener implements HttpSessionListener {
 
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
 		addUserToLoggerContext();
-		MfaLogger.addToContext(MfaLogger.SESSION_ID, session.getId());
-		MfaLogger.logEvent(MfaLogger.Event.MFA_SESSION_CREATED, session.getId());
+		AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, session.getId());
+		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_CREATED, session.getId());
 	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
 		addUserToLoggerContext();
-		MfaLogger.logEvent(MfaLogger.Event.MFA_SESSION_DESTROYED, session.getId());
-		MfaLogger.clearContext();
+		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_DESTROYED, session.getId());
+		AuthenticationLogger.clearContext();
 	}
 
 	private void addUserToLoggerContext() {
 		if (Context.isSessionOpen()) {
-			MfaLogger.addUserToContext(Context.getAuthenticatedUser());
+			AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
 		}
 	}
 }

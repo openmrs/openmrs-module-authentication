@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -18,13 +18,13 @@ import org.apache.logging.log4j.ThreadContext;
 import org.openmrs.User;
 
 /**
- * This class is responsible for logging Mfa events
+ * This class is responsible for logging authentication events
  */
-public class MfaLogger {
+public class AuthenticationLogger {
 
-    private static final Logger logger = LogManager.getLogger(MfaLogger.class);
+    private static final Logger logger = LogManager.getLogger(AuthenticationLogger.class);
 
-    private static final Marker MFA_EVENT_MARKER = MarkerManager.getMarker("MFA_EVENT");
+    private static final Marker AUTHENTICATION_EVENT_MARKER = MarkerManager.getMarker("AUTHENTICATION_EVENT");
 
     public static final String SESSION_ID = "sessionId";
     public static final String IP_ADDRESS = "ipAddress";
@@ -32,18 +32,18 @@ public class MfaLogger {
     public static final String USER_ID = "userId";
 
     public enum Event {
-        MFA_MODULE_STARTED,
-        MFA_SESSION_CREATED,
-        MFA_PRIMARY_AUTH_SUCCEEDED,
-        MFA_PRIMARY_AUTH_FAILED,
-        MFA_SECONDARY_AUTH_SUCCEEDED,
-        MFA_SECONDARY_AUTH_FAILED,
-        MFA_LOGIN_SUCCEEDED,
-        MFA_LOGIN_FAILED,
-        MFA_LOGOUT_SUCCEEDED,
-        MFA_LOGOUT_FAILED,
-        MFA_SESSION_DESTROYED,
-        MFA_MODULE_STOPPED
+        AUTHENTICATION_MODULE_STARTED,
+        AUTHENTICATION_SESSION_CREATED,    
+        AUTHENTICATION_PRIMARY_AUTH_SUCCEEDED,
+        AUTHENTICATION_PRIMARY_AUTH_FAILED,
+        AUTHENTICATION_SECONDARY_AUTH_SUCCEEDED,
+        AUTHENTICATION_SECONDARY_AUTH_FAILED,
+        AUTHENTICATION_LOGIN_SUCCEEDED,
+        AUTHENTICATION_LOGIN_FAILED,
+        AUTHENTICATION_LOGOUT_SUCCEEDED,
+        AUTHENTICATION_LOGOUT_FAILED,
+        AUTHENTICATION_SESSION_DESTROYED,
+        AUTHENTICATION_MODULE_STOPPED
     }
 
     public static void addUserToContext(User user) {
@@ -76,7 +76,7 @@ public class MfaLogger {
     }
 
     public static void logEvent(Event event, String message) {
-        Marker marker = MarkerManager.getMarker(event.name()).setParents(MFA_EVENT_MARKER);
+        Marker marker = MarkerManager.getMarker(event.name()).setParents(AUTHENTICATION_EVENT_MARKER);
         logger.info(marker, message);
     }
 

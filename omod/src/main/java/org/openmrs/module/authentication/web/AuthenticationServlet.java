@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -20,13 +20,13 @@ import java.io.IOException;
 /**
  * LoginServlet
  */
-public class MfaLoginServlet extends HttpServlet {
+public class AuthenticationServlet extends HttpServlet {
 
 	protected final Log log = LogFactory.getLog(getClass());
 
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws IOException {
-		log.debug("loginServlet");
+		log.debug("authenticationServlet");
 		res.sendRedirect(req.getContextPath() + "/");
 	}
 }

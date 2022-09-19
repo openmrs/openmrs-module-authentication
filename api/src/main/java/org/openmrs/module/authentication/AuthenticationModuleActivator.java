@@ -7,26 +7,22 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.BaseModuleActivator;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
  */
-public class MfaModuleActivator extends BaseModuleActivator {
-	
-	private final Log log = LogFactory.getLog(getClass());
+public class AuthenticationModuleActivator extends BaseModuleActivator {
 	
 	@Override
 	public void started() {
-		MfaLogger.logEvent(MfaLogger.Event.MFA_MODULE_STARTED);
+		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_MODULE_STARTED);
 	}
 	
 	@Override
 	public void stopped() {
-		MfaLogger.logEvent(MfaLogger.Event.MFA_MODULE_STOPPED);
+		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_MODULE_STOPPED);
 	}
 }

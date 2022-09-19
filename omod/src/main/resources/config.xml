@@ -8,18 +8,18 @@
 	<author>${project.parent.organization.name}</author>
 	<description>${project.parent.description}</description>
 
-	<activator>org.openmrs.module.mfa.MfaModuleActivator</activator>
+	<activator>org.openmrs.module.authentication.AuthenticationModuleActivator</activator>
 
 	<require_version>${openmrsVersion}</require_version>
 
 	<servlet>
-		<servlet-name>mfaLoginServlet</servlet-name>
-		<servlet-class>org.openmrs.module.mfa.web.MfaLoginServlet</servlet-class>
+		<servlet-name>authenticationServlet</servlet-name>
+		<servlet-class>org.openmrs.module.authentication.web.AuthenticationServlet</servlet-class>
 	</servlet>
 
 	<filter>
 		<filter-name>authenticationFilter</filter-name>
-		<filter-class>org.openmrs.module.mfa.web.AuthenticationFilter</filter-class>
+		<filter-class>org.openmrs.module.authentication.web.AuthenticationFilter</filter-class>
 	</filter>
 
 	<filter-mapping>

@@ -7,15 +7,15 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
-import org.openmrs.module.mfa.AuthenticatorCredentials;
-import org.openmrs.module.mfa.MfaUser;
-import org.openmrs.module.mfa.TokenAuthenticationCredentials;
+import org.openmrs.module.authentication.AuthenticatorCredentials;
+import org.openmrs.module.authentication.CandidateUser;
+import org.openmrs.module.authentication.TokenAuthenticationCredentials;
 
 import java.util.Properties;
 
@@ -38,7 +38,7 @@ public class TokenWebAuthenticator implements WebAuthenticator {
     @Override
     public void configure(String instanceName, Properties config) {
         this.instanceName = instanceName;
-        loginPage = config.getProperty(LOGIN_PAGE, "/module/mfa/token.htm");
+        loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/token.htm");
         tokenParam = config.getProperty(TOKEN_PARAM, "token");
     }
 
@@ -52,7 +52,7 @@ public class TokenWebAuthenticator implements WebAuthenticator {
         TokenAuthenticationCredentials credentials = null;
         String token = session.getRequestParam(tokenParam);
         if (StringUtils.isNotBlank(token)) {
-            MfaUser candidateUser = session.getAuthenticationContext().getCandidateUser();
+            CandidateUser candidateUser = session.getAuthenticationContext().getCandidateUser();
             credentials = new TokenAuthenticationCredentials(instanceName, candidateUser, token);
         }
         return credentials;
@@ -66,7 +66,7 @@ public class TokenWebAuthenticator implements WebAuthenticator {
                 TokenAuthenticationCredentials tac = (TokenAuthenticationCredentials) credentials;
                 // TODO: Temporary to demonstrate.  Replace with proper configuration and algorithm
                 if (tac.getToken().equalsIgnoreCase("open sesame")) {
-                    user = tac.getMfaUser().getUser();
+                    user = tac.getCandidateUser().getUser();
                 }
             }
             else {

@@ -11,7 +11,7 @@
         </layout>
     </appender>
 
-    <logger name="org.openmrs.module.mfa">
+    <logger name="org.openmrs.module.authentication">
         <level value="DEBUG" />
     </logger>
 

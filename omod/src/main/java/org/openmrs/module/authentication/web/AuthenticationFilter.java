@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa.web;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -15,12 +15,12 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.module.mfa.AuthenticationContext;
-import org.openmrs.module.mfa.Authenticator;
-import org.openmrs.module.mfa.AuthenticatorCredentials;
-import org.openmrs.module.mfa.MfaLogger;
-import org.openmrs.module.mfa.MfaProperties;
-import org.openmrs.module.mfa.MfaUser;
+import org.openmrs.module.authentication.AuthenticationConfig;
+import org.openmrs.module.authentication.AuthenticationContext;
+import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.Authenticator;
+import org.openmrs.module.authentication.AuthenticatorCredentials;
+import org.openmrs.module.authentication.CandidateUser;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -39,12 +39,11 @@ import java.util.Properties;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the
- * configured login page controller. This filter is configurable via "mfa.properties" in the
- * application data directory, which include whether the filter is enabled or disabled, and what url patterns
- * do not require authentication:
+ * configured login page controller. This filter is configurable via runtime properties,
+ * which include whether the filter is enabled or disabled, and what url patterns do not require authentication:
  *
- * mfa.enabled = true/false
- * mfa.unauthenticatedUrls = comma-delimited list of url patterns that should not require authentication
+ * authentication.filter.enabled = true/false
+ * authentication.filter.skipPatterns = comma-delimited list of url patterns that should not require authentication
  *
  * NOTE: If a pattern in unprotected urls starts with a "*", then
  * it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
@@ -63,7 +62,7 @@ public class AuthenticationFilter implements Filter {
 	
 	@Override
 	public void init(FilterConfig filterConfig) {
-		log.info("MFA Authentication Filter initializing");
+		log.info("Authentication Filter initializing");
 		// Setup path matcher
 		matcher = new AntPathMatcher();
 		// matcher.setCaseSensitive(false); This is only available in Spring versions included in 2.5.x+
@@ -86,19 +85,19 @@ public class AuthenticationFilter implements Filter {
 		AuthenticationContext context = session.getAuthenticationContext();
 
 		try {
-			MfaLogger.addToContext(MfaLogger.SESSION_ID, request.getSession().getId());
-			MfaLogger.addToContext(MfaLogger.IP_ADDRESS, request.getRemoteAddr());
-			MfaLogger.addUserToContext(Context.getAuthenticatedUser());
+			AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, request.getSession().getId());
+			AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, request.getRemoteAddr());
+			AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
 
 			if (!Context.isAuthenticated()) {
 
-				if (MfaProperties.isConfigurationCacheDisabled()) {
-					MfaProperties.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
+				if (!AuthenticationConfig.isConfigurationCached()) {
+					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
 
-				if (MfaProperties.isMfaEnabled()) {
+				if (AuthenticationConfig.isFilterEnabled()) {
 
-					boolean requiresAuth = !isUnauthenticatedUrlPattern(request);
+					boolean requiresAuth = !isSkipPattern(request);
 					if (requiresAuth) {
 						if (log.isDebugEnabled()) {
 							log.debug("Requested Servlet path: " + request.getServletPath());
@@ -116,16 +115,16 @@ public class AuthenticationFilter implements Filter {
 							if (credentials != null) {
 								candidateUser = primaryAuthenticator.authenticate(credentials);
 								if (candidateUser != null) {
-									MfaLogger.addUserToContext(candidateUser);
-									MfaLogger.logAuthEvent(MfaLogger.Event.MFA_PRIMARY_AUTH_SUCCEEDED, credentials);
+									AuthenticationLogger.addUserToContext(candidateUser);
+									AuthenticationLogger.logAuthEvent(AuthenticationLogger.Event.AUTHENTICATION_PRIMARY_AUTH_SUCCEEDED, credentials);
 								} else {
-									MfaLogger.logAuthEvent(MfaLogger.Event.MFA_PRIMARY_AUTH_FAILED, credentials);
+									AuthenticationLogger.logAuthEvent(AuthenticationLogger.Event.AUTHENTICATION_PRIMARY_AUTH_FAILED, credentials);
 								}
 							}
 							if (candidateUser == null) {
 								response.sendRedirect(primaryAuthenticator.getChallengeUrl(session));
 							} else {
-								context.setPrimaryAuthenticationComplete(new MfaUser(candidateUser), credentials);
+								context.setPrimaryAuthenticationComplete(new CandidateUser(candidateUser), credentials);
 							}
 						}
 
@@ -178,12 +177,12 @@ public class AuthenticationFilter implements Filter {
 			}
 		}
 		finally {
-			MfaLogger.clearContext();
+			AuthenticationLogger.clearContext();
 		}
 	}
 
-	protected boolean isUnauthenticatedUrlPattern(HttpServletRequest request) {
-		for (String pattern : MfaProperties.getUnauthenticatedUrlPatterns()) {
+	protected boolean isSkipPattern(HttpServletRequest request) {
+		for (String pattern : AuthenticationConfig.getFilterSkipPatterns()) {
 			if (matchesPath(request, pattern)) {
 				return true;
 			}

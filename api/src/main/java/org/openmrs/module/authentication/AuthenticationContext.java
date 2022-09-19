@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.context.Context;
@@ -19,42 +19,42 @@ import java.io.Serializable;
  */
 public class AuthenticationContext implements Serializable {
 
-    private MfaUser candidateUser;
-    private MfaAuthenticationCredentials credentials;
+    private CandidateUser candidateUser;
+    private AuthenticationCredentials credentials;
 
     public AuthenticationContext() {
-        this.credentials = new MfaAuthenticationCredentials();
+        this.credentials = new AuthenticationCredentials();
     }
 
     // Accessors
 
-    public MfaUser getCandidateUser() {
+    public CandidateUser getCandidateUser() {
         return candidateUser;
     }
 
-    public void setCandidateUser(MfaUser candidateUser) {
+    public void setCandidateUser(CandidateUser candidateUser) {
         this.candidateUser = candidateUser;
     }
 
-    public MfaAuthenticationCredentials getCredentials() {
+    public AuthenticationCredentials getCredentials() {
         return credentials;
     }
 
-    public void setCredentials(MfaAuthenticationCredentials credentials) {
+    public void setCredentials(AuthenticationCredentials credentials) {
         this.credentials = credentials;
     }
 
     // Authentication
 
     public Authenticator getDefaultPrimaryAuthenticator() {
-        return MfaProperties.getDefaultPrimaryAuthenticator();
+        return AuthenticationConfig.getDefaultPrimaryAuthenticator();
     }
 
     public boolean isPrimaryAuthenticationComplete() {
         return candidateUser != null && getCredentials().getPrimaryCredentials() != null;
     }
 
-    public void setPrimaryAuthenticationComplete(MfaUser candidateUser, AuthenticatorCredentials primaryCredentials) {
+    public void setPrimaryAuthenticationComplete(CandidateUser candidateUser, AuthenticatorCredentials primaryCredentials) {
         setCandidateUser(candidateUser);
         getCredentials().setPrimaryCredentials(primaryCredentials);
     }
@@ -62,9 +62,9 @@ public class AuthenticationContext implements Serializable {
     public Authenticator getSecondaryAuthenticator() {
         Authenticator authenticator = null;
         if (candidateUser != null) {
-            String secondaryName = candidateUser.getMfaSecondaryType();
+            String secondaryName = candidateUser.getSecondaryAuthenticationType();
             if (StringUtils.isNotBlank(secondaryName)) {
-                authenticator = MfaProperties.getAuthenticator(secondaryName);
+                authenticator = AuthenticationConfig.getAuthenticator(secondaryName);
             }
         }
         return authenticator;

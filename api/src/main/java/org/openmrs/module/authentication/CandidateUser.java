@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
@@ -15,40 +15,40 @@ import org.openmrs.User;
 import java.io.Serializable;
 
 /**
- * Facade over an OpenMRS user to provide enable access to MFA-related user attributes
+ * Facade over an OpenMRS user to provide enable access to authentication-related user attributes
  */
-public class MfaUser implements Serializable {
+public class CandidateUser implements Serializable {
 
-    public static final String MFA = "mfa";
+    public static final String AUTHENTICATION = "authentication";
     public static final String SECONDARY_TYPE = "secondaryType";
     public static final String CONFIG = "config";
     private static final String DOT = ".";
 
     private final User user;
 
-    public MfaUser(User user) {
+    public CandidateUser(User user) {
         this.user = user;
     }
 
-    public String getMfaSecondaryType() {
-        return user.getUserProperty(MFA + DOT + SECONDARY_TYPE);
+    public String getSecondaryAuthenticationType() {
+        return user.getUserProperty(AUTHENTICATION + DOT + SECONDARY_TYPE);
     }
 
-    public String getMfaConfigProperty(String type, String key) {
-        String userProperty = MFA + DOT + CONFIG + DOT + type + DOT + key;
+    public String getAuthenticationConfigProperty(String type, String key) {
+        String userProperty = AUTHENTICATION + DOT + CONFIG + DOT + type + DOT + key;
         return user.getUserProperty(userProperty);
     }
 
-    public boolean getMfaConfigPropertyAsBoolean(String type, String key, boolean defaultValue) {
-        String val = getMfaConfigProperty(type, key);
+    public boolean getAuthenticationConfigPropertyAsBoolean(String type, String key, boolean defaultValue) {
+        String val = getAuthenticationConfigProperty(type, key);
         if (StringUtils.isBlank(val)) {
             return defaultValue;
         }
         return Boolean.parseBoolean(val);
     }
 
-    public void setMfaPropertyValue(String type, String key, String value) {
-        user.setUserProperty(MFA + DOT + CONFIG + DOT + type + DOT + key, value);
+    public void setUserPropertyValue(String type, String key, String value) {
+        user.setUserProperty(AUTHENTICATION + DOT + CONFIG + DOT + type + DOT + key, value);
     }
 
     public User getUser() {

@@ -3,11 +3,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.openmrs.module</groupId>
-	<artifactId>mfa</artifactId>
+	<artifactId>authentication</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
-	<name>Multi-Factor Authentication</name>
-	<description>Multi-factor authentication support for OpenMRS</description>
+	<name>Authentication</name>
+	<description>Authentication support for OpenMRS</description>
 
 	<organization>
 		<name>OpenMRS</name>
@@ -15,9 +15,9 @@
 	</organization>
 
 	<scm>
-		<connection>scm:git:git@github.com:PIH/openmrs-module-mfa.git</connection>
-		<developerConnection>scm:git:git@github.com:PIH/openmrs-module-mfa.git</developerConnection>
-		<url>https://github.com/PIH/openmrs-module-mfa/</url>
+		<connection>scm:git:git@github.com:PIH/openmrs-module-authentication.git</connection>
+		<developerConnection>scm:git:git@github.com:PIH/openmrs-module-authentication.git</developerConnection>
+		<url>https://github.com/PIH/openmrs-module-authentication/</url>
 		<tag>HEAD</tag>
 	</scm>
 

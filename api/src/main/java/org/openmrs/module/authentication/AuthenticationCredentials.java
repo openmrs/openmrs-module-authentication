@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.mfa;
+package org.openmrs.module.authentication;
 
 import org.openmrs.api.context.Credentials;
 
@@ -16,17 +16,17 @@ import java.io.Serializable;
 /**
  * Represents the credentials collected during the authentication session
  */
-public class MfaAuthenticationCredentials implements Credentials, Serializable {
+public class AuthenticationCredentials implements Credentials, Serializable {
 
     private AuthenticatorCredentials primaryCredentials;
     private AuthenticatorCredentials secondaryCredentials;
 
-    public MfaAuthenticationCredentials() {
+    public AuthenticationCredentials() {
     }
 
     @Override
     public String getAuthenticationScheme() {
-        return MfaAuthenticationScheme.class.getName();
+        return MultiFactorAuthenticationScheme.class.getName();
     }
 
     @Override
@@ -36,7 +36,7 @@ public class MfaAuthenticationCredentials implements Credentials, Serializable {
 
     public Authenticator getPrimaryAuthenticator() {
         if (primaryCredentials != null && primaryCredentials.getAuthenticatorName() != null) {
-            return MfaProperties.getAuthenticator(primaryCredentials.getAuthenticatorName());
+            return AuthenticationConfig.getAuthenticator(primaryCredentials.getAuthenticatorName());
         }
         return null;
     }
@@ -51,7 +51,7 @@ public class MfaAuthenticationCredentials implements Credentials, Serializable {
 
     public Authenticator getSecondaryAuthenticator() {
         if (secondaryCredentials != null && secondaryCredentials.getAuthenticatorName() != null) {
-            return MfaProperties.getAuthenticator(secondaryCredentials.getAuthenticatorName());
+            return AuthenticationConfig.getAuthenticator(secondaryCredentials.getAuthenticatorName());
         }
         return null;
     }
