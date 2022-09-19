@@ -3,6 +3,7 @@ package org.openmrs.module.mfa;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.User;
+import org.openmrs.test.jupiter.BaseModuleContextSensitiveTest;
 
 import java.util.List;
 import java.util.Properties;
@@ -17,7 +18,7 @@ import static org.openmrs.module.mfa.MfaProperties.MFA_DISABLE_CONFIGURATION_CAC
 import static org.openmrs.module.mfa.MfaProperties.MFA_ENABLED;
 import static org.openmrs.module.mfa.MfaProperties.MFA_UNAUTHENTICATED_URLS;
 
-public class MfaPropertiesTest {
+public class MfaPropertiesTest extends BaseModuleContextSensitiveTest {
 
 	@Before
 	public void setup() {

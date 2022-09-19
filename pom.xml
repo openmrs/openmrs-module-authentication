@@ -22,8 +22,8 @@
 	</scm>
 
 	<properties>
-		<!-- 2.5.0 is set due to log4j2 dependency, if need earlier version, would need to support log4j 1 as well -->
-		<openmrsVersion>2.5.0</openmrsVersion>
+		<!-- 2.5.4 is set due to log4j2 dependency and changes to core logging classes -->
+		<openmrsVersion>2.5.4</openmrsVersion>
 		<!-- Other configuration -->
 		<MODULE_ID>${project.artifactId}</MODULE_ID>
 		<MODULE_NAME>${project.name}</MODULE_NAME>
