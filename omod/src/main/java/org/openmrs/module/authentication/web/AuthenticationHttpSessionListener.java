@@ -25,23 +25,20 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
-		HttpSession session = httpSessionEvent.getSession();
-		addUserToLoggerContext();
-		AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, session.getId());
-		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_CREATED, "session=" + session.getId());
+		logEvent(httpSessionEvent, AuthenticationLogger.Event.AUTHENTICATION_SESSION_CREATED);
 	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
-		HttpSession session = httpSessionEvent.getSession();
-		addUserToLoggerContext();
-		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_DESTROYED, "session=" + session.getId());
-		AuthenticationLogger.clearContext();
+		logEvent(httpSessionEvent, AuthenticationLogger.Event.AUTHENTICATION_SESSION_DESTROYED);
 	}
 
-	private void addUserToLoggerContext() {
-		if (Context.isSessionOpen()) {
+	private void logEvent(HttpSessionEvent httpSessionEvent, AuthenticationLogger.Event event) {
+		HttpSession session = httpSessionEvent.getSession();
+		if (Context.isSessionOpen() && Context.getAuthenticatedUser() != null) {
 			AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
 		}
+		AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, session.getId());
+		AuthenticationLogger.logEvent(event, "session=" + session.getId());
 	}
 }
