@@ -38,7 +38,7 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		if (Context.isSessionOpen() && Context.getAuthenticatedUser() != null) {
 			AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
 		}
-		AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, session.getId());
-		AuthenticationLogger.logEvent(event, "session=" + session.getId());
+		AuthenticationLogger.addToContext(AuthenticationLogger.HTTP_SESSION_ID, session.getId());
+		AuthenticationLogger.logEvent(event, "httpSessionId=" + session.getId());
 	}
 }

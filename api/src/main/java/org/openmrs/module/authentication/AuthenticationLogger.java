@@ -26,7 +26,8 @@ public class AuthenticationLogger {
 
     private static final Marker AUTHENTICATION_EVENT_MARKER = MarkerManager.getMarker("AUTHENTICATION_EVENT");
 
-    public static final String SESSION_ID = "sessionId";
+    public static final String AUTHENTICATION_SESSION_ID = "authenticationSessionId";
+    public static final String HTTP_SESSION_ID = "httpSessionId";
     public static final String IP_ADDRESS = "ipAddress";
     public static final String USERNAME = "username";
     public static final String USER_ID = "userId";

@@ -85,10 +85,6 @@ public class AuthenticationFilter implements Filter {
 		AuthenticationContext context = session.getAuthenticationContext();
 
 		try {
-			AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, request.getSession().getId());
-			AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, request.getRemoteAddr());
-			AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
-
 			if (!Context.isAuthenticated()) {
 
 				if (!AuthenticationConfig.isConfigurationCached()) {

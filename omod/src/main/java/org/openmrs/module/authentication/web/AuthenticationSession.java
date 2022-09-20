@@ -9,49 +9,65 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationContext;
+import org.openmrs.module.authentication.AuthenticationLogger;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.util.UUID;
 
 /**
  * Wrapper class for an HttpSession that provides access to the AuthenticationContext
  */
 public class AuthenticationSession {
 
-    public static final String CONTEXT_SESSION_KEY = "__authentication_context";
+    public static final String AUTHENTICATION_SESSION_ID_KEY = "__authentication_session_id";
+    public static final String AUTHENTICATION_CONTEXT_KEY = "__authentication_context";
 
-    private HttpServletRequest request;
-    private HttpServletResponse response;
+    private String authenticationSessionId;
+    private final HttpServletRequest request;
+    private final HttpServletResponse response;
+    private AuthenticationContext authenticationContext;
 
     public AuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
+
         this.request = request;
         this.response = response;
+
+        authenticationContext = (AuthenticationContext) request.getSession().getAttribute(AUTHENTICATION_CONTEXT_KEY);
+        if (authenticationContext == null) {
+            authenticationContext = new AuthenticationContext();
+            request.getSession().setAttribute(AUTHENTICATION_CONTEXT_KEY, authenticationContext);
+        }
+
+        authenticationSessionId = (String) request.getSession().getAttribute(AUTHENTICATION_SESSION_ID_KEY);
+        if (authenticationSessionId == null) {
+            authenticationSessionId = UUID.randomUUID().toString();
+            request.getSession().setAttribute(AUTHENTICATION_SESSION_ID_KEY, authenticationSessionId);
+        }
+
+        AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, authenticationSessionId);
+        AuthenticationLogger.addToContext(AuthenticationLogger.HTTP_SESSION_ID, request.getSession().getId());
+        AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, request.getRemoteAddr());
+        if (Context.isSessionOpen()) {
+            AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
+        }
     }
 
     public AuthenticationContext getAuthenticationContext() {
-        AuthenticationContext context = (AuthenticationContext) request.getSession().getAttribute(CONTEXT_SESSION_KEY);
-        if (context == null) {
-            context = new AuthenticationContext();
-            setAuthenticationContext(context);
-        }
-        return context;
+        return authenticationContext;
     }
 
     public String getRequestParam(String name) {
         return request.getParameter(name);
     }
 
-    public void setAuthenticationContext(AuthenticationContext authenticationContext) {
-        request.getSession().setAttribute(CONTEXT_SESSION_KEY, authenticationContext);
-    }
-
-
     public void removeAuthenticationContext() {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            session.removeAttribute(CONTEXT_SESSION_KEY);
+            session.removeAttribute(AUTHENTICATION_CONTEXT_KEY);
         }
     }
 }
