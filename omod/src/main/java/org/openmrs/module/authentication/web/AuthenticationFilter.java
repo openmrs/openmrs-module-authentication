@@ -169,7 +169,7 @@ public class AuthenticationFilter implements Filter {
 				}
 			} else {
 			// If authenticated, reset the authentication session
-				session.reset();
+				session.removeAuthenticationContext();
 			}
 
 			if (!response.isCommitted()) {

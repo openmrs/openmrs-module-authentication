@@ -85,6 +85,6 @@ public class AuthenticationLogger {
     }
 
     public static void logAuthEvent(Event event, AuthenticatorCredentials credentials) {
-        logEvent(event, event.name() + ":" + credentials.getAuthenticatorName());
+        logEvent(event, "authenticator=" + credentials.getAuthenticatorName());
     }
 }

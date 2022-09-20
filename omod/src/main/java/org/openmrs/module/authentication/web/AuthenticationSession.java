@@ -13,6 +13,7 @@ import org.openmrs.module.authentication.AuthenticationContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 /**
  * Wrapper class for an HttpSession that provides access to the AuthenticationContext
@@ -46,8 +47,11 @@ public class AuthenticationSession {
         request.getSession().setAttribute(CONTEXT_SESSION_KEY, authenticationContext);
     }
 
-    public void reset() {
-        request.getSession().removeAttribute(CONTEXT_SESSION_KEY);
-    }
 
+    public void removeAuthenticationContext() {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.removeAttribute(CONTEXT_SESSION_KEY);
+        }
+    }
 }

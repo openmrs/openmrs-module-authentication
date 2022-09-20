@@ -28,14 +28,14 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		HttpSession session = httpSessionEvent.getSession();
 		addUserToLoggerContext();
 		AuthenticationLogger.addToContext(AuthenticationLogger.SESSION_ID, session.getId());
-		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_CREATED, session.getId());
+		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_CREATED, "session=" + session.getId());
 	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		HttpSession session = httpSessionEvent.getSession();
 		addUserToLoggerContext();
-		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_DESTROYED, session.getId());
+		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_SESSION_DESTROYED, "session=" + session.getId());
 		AuthenticationLogger.clearContext();
 	}
 

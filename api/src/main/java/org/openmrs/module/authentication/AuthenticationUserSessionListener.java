@@ -39,6 +39,6 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 				e = AuthenticationLogger.Event.AUTHENTICATION_LOGOUT_FAILED;
 			}
 		}
-		AuthenticationLogger.logEvent(e);
+		AuthenticationLogger.logEvent(e, "user=" + user.getUsername());
 	}
 }
