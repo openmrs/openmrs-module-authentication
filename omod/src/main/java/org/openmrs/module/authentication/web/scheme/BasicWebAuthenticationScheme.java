@@ -50,8 +50,8 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
     public void configure(String instanceName, Properties config) {
         this.instanceName = instanceName;
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/basicLogin.htm");
-        usernameParam = config.getProperty(USERNAME_PARAM, "uname");
-        passwordParam = config.getProperty(PASSWORD_PARAM, "pw");
+        usernameParam = config.getProperty(USERNAME_PARAM, "username");
+        passwordParam = config.getProperty(PASSWORD_PARAM, "password");
     }
 
     @Override

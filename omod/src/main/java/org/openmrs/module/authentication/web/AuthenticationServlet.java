@@ -18,7 +18,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * LoginServlet
+ * Simple Servlet that provides a URL and forces authentication
  */
 public class AuthenticationServlet extends HttpServlet {
 

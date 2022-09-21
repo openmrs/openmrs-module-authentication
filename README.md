@@ -69,11 +69,25 @@ authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 * One can specify 0-N configuration properties.  These properties are made available to the `ConfigurableAuthenticationScheme` without the prefix
   * In the example above, the `BasicAuthenticationScheme` would be given a property named `loginPage` with a value of `/module/authentication/basic.htm`
 
-### Sample configuration that can be used to demonstrate multi-factor authentication
+
+### Examples
+
+### Legacy UI (1.x) login page
+
+```properties
+authentication.scheme=basic
+authentication.whiteList=/index.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
+
+authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
+authentication.scheme.basic.config.loginPage=/index.htm
+authentication.scheme.basic.config.usernameParam=uname
+authentication.scheme.basic.config.passwordParam=pw
+```
+
+### Two-factor authentication example
 
 ```properties
 authentication.scheme=mfa
-authentication.settings.cached=false
 authentication.whiteList=/**/authentication/basic.htm,/**/authentication/token.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
 authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.MultiFactorAuthenticationScheme

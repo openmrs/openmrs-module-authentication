@@ -7,11 +7,11 @@
 			<table>
 				<tr>
 					<td>User:</td>
-					<td><input type="text" name="uname" value="" id="username" size="25" maxlength="50" /></td>
+					<td><input type="text" name="username" value="" id="username" size="25" maxlength="50" /></td>
 				</tr>
 				<tr>
 					<td>Password:</td>
-					<td><input type="password" name="pw" value="" id="password" size="25" /></td>
+					<td><input type="password" name="password" value="" id="password" size="25" /></td>
 				</tr>
 				<tr>
 					<td></td>
