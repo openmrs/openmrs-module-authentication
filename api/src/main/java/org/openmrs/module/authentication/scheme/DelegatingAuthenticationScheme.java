@@ -29,7 +29,7 @@ import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICAT
 @Component
 public class DelegatingAuthenticationScheme implements AuthenticationScheme {
 
-    private AuthenticationScheme authenticationScheme;
+    private final AuthenticationScheme authenticationScheme;
 
     public DelegatingAuthenticationScheme() {
         String scheme = AuthenticationConfig.getProperty(AUTHENTICATION_SCHEME);

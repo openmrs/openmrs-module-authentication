@@ -136,6 +136,8 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		}
 		authenticated = primaryScheme.authenticate(primaryCredentials);
 		if (authenticated == null) {
+			mfaCreds.setPrimaryCredentials(null);
+			mfaCreds.setSecondaryCredentials(null);
 			throw new ContextAuthenticationException("Primary authentication failed");
 		}
 		AuthenticationLogger.addUserToContext(authenticated.getUser());
@@ -156,6 +158,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 			}
 			catch (ContextAuthenticationException e) {
 				AuthenticationLogger.logAuthEvent(AuthenticationLogger.SECONDARY_AUTH_FAILED, secondaryCredentials);
+				mfaCreds.setSecondaryCredentials(null);
 				throw new ContextAuthenticationException("Secondary authentication failed");
 			}
 		}

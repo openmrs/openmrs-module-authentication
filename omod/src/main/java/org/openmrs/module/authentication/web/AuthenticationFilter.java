@@ -113,7 +113,6 @@ public class AuthenticationFilter implements Filter {
 								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
 							catch (ContextAuthenticationException e) {
-								context.setCredentials(null);
 								challengeUrl = authenticationScheme.getChallengeUrl(session);
 								// TODO: Add message as request or session attribute here??
 								response.sendRedirect(challengeUrl);
