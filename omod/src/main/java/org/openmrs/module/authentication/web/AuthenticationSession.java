@@ -37,6 +37,9 @@ public class AuthenticationSession {
         this.session = session;
         AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, getAuthenticationSessionId());
         AuthenticationLogger.addToContext(AuthenticationLogger.HTTP_SESSION_ID, getHttpSessionId());
+        AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, getIpAddress());
+        AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, getUsername());
+        AuthenticationLogger.addToContext(AuthenticationLogger.USER_ID, getUserId());
         if (Context.isSessionOpen() && Context.isAuthenticated()) {
             User authenticatedUser = Context.getAuthenticatedUser();
             setUsername(authenticatedUser.getUsername());
@@ -73,16 +76,19 @@ public class AuthenticationSession {
 
     public String getIpAddress() {
         String ipAddress = (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
-        if (request != null) {
-            if (ipAddress == null) {
-                ipAddress = request.getRemoteAddr();
-                session.setAttribute(AUTHENTICATION_IP_ADDRESS, ipAddress);
-            }
-            else if (!ipAddress.equals(request.getRemoteAddr())) {
-                throw new ContextAuthenticationException("IP Address has changed during authentication session");
-            }
+        if (ipAddress != null && request != null && !ipAddress.equals(request.getRemoteAddr())) {
+            throw new ContextAuthenticationException("IP Address has changed during authentication session");
         }
-        return (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
+        if (ipAddress == null) {
+            if (request != null) {
+                ipAddress = request.getRemoteAddr();
+            }
+            else {
+                ipAddress = AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS);
+            }
+            session.setAttribute(AUTHENTICATION_IP_ADDRESS, ipAddress);
+        }
+        return ipAddress;
     }
 
     public String getUsername() {
