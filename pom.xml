@@ -15,9 +15,9 @@
 	</organization>
 
 	<scm>
-		<connection>scm:git:git@github.com:PIH/openmrs-module-authentication.git</connection>
-		<developerConnection>scm:git:git@github.com:PIH/openmrs-module-authentication.git</developerConnection>
-		<url>https://github.com/PIH/openmrs-module-authentication/</url>
+		<connection>scm:git:git@github.com:openmrs/openmrs-module-authentication.git</connection>
+		<developerConnection>scm:git:git@github.com:openmrs/openmrs-module-authentication.git</developerConnection>
+		<url>https://github.com/openmrs/openmrs-module-authentication/</url>
 		<tag>HEAD</tag>
 	</scm>
 
