@@ -33,5 +33,8 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
 		String sessionId = session.getHttpSessionId();
 		AuthenticationLogger.logEvent(AuthenticationLogger.SESSION_DESTROYED, "httpSessionId=" + sessionId);
+		if (!session.isUserAuthenticated()) {
+			session.destroy();
+		}
 	}
 }

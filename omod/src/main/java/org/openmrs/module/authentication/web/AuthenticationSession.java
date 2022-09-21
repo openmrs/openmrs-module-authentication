@@ -40,7 +40,7 @@ public class AuthenticationSession {
         AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, getIpAddress());
         AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, getUsername());
         AuthenticationLogger.addToContext(AuthenticationLogger.USER_ID, getUserId());
-        if (Context.isSessionOpen() && Context.isAuthenticated()) {
+        if (isUserAuthenticated()) {
             User authenticatedUser = Context.getAuthenticatedUser();
             setUsername(authenticatedUser.getUsername());
             setUserId(authenticatedUser.getUserId().toString());
@@ -125,5 +125,23 @@ public class AuthenticationSession {
         if (session != null) {
             session.removeAttribute(AUTHENTICATION_CONTEXT_KEY);
         }
+    }
+
+    public void destroy() {
+        if (session != null) {
+            session.removeAttribute(AUTHENTICATION_SESSION_ID_KEY);
+            session.removeAttribute(AUTHENTICATION_CONTEXT_KEY);
+            session.removeAttribute(AUTHENTICATION_IP_ADDRESS);
+            session.removeAttribute(AUTHENTICATION_USERNAME);
+            session.removeAttribute(AUTHENTICATION_USER_ID);
+        }
+        AuthenticationLogger.clearContext();
+    }
+
+    /**
+     * @return true if there is an open session with an authenticated user
+     */
+    public boolean isUserAuthenticated() {
+        return Context.isSessionOpen() && Context.isAuthenticated();
     }
 }
