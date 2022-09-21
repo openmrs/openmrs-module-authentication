@@ -61,13 +61,17 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
             credentials = new BasicAuthenticationCredentials(username, password);
+            session.getAuthenticationContext().setCredentials(credentials);
         }
         return credentials;
     }
 
     @Override
     public String getChallengeUrl(AuthenticationSession session) {
-        return loginPage;
+        if (session.getAuthenticationContext().getCredentials() == null) {
+            return loginPage;
+        }
+        return null;
     }
 
     @Override

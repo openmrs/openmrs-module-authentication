@@ -106,6 +106,13 @@ public class AuthenticationFilter implements Filter {
 							}
 							catch (ContextAuthenticationException e) {
 								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
+								if (challengeUrl == null) {
+									session.getAuthenticationContext().setCredentials(null);
+									challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
+								}
+								if (challengeUrl == null) {
+									challengeUrl = "/";
+								}
 								response.sendRedirect(challengeUrl);
 							}
 						}
