@@ -13,23 +13,23 @@ This module provides support for enhanced authentication features in OpenMRS and
 
 The operation of this module is fully configured using OpenMRS runtime properties.  All properties are prefixed with `authentication.`
 
+### authentication.scheme ###
+
+**Default value**: Will default back to the core UsernamePasswordAuthenticationScheme
+
+This property allows implementations to specify which the authentication scheme to use at runtime.  If not specified, then the module will default to the core UsernamePasswordAuthenticationScheme.  This property should reference one of the {schemeId} values that identify a particular configured scheme.
+
 ### authentication.settings.cached ###
 
 **Default value**:  true
 
 This controls whether configuration properties should be cached at startup to optimize performance, or whether they should not be cached to enable quick testing of runtime changes.  Typically, all production instances should leave this at the default value of true, but this may be helpful during development and initial testing phases to more rapidly test and troubleshoot configuration settings without the need for continuous server restarts.
 
-### authentication.filter.enabled ###
-
-**Default value**:  false
-
-This determines whether the Authentication Filter is enabled, which will redirect all HTTP requests to authenticate if they have not already done so.  The default value is false, to enable system administrators to install the module without immediately impacting user requests, and then enable this along with other related settings when ready.
-
-#### authentication.filter.skipPatterns ####
+#### authentication.whiteList ####
 
 **Default value**:  none
 
-If ```authentication.filter.enabled = true```, then this is a comma-delimited list of URL patterns that should be served without requiring a login redirect if the current user is not authenticated.  The main purpose of this is to enable login pages, along with images and other resources, to be served witout redirection for authentication.  The expected URL patterns follow the ANT pattern-matching system.  One difference, for ease of configuration, is that any pattern that starts with "\*" is assumed to be an "ends with" pattern match, and will match on any url that ends with the specified pattern.  It essentially turns it into an ANT "/**/*..." match, meaning that any url that ends with the given pattern will be matched at any level of the hierarchy.
+If the configured `authentication.scheme` implements `WebAuthenticationScheme`, then this is a comma-delimited list of URL patterns that should be served without requiring a redirect to the configured challenge page if the current user is not authenticated.  The main purpose of this is to enable login pages, along with images and other resources, to be served without redirection for authentication.  The expected URL patterns follow the ANT pattern-matching system.  One difference, for ease of configuration, is that any pattern that starts with "\*" is assumed to be an "ends with" pattern match, and will match on any url that ends with the specified pattern.  It essentially turns it into an ANT "/**/*..." match, meaning that any url that ends with the given pattern will be matched at any level of the hierarchy.
 
 For example, what would otherwise require specifying patterns like this:
 ```/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png```
@@ -39,64 +39,52 @@ Can instead be specified like this:
 
 As a starting point, if one wants to allow the 1.x (legacyui) login page to load successfully, along with all resources and the appropriate login servlets, the following configuration value can be used:
 
-```authentication.filter.skipPatterns=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png```
+```authentication.whiteList=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png```
 
-### Authenticators ###
+### Authentication Schemes ###
 
-TODO: Update the below
-
-For each Authenticator configuration supported by the system, a series of properties should be added that identify the type of this authenticator, and it's configuration properties.
-
-#### authentication.authenticator.<name> and authenticator.<name>.config.<propertyName> ###
-
-For example, to configure the default BasicWebAuthenticator that is included in this module:
+All custom authentication schemes are identified with a `schemeId`.  This `schemeId` can be anything, but is typically concise, descriptive, and must be unique.  To configure a new authentication scheme with a given `schemeId`, you must include the following property in your configuration:
 
 ```properties
-authenticator.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
-authenticator.basic.config.loginPage=/module/authentication/basic.htm
+authentication.scheme.{schemeId}.type=fully.specified.name.of.authentication.scheme.class
 ```
 
-* This indicates that the unique `name` of this Authenticator instance is `basic`
-* This indicates that the type is a `BasicWebAuthenticator`
+If a given `AuthenticationScheme` implements `ConfigurableAuthenticationScheme`, then one can also specify the properties to configure it with as follows:
+
+```properties
+authentication.scheme.{schemeId}.config.{property1}={value1}
+authentication.scheme.{schemeId}.config.{property2}={value2}
+```
+
+For example, to configure a new instance of the BasicWebAuthenticationScheme that is included in this module:
+
+```properties
+authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
+authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
+```
+
+* This indicates that the unique `schemeId` of this `AuthenticationScheme` is `basic`
+* This indicates that the type is a `BasicWebAuthenticationScheme`
 * This indicates the properties that are used to configure the instance.
-* One can specify 0-N configuration properties.  All are prefixed by `authenticator.<name>.config.<propertyName>`
-* The `BasicWebAuthenticator` in the above example supports a single parameter named `loginPage`
-
-#### authentication.authenticators.primary ####
-
-**Default value**:  none
-
-This is the `name` of the authenticator that should be used as the primary authenticator for the system.  To configure the above example `BasicWebAuthenticator` instance as the primary authenticator, you would specify:
-
-`authenticators.primary = basic`
-
-#### authentication.authenticators.secondary ####
-
-**Default value**:  none
-
-This is a comma-separated list of authenticator `name` that should be made available for use in secondary authentication.
-
-### Sample configuration for filtering and redirecting to 1.x (legacyui) login page
-
-```properties
-authentication.filter.enabled=true
-authentication.filter.skipPatterns=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png
-```
+* One can specify 0-N configuration properties.  These properties are made available to the `ConfigurableAuthenticationScheme` without the prefix
+  * In the example above, the `BasicAuthenticationScheme` would be given a property named `loginPage` with a value of `/module/authentication/basic.htm`
 
 ### Sample configuration that can be used to demonstrate multi-factor authentication
 
 ```properties
-authentication.filter.enabled=true
-authentication.filter.skipPatterns=/**/authentication/basic.htm,/**/authentication/token.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
+authentication.scheme=mfa
+authentication.settings.cached=false
+authentication.whiteList=/**/authentication/basic.htm,/**/authentication/token.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
-authenticators.primary=basic
-authenticators.secondary=dummy
+authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.MultiFactorAuthenticationScheme
+authentication.scheme.mfa.config.primaryOptions=basic
+authentication.scheme.mfa.config.secondaryOptions=token
 
-authenticator.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
-authenticator.basic.config.loginPage=/module/authentication/basic.htm
+authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
+authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 
-authenticator.dummy.type=org.openmrs.module.authentication.web.scheme.TokenWebAuthenticationScheme
-authenticator.dummy.config.loginPage=/module/authentication/token.htm
+authentication.scheme.token.type=org.openmrs.module.authentication.web.scheme.TokenWebAuthenticationScheme
+authentication.scheme.token.config.loginPage=/module/authentication/token.htm
 ```
 
 ## Background
