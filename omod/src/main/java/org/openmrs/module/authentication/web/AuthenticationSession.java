@@ -9,12 +9,13 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.UUID;
 
@@ -25,43 +26,92 @@ public class AuthenticationSession {
 
     public static final String AUTHENTICATION_SESSION_ID_KEY = "__authentication_session_id";
     public static final String AUTHENTICATION_CONTEXT_KEY = "__authentication_context";
+    public static final String AUTHENTICATION_IP_ADDRESS = "__authentication_ip_address";
+    public static final String AUTHENTICATION_USERNAME = "__authentication_username";
+    public static final String AUTHENTICATION_USER_ID = "__authentication_user_id";
 
-    private String authenticationSessionId;
-    private final HttpServletRequest request;
-    private final HttpServletResponse response;
-    private AuthenticationContext authenticationContext;
+    private final HttpSession session;
+    private HttpServletRequest request;
 
-    public AuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
+    public AuthenticationSession(HttpSession session) {
+        this.session = session;
+        AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, getAuthenticationSessionId());
+        AuthenticationLogger.addToContext(AuthenticationLogger.HTTP_SESSION_ID, getHttpSessionId());
+        if (Context.isSessionOpen() && Context.isAuthenticated()) {
+            User authenticatedUser = Context.getAuthenticatedUser();
+            setUsername(authenticatedUser.getUsername());
+            setUserId(authenticatedUser.getUserId().toString());
+        }
+    }
 
+    public AuthenticationSession(HttpServletRequest request) {
+        this(request.getSession());
         this.request = request;
-        this.response = response;
-
-        authenticationContext = (AuthenticationContext) request.getSession().getAttribute(AUTHENTICATION_CONTEXT_KEY);
-        if (authenticationContext == null) {
-            authenticationContext = new AuthenticationContext();
-            request.getSession().setAttribute(AUTHENTICATION_CONTEXT_KEY, authenticationContext);
-        }
-
-        authenticationSessionId = (String) request.getSession().getAttribute(AUTHENTICATION_SESSION_ID_KEY);
-        if (authenticationSessionId == null) {
-            authenticationSessionId = UUID.randomUUID().toString();
-            request.getSession().setAttribute(AUTHENTICATION_SESSION_ID_KEY, authenticationSessionId);
-        }
-
-        AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, authenticationSessionId);
-        AuthenticationLogger.addToContext(AuthenticationLogger.HTTP_SESSION_ID, request.getSession().getId());
-        AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, request.getRemoteAddr());
-        if (Context.isSessionOpen()) {
-            AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
-        }
+        AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, getIpAddress());
     }
 
     public AuthenticationContext getAuthenticationContext() {
-        return authenticationContext;
+        AuthenticationContext ctx = (AuthenticationContext) session.getAttribute(AUTHENTICATION_CONTEXT_KEY);
+        if (ctx == null) {
+            ctx = new AuthenticationContext();
+            session.setAttribute(AUTHENTICATION_CONTEXT_KEY, ctx);
+        }
+        return ctx;
+    }
+
+    public String getAuthenticationSessionId() {
+        String authSessionId = (String) session.getAttribute(AUTHENTICATION_SESSION_ID_KEY);
+        if (authSessionId == null) {
+            authSessionId = AuthenticationLogger.getFromContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID);
+            if (authSessionId == null) {
+                authSessionId = UUID.randomUUID().toString();
+            }
+            session.setAttribute(AUTHENTICATION_SESSION_ID_KEY, authSessionId);
+        }
+        return authSessionId;
+    }
+
+    public String getIpAddress() {
+        String ipAddress = (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
+        if (request != null) {
+            if (ipAddress == null) {
+                ipAddress = request.getRemoteAddr();
+                session.setAttribute(AUTHENTICATION_IP_ADDRESS, ipAddress);
+            }
+            else if (!ipAddress.equals(request.getRemoteAddr())) {
+                throw new ContextAuthenticationException("IP Address has changed during authentication session");
+            }
+        }
+        return (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
+    }
+
+    public String getUsername() {
+        return (String) session.getAttribute(AUTHENTICATION_USERNAME);
+    }
+
+    public void setUsername(String username) {
+        session.setAttribute(AUTHENTICATION_USERNAME, username);
+        AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, username);
+    }
+
+    public String getUserId() {
+        return (String) session.getAttribute(AUTHENTICATION_USER_ID);
+    }
+
+    public void setUserId(String userId) {
+        session.setAttribute(AUTHENTICATION_USER_ID, userId);
+        AuthenticationLogger.addToContext(AuthenticationLogger.USER_ID, userId);
+    }
+
+    public String getHttpSessionId() {
+        return session.getId();
     }
 
     public String getRequestParam(String name) {
-        return request.getParameter(name);
+        if (request != null) {
+            return request.getParameter(name);
+        }
+        return null;
     }
 
     public void removeAuthenticationContext() {

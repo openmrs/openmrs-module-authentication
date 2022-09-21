@@ -3,6 +3,7 @@ package org.openmrs.module.authentication;
 import org.junit.Before;
 import org.junit.Test;
 import org.openmrs.User;
+import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.test.jupiter.BaseModuleContextSensitiveTest;
 
 import java.util.List;
@@ -12,8 +13,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICATORS_PRIMARY;
-import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICATORS_SECONDARY;
+import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICATION_SCHEME;
 import static org.openmrs.module.authentication.AuthenticationConfig.FILTER_ENABLED;
 import static org.openmrs.module.authentication.AuthenticationConfig.FILTER_SKIP_PATTERNS;
 import static org.openmrs.module.authentication.AuthenticationConfig.SETTINGS_CACHED;
@@ -70,7 +70,7 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 	@Test
 	public void shouldGetClass() {
 		AuthenticationConfig.setProperty("user", "org.openmrs.User");
-		Class<? extends User> userClass = AuthenticationConfig.getClass("user", User.class);
+		Class<?> userClass = AuthenticationConfig.getClass("user", User.class);
 		assertThat(userClass, notNullValue());
 		assertThat(userClass, equalTo(User.class));
 	}
@@ -130,38 +130,11 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 	}
 
 	@Test
-	public void shouldGetPrimaryAuthenticatorOptions() {
-		AuthenticationConfig.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
-		List<String> options = AuthenticationConfig.getPrimaryAuthenticatorOptions();
-		assertThat(options.size(), equalTo(2));
-		assertThat(options.get(0), equalTo("basic"));
-		assertThat(options.get(1), equalTo("sms"));
-	}
-
-	@Test
-	public void shouldGetSecondaryAuthenticatorOptions() {
-		AuthenticationConfig.setProperty(AUTHENTICATORS_SECONDARY, "basic,sms");
-		List<String> options = AuthenticationConfig.getSecondaryAuthenticatorOptions();
-		assertThat(options.size(), equalTo(2));
-		assertThat(options.get(0), equalTo("basic"));
-		assertThat(options.get(1), equalTo("sms"));
-	}
-
-	@Test
-	public void shouldGetDefaultPrimaryAuthenticator() {
-		AuthenticationConfig.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
-		AuthenticationConfig.setProperty("authentication.authenticator.basic.type", "org.openmrs.module.authentication.TestAuthenticator");
-		Authenticator authenticator = AuthenticationConfig.getDefaultPrimaryAuthenticator();
-		assertThat(authenticator, notNullValue());
-		assertThat(authenticator.getClass(), equalTo(TestAuthenticator.class));
-	}
-
-	@Test
 	public void shouldGetAuthenticator() {
-		AuthenticationConfig.setProperty(AUTHENTICATORS_PRIMARY, "basic,sms");
-		AuthenticationConfig.setProperty("authentication.authenticator.sms.type", "org.openmrs.module.authentication.TestAuthenticator");
-		Authenticator authenticator = AuthenticationConfig.getAuthenticator("sms");
+		AuthenticationConfig.setProperty(AUTHENTICATION_SCHEME, "test");
+		AuthenticationConfig.setProperty("authentication.scheme.test.type", "org.openmrs.module.authentication.TestAuthenticationScheme");
+		AuthenticationScheme authenticator = AuthenticationConfig.getAuthenticationScheme("test");
 		assertThat(authenticator, notNullValue());
-		assertThat(authenticator.getClass(), equalTo(TestAuthenticator.class));
+		assertThat(authenticator.getClass(), equalTo(TestAuthenticationScheme.class));
 	}
 }

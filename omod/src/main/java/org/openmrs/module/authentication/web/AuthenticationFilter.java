@@ -12,15 +12,15 @@ package org.openmrs.module.authentication.web;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.User;
+import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
-import org.openmrs.module.authentication.Authenticator;
-import org.openmrs.module.authentication.AuthenticatorCredentials;
-import org.openmrs.module.authentication.CandidateUser;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.scheme.DelegatingAuthenticationScheme;
+import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -81,7 +81,7 @@ public class AuthenticationFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		AuthenticationSession session = new AuthenticationSession(request, response);
+		AuthenticationSession session = new AuthenticationSession(request);
 		AuthenticationContext context = session.getAuthenticationContext();
 
 		try {
@@ -100,72 +100,30 @@ public class AuthenticationFilter implements Filter {
 							log.debug("Requested Request URI: " + request.getRequestURI());
 						}
 
-						// If no primary authentication has taken place, ensure the primary authenticator passes
-						User candidateUser = null;
-						// TODO: Currently we always use the default primary authenticator.
-						// TODO: If we want to allow users to choose their primary authenticator, would need to change this
-						WebAuthenticator primaryAuthenticator = validate(context.getDefaultPrimaryAuthenticator());
-						if (!context.isPrimaryAuthenticationComplete()) {
-							// Attempt to authenticate and if unable to do so, initiate challenge
-							AuthenticatorCredentials credentials = primaryAuthenticator.getCredentials(session);
-							if (credentials != null) {
-								candidateUser = primaryAuthenticator.authenticate(credentials);
-								if (candidateUser != null) {
-									AuthenticationLogger.addUserToContext(candidateUser);
-									AuthenticationLogger.logAuthEvent(AuthenticationLogger.Event.AUTHENTICATION_PRIMARY_AUTH_SUCCEEDED, credentials);
-								} else {
-									AuthenticationLogger.logAuthEvent(AuthenticationLogger.Event.AUTHENTICATION_PRIMARY_AUTH_FAILED, credentials);
-								}
-							}
-							if (candidateUser == null) {
-								response.sendRedirect(primaryAuthenticator.getChallengeUrl(session));
-							} else {
-								context.setPrimaryAuthenticationComplete(new CandidateUser(candidateUser), credentials);
-							}
+						WebAuthenticationScheme authenticationScheme = getAuthenticationScheme();
+						AuthenticationCredentials credentials = authenticationScheme.getCredentials(session);
+						String challengeUrl = authenticationScheme.getChallengeUrl(session);
+						if (StringUtils.isNotBlank(challengeUrl)) {
+							response.sendRedirect(challengeUrl);
 						}
-
-						// If here, this means that primary authentication was successful, and there is a candidate user
-						// Check if this user has a secondary authentication configured
-						// If they do, attempt to retrieve credentials, otherwise, redirect to challenge for them.
-
-						if (context.isPrimaryAuthenticationComplete()) {
-							WebAuthenticator secondaryAuthenticator = validate(context.getSecondaryAuthenticator());
-							if (secondaryAuthenticator != null) {
-								AuthenticatorCredentials credentials = secondaryAuthenticator.getCredentials(session);
-								if (credentials == null) {
-									response.sendRedirect(secondaryAuthenticator.getChallengeUrl(session));
-								} else {
-									context.getCredentials().setSecondaryCredentials(credentials);
-								}
+						else {
+							try {
+								Context.authenticate(credentials);
+								regenerateSession(request);  // Guard against session fixation attacks
+								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
-
-							// If here, that means that primary authentication is complete and secondary authentication
-							// is either not enabled for this user, or credentials have been retrieved.  Authenticate.
-							if (context.isReadyToAuthenticate()) {
-								try {
-									Context.authenticate(context.getCredentials());
-
-									// If Authentication is successful, we regenerate session
-									regenerateSession(request);
-
-									// Redirect to appropriate success url
-									response.sendRedirect(determineSuccessRedirectUrl(request));
-								}
-								catch (ContextAuthenticationException e) {
-									String challengeUrl = primaryAuthenticator.getChallengeUrl(session);
-									if (secondaryAuthenticator != null) {
-										challengeUrl = secondaryAuthenticator.getChallengeUrl(session);
-									}
-									// TODO: Add message as request or session attribute here??
-									response.sendRedirect(challengeUrl);
-								}
+							catch (ContextAuthenticationException e) {
+								context.setCredentials(null);
+								challengeUrl = authenticationScheme.getChallengeUrl(session);
+								// TODO: Add message as request or session attribute here??
+								response.sendRedirect(challengeUrl);
 							}
 						}
 					}
 				}
-			} else {
-			// If authenticated, reset the authentication session
-				session.removeAuthenticationContext();
+			}
+			else {
+				session.removeAuthenticationContext();  // If authenticated, remove authentication details from session
 			}
 
 			if (!response.isCommitted()) {
@@ -206,17 +164,22 @@ public class AuthenticationFilter implements Filter {
 	 * Validates that the given Authenticator is a WebAuthenticator, throwing an Exception if not
 	 * @return the passed Authenticator cast to a WebAuthenticator
 	 */
-	protected WebAuthenticator validate(Authenticator authenticator) {
-		WebAuthenticator ret = null;
-		if (authenticator != null) {
-			if (authenticator instanceof WebAuthenticator) {
-				ret = (WebAuthenticator) authenticator;
+	protected WebAuthenticationScheme getAuthenticationScheme() {
+		AuthenticationScheme authenticationScheme = Context.getAuthenticationScheme();
+		if (authenticationScheme instanceof DelegatingAuthenticationScheme) {
+			DelegatingAuthenticationScheme delegatingScheme = (DelegatingAuthenticationScheme) authenticationScheme;
+			AuthenticationScheme targetScheme = delegatingScheme.getDelegatedAuthenticationScheme();
+			if (targetScheme instanceof WebAuthenticationScheme) {
+				return (WebAuthenticationScheme) targetScheme;
 			}
 			else {
-				throw new UnsupportedOperationException("Only WebAuthenticators are currently supported");
+				log.warn("Expected " + WebAuthenticationScheme.class + " but got " + targetScheme);
 			}
 		}
-		return ret;
+		else {
+			log.warn("Expected " + DelegatingAuthenticationScheme.class + " but got " + authenticationScheme);
+		}
+		return null;
 	}
 
 	/**
@@ -226,7 +189,7 @@ public class AuthenticationFilter implements Filter {
 	 * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
 	 * @param request the request containing the session to regenerate
 	 */
-	protected HttpSession regenerateSession(HttpServletRequest request) {
+	protected void regenerateSession(HttpServletRequest request) {
 		Properties sessionAttributes = new Properties();
 		HttpSession existingSession = request.getSession(false);
 		if (existingSession != null) {
@@ -247,7 +210,6 @@ public class AuthenticationFilter implements Filter {
 				newSession.setAttribute(attribute, sessionAttributes.get(attribute));
 			}
 		}
-		return newSession;
 	}
 
 	private String determineSuccessRedirectUrl(HttpServletRequest request) {

@@ -7,15 +7,16 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.web;
+package org.openmrs.module.authentication.web.scheme;
 
-import org.openmrs.module.authentication.Authenticator;
-import org.openmrs.module.authentication.AuthenticatorCredentials;
+import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.web.AuthenticationSession;
 
 /**
  * Represents a particular method of authentication.
  */
-public interface WebAuthenticator extends Authenticator {
+public interface WebAuthenticationScheme extends ConfigurableAuthenticationScheme {
 
     /**
      * This method is intended to be used by implementations to inspect the AuthenticationSession for any
@@ -24,10 +25,12 @@ public interface WebAuthenticator extends Authenticator {
      * @param session the current AuthenticationSession
      * @return Credentials that could be passed to the authenticate method to attempt authentication or null if none
      */
-    AuthenticatorCredentials getCredentials(AuthenticationSession session);
+    AuthenticationCredentials getCredentials(AuthenticationSession session);
 
     /**
-     * This method is intended to be used by implementations to indicate the url for a user authentication challenge
+     * This method provides a means for an AuthenticationScheme to return an appropriate challenge URL
+     * to enable submission of additional AuthenticationCredentials
+     * If no additional challenge URL is required or configured, this should return null
      * @param session the current AuthenticationSession
      */
     String getChallengeUrl(AuthenticationSession session);

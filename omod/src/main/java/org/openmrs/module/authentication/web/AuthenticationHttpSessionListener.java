@@ -9,11 +9,9 @@
  */
 package org.openmrs.module.authentication.web;
 
-import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
 import javax.servlet.http.HttpSessionListener;
 
@@ -25,20 +23,15 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
-		logEvent(httpSessionEvent, AuthenticationLogger.Event.AUTHENTICATION_SESSION_CREATED);
+		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
+		String sessionId = session.getHttpSessionId();
+		AuthenticationLogger.logEvent(AuthenticationLogger.SESSION_CREATED, "httpSessionId=" + sessionId);
 	}
 
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
-		logEvent(httpSessionEvent, AuthenticationLogger.Event.AUTHENTICATION_SESSION_DESTROYED);
-	}
-
-	private void logEvent(HttpSessionEvent httpSessionEvent, AuthenticationLogger.Event event) {
-		HttpSession session = httpSessionEvent.getSession();
-		if (Context.isSessionOpen() && Context.getAuthenticatedUser() != null) {
-			AuthenticationLogger.addUserToContext(Context.getAuthenticatedUser());
-		}
-		AuthenticationLogger.addToContext(AuthenticationLogger.HTTP_SESSION_ID, session.getId());
-		AuthenticationLogger.logEvent(event, "httpSessionId=" + session.getId());
+		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
+		String sessionId = session.getHttpSessionId();
+		AuthenticationLogger.logEvent(AuthenticationLogger.SESSION_DESTROYED, "httpSessionId=" + sessionId);
 	}
 }

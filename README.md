@@ -52,7 +52,7 @@ For each Authenticator configuration supported by the system, a series of proper
 For example, to configure the default BasicWebAuthenticator that is included in this module:
 
 ```properties
-authenticator.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticator
+authenticator.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
 authenticator.basic.config.loginPage=/module/authentication/basic.htm
 ```
 
@@ -92,10 +92,10 @@ authentication.filter.skipPatterns=/**/authentication/basic.htm,/**/authenticati
 authenticators.primary=basic
 authenticators.secondary=dummy
 
-authenticator.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticator
+authenticator.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
 authenticator.basic.config.loginPage=/module/authentication/basic.htm
 
-authenticator.dummy.type=org.openmrs.module.authentication.web.TokenWebAuthenticator
+authenticator.dummy.type=org.openmrs.module.authentication.web.scheme.TokenWebAuthenticationScheme
 authenticator.dummy.config.loginPage=/module/authentication/token.htm
 ```
 

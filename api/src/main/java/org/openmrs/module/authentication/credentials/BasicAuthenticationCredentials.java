@@ -7,40 +7,36 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication;
+package org.openmrs.module.authentication.credentials;
+
+import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
+import org.openmrs.api.context.UsernamePasswordCredentials;
 
 /**
- * Credentials supporting basic authentication - username and password
+ * AuthenticationCredentials supporting basic authentication - username and password
  */
-public class BasicAuthenticatorCredentials implements AuthenticatorCredentials {
+public class BasicAuthenticationCredentials extends AuthenticationCredentials {
 
-    private String authenticatorName;
     private String username;
     private String password;
 
-    public BasicAuthenticatorCredentials(String authenticatorName, String username, String password) {
-        this.authenticatorName = authenticatorName;
+    public BasicAuthenticationCredentials(String username, String password) {
         this.username = username;
         this.password = password;
     }
 
     @Override
-    public String getAuthenticatorName() {
-        return authenticatorName;
+    public String getAuthenticationScheme() {
+        return UsernamePasswordAuthenticationScheme.class.getName();
     }
 
-    @Override
-    public String getAuthenticationScheme() {
-        return getClass().getName();
+    public UsernamePasswordCredentials toUsernamePasswordCredentials() {
+        return new UsernamePasswordCredentials(username, password);
     }
 
     @Override
     public String getClientName() {
         return username;
-    }
-
-    public void setAuthenticatorName(String authenticatorName) {
-        this.authenticatorName = authenticatorName;
     }
 
     public String getUsername() {

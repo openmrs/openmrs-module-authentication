@@ -18,11 +18,11 @@ public class AuthenticationModuleActivator extends BaseModuleActivator {
 	
 	@Override
 	public void started() {
-		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_MODULE_STARTED);
+		AuthenticationLogger.logEvent(AuthenticationLogger.MODULE_STARTED);
 	}
 	
 	@Override
 	public void stopped() {
-		AuthenticationLogger.logEvent(AuthenticationLogger.Event.AUTHENTICATION_MODULE_STOPPED);
+		AuthenticationLogger.logEvent(AuthenticationLogger.MODULE_STOPPED);
 	}
 }

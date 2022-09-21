@@ -10,7 +10,9 @@
 package org.openmrs.module.authentication;
 
 import org.apache.commons.lang.StringUtils;
+import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 import org.openmrs.util.OpenmrsUtil;
 
 import java.io.Serializable;
@@ -27,17 +29,16 @@ public class AuthenticationConfig implements Serializable {
 
     // Available configuration parameters in runtime properties
     public static final String PREFIX = "authentication.";
+    public static final String SCHEME = "scheme";
+    public static final String AUTHENTICATION_SCHEME = PREFIX + SCHEME;
     public static final String SETTINGS_PREFIX = PREFIX + "settings.";
     public static final String SETTINGS_CACHED = SETTINGS_PREFIX + "cached";
     public static final String FILTER_PREFIX = PREFIX + "filter.";
     public static final String FILTER_ENABLED = FILTER_PREFIX + "enabled";
     public static final String FILTER_SKIP_PATTERNS = FILTER_PREFIX + "skipPatterns";
-
-    public static final String AUTHENTICATORS_PRIMARY = PREFIX + "authenticators.primary";
-    public static final String AUTHENTICATORS_SECONDARY= PREFIX + "authenticators.secondary";
     public static final String AUTH_NAME_VARIABLE = "{authName}";
-    public static final String AUTHENTICATOR_TYPE = PREFIX + "authenticator." + AUTH_NAME_VARIABLE + ".type";
-    public static final String AUTHENTICATOR_CONFIG = PREFIX + "authenticator." + AUTH_NAME_VARIABLE + ".config.";
+    public static final String AUTHENTICATOR_TYPE = AUTHENTICATION_SCHEME + "." + AUTH_NAME_VARIABLE + ".type";
+    public static final String AUTHENTICATOR_CONFIG = AUTHENTICATION_SCHEME + "." + AUTH_NAME_VARIABLE + ".config.";
 
     private static Properties config;
 
@@ -131,27 +132,15 @@ public class AuthenticationConfig implements Serializable {
         return getStringList(FILTER_SKIP_PATTERNS);
     }
 
-    public static List<String> getPrimaryAuthenticatorOptions() {
-        return getStringList(AUTHENTICATORS_PRIMARY);
-    }
-
-    public static Authenticator getDefaultPrimaryAuthenticator() {
-        if (getPrimaryAuthenticatorOptions().isEmpty()) {
-            return null;
-        }
-        return getAuthenticator(getPrimaryAuthenticatorOptions().get(0));
-    }
-
-    public static List<String> getSecondaryAuthenticatorOptions() {
-        return getStringList(AUTHENTICATORS_SECONDARY);
-    }
-
-    public static Authenticator getAuthenticator(String authName) {
+    public static AuthenticationScheme getAuthenticationScheme(String authName) {
         String authenticatorPropertyName = AUTHENTICATOR_TYPE.replace(AUTH_NAME_VARIABLE, authName);
         String authenticatorConfigProp = AUTHENTICATOR_CONFIG.replace(AUTH_NAME_VARIABLE, authName);
-        Authenticator authenticator = getClassInstance(authenticatorPropertyName, Authenticator.class);
-        authenticator.configure(authName, getSubsetWithPrefix(authenticatorConfigProp, true));
-        return authenticator;
+        AuthenticationScheme scheme = getClassInstance(authenticatorPropertyName, AuthenticationScheme.class);
+        if (scheme instanceof ConfigurableAuthenticationScheme) {
+            ConfigurableAuthenticationScheme configScheme = (ConfigurableAuthenticationScheme) scheme;
+            configScheme.configure(authName, getSubsetWithPrefix(authenticatorConfigProp, true));
+        }
+        return scheme;
     }
 
     public static synchronized void reloadConfigFromRuntimeProperties(String applicationName) {

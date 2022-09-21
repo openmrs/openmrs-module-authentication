@@ -7,26 +7,26 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.web;
+package org.openmrs.module.authentication.web.scheme;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-import org.openmrs.api.context.UsernamePasswordCredentials;
-import org.openmrs.module.authentication.AuthenticatorCredentials;
-import org.openmrs.module.authentication.BasicAuthenticatorCredentials;
 import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
+import org.openmrs.module.authentication.web.AuthenticationSession;
 
 import java.util.Properties;
 
 /**
  * Represents a particular method of authentication.
  */
-public class BasicWebAuthenticator implements WebAuthenticator {
+public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
 
     protected final Log log = LogFactory.getLog(getClass());
 
@@ -39,7 +39,12 @@ public class BasicWebAuthenticator implements WebAuthenticator {
     private String usernameParam;
     private String passwordParam;
 
-    public BasicWebAuthenticator() {}
+    public BasicWebAuthenticationScheme() {}
+
+    @Override
+    public String getInstanceName() {
+        return instanceName;
+    }
 
     @Override
     public void configure(String instanceName, Properties config) {
@@ -50,41 +55,31 @@ public class BasicWebAuthenticator implements WebAuthenticator {
     }
 
     @Override
-    public String getChallengeUrl(AuthenticationSession session) {
-        return loginPage;
-    }
-
-    @Override
-    public AuthenticatorCredentials getCredentials(AuthenticationSession session) {
-        BasicAuthenticatorCredentials credentials = null;
+    public AuthenticationCredentials getCredentials(AuthenticationSession session) {
+        BasicAuthenticationCredentials credentials = null;
         String username = session.getRequestParam(usernameParam);
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
-            credentials = new BasicAuthenticatorCredentials(instanceName, username, password);
+            credentials = new BasicAuthenticationCredentials(username, password);
         }
         return credentials;
     }
 
     @Override
-    public User authenticate(AuthenticatorCredentials credentials) {
-        User user = null;
-        if (credentials != null) {
-            if (credentials instanceof BasicAuthenticatorCredentials) {
-                BasicAuthenticatorCredentials bac = (BasicAuthenticatorCredentials) credentials;
-                UsernamePasswordCredentials c = new UsernamePasswordCredentials(bac.getUsername(), bac.getPassword());
-                try {
-                    AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, bac.getUsername());
-                    Authenticated authenticated = new UsernamePasswordAuthenticationScheme().authenticate(c);
-                    user = authenticated.getUser();
-                }
-                catch (ContextAuthenticationException e) {
-                    log.debug("Basic Authentication Failed: " + e.getMessage());
-                }
-            }
-            else {
-                log.warn("Expected " + BasicAuthenticatorCredentials.class + " but got " + credentials.getClass());
-            }
+    public String getChallengeUrl(AuthenticationSession session) {
+        return loginPage;
+    }
+
+    @Override
+    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+
+        // Ensure the credentials provided are of the expected type
+        if (!(credentials instanceof BasicAuthenticationCredentials)) {
+            throw new ContextAuthenticationException("The credentials provided are invalid.");
         }
-        return user;
+
+        BasicAuthenticationCredentials bac = (BasicAuthenticationCredentials) credentials;
+        AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, bac.getUsername());
+        return new UsernamePasswordAuthenticationScheme().authenticate(bac.toUsernamePasswordCredentials());
     }
 }

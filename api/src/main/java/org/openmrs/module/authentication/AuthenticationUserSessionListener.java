@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication;
 
+import org.apache.logging.log4j.Marker;
 import org.openmrs.User;
 import org.openmrs.UserSessionListener;
 import org.springframework.stereotype.Component;
@@ -22,23 +23,23 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
 		AuthenticationLogger.addUserToContext(user);
-		AuthenticationLogger.Event e = null;
+		Marker marker = null;
 		if (event == Event.LOGIN) {
 			if (status == Status.SUCCESS) {
-				e = AuthenticationLogger.Event.AUTHENTICATION_LOGIN_SUCCEEDED;
+				marker = AuthenticationLogger.LOGIN_SUCCEEDED;
 			}
 			else if (status == Status.FAIL) {
-				e = AuthenticationLogger.Event.AUTHENTICATION_LOGIN_FAILED;
+				marker = AuthenticationLogger.LOGIN_FAILED;
 			}
 		}
 		else if (event == Event.LOGOUT) {
 			if (status == Status.SUCCESS) {
-				e = AuthenticationLogger.Event.AUTHENTICATION_LOGOUT_SUCCEEDED;
+				marker = AuthenticationLogger.LOGOUT_SUCCEEDED;
 			}
 			else if (status == Status.FAIL) {
-				e = AuthenticationLogger.Event.AUTHENTICATION_LOGOUT_FAILED;
+				marker = AuthenticationLogger.LOGOUT_FAILED;
 			}
 		}
-		AuthenticationLogger.logEvent(e, "user=" + user.getUsername());
+		AuthenticationLogger.logEvent(marker, "user=" + user.getUsername());
 	}
 }

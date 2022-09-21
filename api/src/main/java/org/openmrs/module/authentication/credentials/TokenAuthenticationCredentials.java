@@ -7,40 +7,37 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication;
+package org.openmrs.module.authentication.credentials;
+
+import org.openmrs.User;
 
 /**
  * Credentials supporting token-based authentication.
- * This is expected to be a second authentication factor, and thus does not need to contain a username
+ * This is generally intended to be used as a secondary authentication factor
  */
-public class TokenAuthenticationCredentials implements AuthenticatorCredentials {
+public class TokenAuthenticationCredentials extends AuthenticationCredentials {
 
-    private String authenticatorName;
-    private CandidateUser candidateUser;
-    private String token;
+    private final String authenticationScheme;
+    private final User candidateUser;
+    private final String token;
 
-    public TokenAuthenticationCredentials(String authenticatorName, CandidateUser candidateUser, String token) {
-        this.authenticatorName = authenticatorName;
+    public TokenAuthenticationCredentials(String authenticationScheme, User candidateUser, String token) {
+        this.authenticationScheme = authenticationScheme;
         this.candidateUser = candidateUser;
         this.token = token;
     }
 
     @Override
-    public String getAuthenticatorName() {
-        return authenticatorName;
-    }
-
-    @Override
     public String getAuthenticationScheme() {
-        return getClass().getName();
+        return authenticationScheme;
     }
 
     @Override
     public String getClientName() {
-        return candidateUser.getUser().getUsername();
+        return candidateUser.getUsername();
     }
 
-    public CandidateUser getCandidateUser() {
+    public User getCandidateUser() {
         return candidateUser;
     }
 

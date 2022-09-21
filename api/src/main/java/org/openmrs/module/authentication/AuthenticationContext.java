@@ -9,30 +9,30 @@
  */
 package org.openmrs.module.authentication;
 
-import org.apache.commons.lang.StringUtils;
-import org.openmrs.api.context.Context;
+import org.openmrs.User;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 
 import java.io.Serializable;
 
 /**
- * Provides access to data that needs to be shared throughout the authentication process and passed between methods
+ * Provides access to authentication details
+ * This allows sharing and persisting authentication details across methods, threads, and requests
  */
 public class AuthenticationContext implements Serializable {
 
-    private CandidateUser candidateUser;
+    private User candidateUser;
     private AuthenticationCredentials credentials;
 
     public AuthenticationContext() {
-        this.credentials = new AuthenticationCredentials();
     }
 
     // Accessors
 
-    public CandidateUser getCandidateUser() {
+    public User getCandidateUser() {
         return candidateUser;
     }
 
-    public void setCandidateUser(CandidateUser candidateUser) {
+    public void setCandidateUser(User candidateUser) {
         this.candidateUser = candidateUser;
     }
 
@@ -44,36 +44,4 @@ public class AuthenticationContext implements Serializable {
         this.credentials = credentials;
     }
 
-    // Authentication
-
-    public Authenticator getDefaultPrimaryAuthenticator() {
-        return AuthenticationConfig.getDefaultPrimaryAuthenticator();
-    }
-
-    public boolean isPrimaryAuthenticationComplete() {
-        return candidateUser != null && getCredentials().getPrimaryCredentials() != null;
-    }
-
-    public void setPrimaryAuthenticationComplete(CandidateUser candidateUser, AuthenticatorCredentials primaryCredentials) {
-        setCandidateUser(candidateUser);
-        getCredentials().setPrimaryCredentials(primaryCredentials);
-    }
-
-    public Authenticator getSecondaryAuthenticator() {
-        Authenticator authenticator = null;
-        if (candidateUser != null) {
-            String secondaryName = candidateUser.getSecondaryAuthenticationType();
-            if (StringUtils.isNotBlank(secondaryName)) {
-                authenticator = AuthenticationConfig.getAuthenticator(secondaryName);
-            }
-        }
-        return authenticator;
-    }
-
-    public boolean isReadyToAuthenticate() {
-        if (Context.isAuthenticated() || !isPrimaryAuthenticationComplete()) {
-            return false;
-        }
-        return getSecondaryAuthenticator() == null || credentials.getSecondaryCredentials() != null;
-    }
 }

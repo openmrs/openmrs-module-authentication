@@ -9,19 +9,21 @@
  */
 package org.openmrs.module.authentication;
 
-import org.openmrs.User;
+import org.openmrs.api.context.Authenticated;
+import org.openmrs.api.context.Credentials;
+import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 
 import java.util.Properties;
 
 /**
  * Represents a particular method of authentication.
  */
-public class TestAuthenticator implements Authenticator {
+public class TestAuthenticationScheme implements ConfigurableAuthenticationScheme {
 
     private String instanceName;
     private Properties config;
 
-    public TestAuthenticator() {}
+    public TestAuthenticationScheme() {}
 
     @Override
     public void configure(String instanceName, Properties config) {
@@ -30,7 +32,7 @@ public class TestAuthenticator implements Authenticator {
     }
 
     @Override
-    public User authenticate(AuthenticatorCredentials credentials) {
+    public Authenticated authenticate(Credentials credentials) {
         return null;
     }
 
