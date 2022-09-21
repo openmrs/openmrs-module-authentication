@@ -107,7 +107,8 @@ public class AuthenticationFilter implements Filter {
 							catch (ContextAuthenticationException e) {
 								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								if (challengeUrl == null) {
-									session.getAuthenticationContext().setCredentials(null);
+									String schemeId = webAuthenticationScheme.getInstanceName();
+									session.getAuthenticationContext().removeCredentials(schemeId);
 									challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								}
 								if (challengeUrl == null) {

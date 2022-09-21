@@ -13,6 +13,8 @@ import org.openmrs.User;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Provides access to authentication details
@@ -21,7 +23,7 @@ import java.io.Serializable;
 public class AuthenticationContext implements Serializable {
 
     private User candidateUser;
-    private AuthenticationCredentials credentials;
+    private Map<String, AuthenticationCredentials> credentials = new HashMap<>();
 
     public AuthenticationContext() {
     }
@@ -36,12 +38,16 @@ public class AuthenticationContext implements Serializable {
         this.candidateUser = candidateUser;
     }
 
-    public AuthenticationCredentials getCredentials() {
-        return credentials;
+    public AuthenticationCredentials getCredentials(String schemeId) {
+        return credentials.get(schemeId);
     }
 
-    public void setCredentials(AuthenticationCredentials credentials) {
-        this.credentials = credentials;
+    public void setCredentials(String schemeId, AuthenticationCredentials authenticationCredentials) {
+        credentials.put(schemeId, authenticationCredentials);
+    }
+
+    public void removeCredentials(String schemeId) {
+        credentials.remove(schemeId);
     }
 
 }

@@ -209,10 +209,10 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	}
 
 	protected MultiFactorAuthenticationCredentials getCredentialsFromContext(AuthenticationContext context) {
-		MultiFactorAuthenticationCredentials creds = (MultiFactorAuthenticationCredentials) context.getCredentials();
+		MultiFactorAuthenticationCredentials creds = (MultiFactorAuthenticationCredentials) context.getCredentials(getInstanceName());
 		if (creds == null) {
 			creds = new MultiFactorAuthenticationCredentials();
-			context.setCredentials(creds);
+			context.setCredentials(getInstanceName(), creds);
 		}
 		return creds;
 	}
