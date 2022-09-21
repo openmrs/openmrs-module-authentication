@@ -9,7 +9,6 @@
  */
 package org.openmrs.module.authentication.scheme;
 
-import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
@@ -19,8 +18,6 @@ import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
 import org.springframework.stereotype.Component;
 
-import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICATION_SCHEME;
-
 /**
  * This AuthenticationScheme overrides the core authentication scheme as soon as this module is installed
  * This delegates to another authentication scheme based on configuration, defaulting to the
@@ -29,20 +26,12 @@ import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICAT
 @Component
 public class DelegatingAuthenticationScheme implements AuthenticationScheme {
 
-    private final AuthenticationScheme authenticationScheme;
-
     public DelegatingAuthenticationScheme() {
-        String scheme = AuthenticationConfig.getProperty(AUTHENTICATION_SCHEME);
-        if (StringUtils.isBlank(scheme)) {
-            authenticationScheme = new UsernamePasswordAuthenticationScheme();
-        }
-        else {
-            authenticationScheme = AuthenticationConfig.getAuthenticationScheme(scheme);
-        }
     }
 
     @Override
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+        AuthenticationScheme authenticationScheme = getDelegatedAuthenticationScheme();
         if (authenticationScheme instanceof UsernamePasswordAuthenticationScheme) {
             if (credentials instanceof BasicAuthenticationCredentials) {
                 credentials = ((BasicAuthenticationCredentials) credentials).toUsernamePasswordCredentials();
@@ -52,6 +41,6 @@ public class DelegatingAuthenticationScheme implements AuthenticationScheme {
     }
 
     public AuthenticationScheme getDelegatedAuthenticationScheme() {
-        return authenticationScheme;
+        return AuthenticationConfig.getAuthenticationScheme();
     }
 }

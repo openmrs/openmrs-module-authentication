@@ -85,22 +85,16 @@ public class AuthenticationFilter implements Filter {
 		try {
 			if (!Context.isAuthenticated()) {
 
-				if (!AuthenticationConfig.isConfigurationCached()) {
+				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
 
-				if (AuthenticationConfig.isFilterEnabled()) {
-
-					boolean requiresAuth = !isSkipPattern(request);
-					if (requiresAuth) {
-						if (log.isDebugEnabled()) {
-							log.debug("Requested Servlet path: " + request.getServletPath());
-							log.debug("Requested Request URI: " + request.getRequestURI());
-						}
-
-						WebAuthenticationScheme authenticationScheme = getAuthenticationScheme();
-						AuthenticationCredentials credentials = authenticationScheme.getCredentials(session);
-						String challengeUrl = authenticationScheme.getChallengeUrl(session);
+				AuthenticationScheme authenticationScheme = getAuthenticationScheme();
+				if (authenticationScheme instanceof WebAuthenticationScheme) {
+					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
+					if (!isWhiteListed(request)) {
+						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
+						String challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 						if (StringUtils.isNotBlank(challengeUrl)) {
 							response.sendRedirect(challengeUrl);
 						}
@@ -111,8 +105,7 @@ public class AuthenticationFilter implements Filter {
 								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
 							catch (ContextAuthenticationException e) {
-								challengeUrl = authenticationScheme.getChallengeUrl(session);
-								// TODO: Add message as request or session attribute here??
+								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								response.sendRedirect(challengeUrl);
 							}
 						}
@@ -132,8 +125,8 @@ public class AuthenticationFilter implements Filter {
 		}
 	}
 
-	protected boolean isSkipPattern(HttpServletRequest request) {
-		for (String pattern : AuthenticationConfig.getFilterSkipPatterns()) {
+	protected boolean isWhiteListed(HttpServletRequest request) {
+		for (String pattern : AuthenticationConfig.getWhiteList()) {
 			if (matchesPath(request, pattern)) {
 				return true;
 			}
@@ -158,25 +151,16 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
-	 * Validates that the given Authenticator is a WebAuthenticator, throwing an Exception if not
-	 * @return the passed Authenticator cast to a WebAuthenticator
+	 * Returns the configured authentication scheme.
+	 * If this is a DelegatingAuthenticationScheme, returns the AuthenticationScheme that this delegates to
 	 */
-	protected WebAuthenticationScheme getAuthenticationScheme() {
+	protected AuthenticationScheme getAuthenticationScheme() {
 		AuthenticationScheme authenticationScheme = Context.getAuthenticationScheme();
 		if (authenticationScheme instanceof DelegatingAuthenticationScheme) {
 			DelegatingAuthenticationScheme delegatingScheme = (DelegatingAuthenticationScheme) authenticationScheme;
-			AuthenticationScheme targetScheme = delegatingScheme.getDelegatedAuthenticationScheme();
-			if (targetScheme instanceof WebAuthenticationScheme) {
-				return (WebAuthenticationScheme) targetScheme;
-			}
-			else {
-				log.warn("Expected " + WebAuthenticationScheme.class + " but got " + targetScheme);
-			}
+			return delegatingScheme.getDelegatedAuthenticationScheme();
 		}
-		else {
-			log.warn("Expected " + DelegatingAuthenticationScheme.class + " but got " + authenticationScheme);
-		}
-		return null;
+		return authenticationScheme;
 	}
 
 	/**

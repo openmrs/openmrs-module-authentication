@@ -13,10 +13,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.openmrs.module.authentication.AuthenticationConfig.AUTHENTICATION_SCHEME;
-import static org.openmrs.module.authentication.AuthenticationConfig.FILTER_ENABLED;
-import static org.openmrs.module.authentication.AuthenticationConfig.FILTER_SKIP_PATTERNS;
+import static org.openmrs.module.authentication.AuthenticationConfig.SCHEME;
 import static org.openmrs.module.authentication.AuthenticationConfig.SETTINGS_CACHED;
+import static org.openmrs.module.authentication.AuthenticationConfig.WHITE_LIST;
 
 public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 
@@ -27,31 +26,31 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 
 	@Test
 	public void shouldGetAndSetKeysAndProperties() {
-		AuthenticationConfig.setProperty(FILTER_ENABLED, "false");
-		AuthenticationConfig.setProperty(FILTER_SKIP_PATTERNS, "*.css");
+		AuthenticationConfig.setProperty("testBoolean", "false");
+		AuthenticationConfig.setProperty(WHITE_LIST, "*.css");
 		assertThat(AuthenticationConfig.getKeys().size(), equalTo(2));
-		assertThat(AuthenticationConfig.getProperty(FILTER_ENABLED), equalTo("false"));
-		assertThat(AuthenticationConfig.getProperty(FILTER_SKIP_PATTERNS), equalTo("*.css"));
+		assertThat(AuthenticationConfig.getProperty("testBoolean"), equalTo("false"));
+		assertThat(AuthenticationConfig.getProperty(WHITE_LIST), equalTo("*.css"));
 		assertThat(AuthenticationConfig.getProperty(SETTINGS_CACHED), nullValue());
 		assertThat(AuthenticationConfig.getProperty(SETTINGS_CACHED, "true"), equalTo("true"));
-		assertThat(AuthenticationConfig.getKeys().contains(FILTER_ENABLED), equalTo(true));
-		assertThat(AuthenticationConfig.getKeys().contains(FILTER_SKIP_PATTERNS), equalTo(true));
+		assertThat(AuthenticationConfig.getKeys().contains("testBoolean"), equalTo(true));
+		assertThat(AuthenticationConfig.getKeys().contains(WHITE_LIST), equalTo(true));
 		assertThat(AuthenticationConfig.getKeys().contains(SETTINGS_CACHED), equalTo(false));
 	}
 
 	@Test
 	public void shouldGetBooleanProperty() {
-		AuthenticationConfig.setProperty(FILTER_ENABLED, "false");
-		assertThat(AuthenticationConfig.getBoolean(FILTER_ENABLED, true), equalTo(false));
-		AuthenticationConfig.setProperty(FILTER_ENABLED, "true");
-		assertThat(AuthenticationConfig.getBoolean(FILTER_ENABLED, false), equalTo(true));
+		AuthenticationConfig.setProperty("testBoolean", "false");
+		assertThat(AuthenticationConfig.getBoolean("testBoolean", true), equalTo(false));
+		AuthenticationConfig.setProperty("testBoolean", "true");
+		assertThat(AuthenticationConfig.getBoolean("testBoolean", false), equalTo(true));
 	}
 
 	@Test
 	public void shouldGetStringListProperty() {
-		assertThat(AuthenticationConfig.getStringList(FILTER_SKIP_PATTERNS).size(), equalTo(0));
-		AuthenticationConfig.setProperty(FILTER_SKIP_PATTERNS, "*.css,*.gif,*.jpg,*.png");
-		List<String> urls = AuthenticationConfig.getStringList(FILTER_SKIP_PATTERNS);
+		assertThat(AuthenticationConfig.getStringList(WHITE_LIST).size(), equalTo(0));
+		AuthenticationConfig.setProperty(WHITE_LIST, "*.css,*.gif,*.jpg,*.png");
+		List<String> urls = AuthenticationConfig.getStringList(WHITE_LIST);
 		assertThat(urls.size(), equalTo(4));
 		assertThat(urls.get(0), equalTo("*.css"));
 		assertThat(urls.get(1), equalTo("*.gif"));
@@ -104,25 +103,17 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 	}
 
 	@Test
-	public void shouldGetFilterEnabled() {
-		AuthenticationConfig.setProperty(FILTER_ENABLED, "false");
-		assertThat(AuthenticationConfig.isFilterEnabled(), equalTo(false));
-		AuthenticationConfig.setProperty(FILTER_ENABLED, "true");
-		assertThat(AuthenticationConfig.isFilterEnabled(), equalTo(true));
-	}
-
-	@Test
 	public void shouldGetConfigSettingsCached() {
 		AuthenticationConfig.setProperty(SETTINGS_CACHED, "false");
-		assertThat(AuthenticationConfig.isConfigurationCached(), equalTo(false));
+		assertThat(AuthenticationConfig.isConfigurationCacheEnabled(), equalTo(false));
 		AuthenticationConfig.setProperty(SETTINGS_CACHED, "true");
-		assertThat(AuthenticationConfig.isConfigurationCached(), equalTo(true));
+		assertThat(AuthenticationConfig.isConfigurationCacheEnabled(), equalTo(true));
 	}
 
 	@Test
-	public void shouldGetFilterSkipPatterns() {
-		AuthenticationConfig.setProperty(FILTER_SKIP_PATTERNS, "*.css,*.gif,*.jpg");
-		List<String> patterns = AuthenticationConfig.getFilterSkipPatterns();
+	public void shouldGetWhiteList() {
+		AuthenticationConfig.setProperty(WHITE_LIST, "*.css,*.gif,*.jpg");
+		List<String> patterns = AuthenticationConfig.getWhiteList();
 		assertThat(patterns.size(), equalTo(3));
 		assertThat(patterns.get(0), equalTo("*.css"));
 		assertThat(patterns.get(1), equalTo("*.gif"));
@@ -131,7 +122,7 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 
 	@Test
 	public void shouldGetAuthenticator() {
-		AuthenticationConfig.setProperty(AUTHENTICATION_SCHEME, "test");
+		AuthenticationConfig.setProperty(SCHEME, "test");
 		AuthenticationConfig.setProperty("authentication.scheme.test.type", "org.openmrs.module.authentication.TestAuthenticationScheme");
 		AuthenticationScheme authenticator = AuthenticationConfig.getAuthenticationScheme("test");
 		assertThat(authenticator, notNullValue());
