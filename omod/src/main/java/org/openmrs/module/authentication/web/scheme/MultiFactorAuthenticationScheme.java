@@ -3,13 +3,14 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
 package org.openmrs.module.authentication.web.scheme;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.logging.log4j.Marker;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
@@ -28,13 +29,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-import static org.openmrs.module.authentication.AuthenticationLogger.PRIMARY_AUTH_FAILED;
-import static org.openmrs.module.authentication.AuthenticationLogger.PRIMARY_AUTH_SUCCEEDED;
+import static org.openmrs.module.authentication.AuthenticationLogger.getMarker;
+import static org.openmrs.module.authentication.AuthenticationLogger.logEvent;
 
 /**
  * An authentication scheme that supports a primary and secondary authentication factors
  */
 public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme implements WebAuthenticationScheme {
+
+	public static final Marker PRIMARY_SUCCEEDED = getMarker("PRIMARY_AUTHENTICATION_SUCCEEDED");
+	public static final Marker PRIMARY_FAILED = getMarker("PRIMARY_AUTHENTICATION_FAILED");
+	public static final Marker SECONDARY_SUCCEEDED = getMarker("SECONDARY_AUTHENTICATION_SUCCEEDED");
+	public static final Marker SECONDARY_FAILED = getMarker("SECONDARY_AUTHENTICATION_FAILED");
 
 	// User property components
 	public static final String AUTHENTICATION = "authentication";
@@ -42,21 +48,22 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	public static final String CONFIG = "config";
 	private static final String DOT = ".";
 
-	private String instanceName;
+	private String schemeId;
 	private List<String> primaryOptions = new ArrayList<>();
 	private List<String> secondaryOptions = new ArrayList<>();
 
 	public MultiFactorAuthenticationScheme() {
+		this.schemeId = getClass().getName();
 	}
 
 	@Override
-	public String getInstanceName() {
-		return instanceName;
+	public String getSchemeId() {
+		return schemeId;
 	}
 
 	@Override
-	public void configure(String instanceName, Properties config) {
-		this.instanceName = instanceName;
+	public void configure(String schemeId, Properties config) {
+		this.schemeId = schemeId;
 		primaryOptions = parseOptions(config.getProperty("primaryOptions"));
 		secondaryOptions = parseOptions(config.getProperty("secondaryOptions"));
 	}
@@ -76,7 +83,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 				AuthenticationLogger.addUserToContext(candidateUser);
 				if (context.getCandidateUser() == null) {
 					context.setCandidateUser(candidateUser);
-					AuthenticationLogger.logAuthEvent(PRIMARY_AUTH_SUCCEEDED, credentials.getPrimaryCredentials());
+					logEvent(PRIMARY_SUCCEEDED, credentials.getPrimaryCredentials().toString());
 				}
 				else if (!context.getCandidateUser().equals(candidateUser)) {
 					throw new ContextAuthenticationException("Primary authentication returned conflicting user");
@@ -89,7 +96,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 				}
 			}
 			catch (ContextAuthenticationException e) {
-				AuthenticationLogger.logAuthEvent(PRIMARY_AUTH_FAILED, credentials.getPrimaryCredentials());
+				logEvent(PRIMARY_FAILED, credentials.getPrimaryCredentials().toString());
 				credentials.setPrimaryCredentials(null);
 				context.setCandidateUser(null);
 			}
@@ -154,10 +161,10 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 				if (!authenticated.getUser().equals(secondaryAuthenticated.getUser())) {
 					throw new ContextAuthenticationException("Primary and secondary authentication do not match");
 				}
-				AuthenticationLogger.logAuthEvent(AuthenticationLogger.SECONDARY_AUTH_SUCCEEDED, secondaryCredentials);
+				logEvent(SECONDARY_SUCCEEDED, secondaryCredentials.toString());
 			}
 			catch (ContextAuthenticationException e) {
-				AuthenticationLogger.logAuthEvent(AuthenticationLogger.SECONDARY_AUTH_FAILED, secondaryCredentials);
+				logEvent(SECONDARY_FAILED, secondaryCredentials.toString());
 				mfaCreds.setSecondaryCredentials(null);
 				throw new ContextAuthenticationException("Secondary authentication failed");
 			}
@@ -209,10 +216,10 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	}
 
 	protected MultiFactorAuthenticationCredentials getCredentialsFromContext(AuthenticationContext context) {
-		MultiFactorAuthenticationCredentials creds = (MultiFactorAuthenticationCredentials) context.getCredentials(getInstanceName());
+		MultiFactorAuthenticationCredentials creds = (MultiFactorAuthenticationCredentials) context.getCredentials(schemeId);
 		if (creds == null) {
-			creds = new MultiFactorAuthenticationCredentials();
-			context.setCredentials(getInstanceName(), creds);
+			creds = new MultiFactorAuthenticationCredentials(schemeId);
+			context.addCredentials(creds);
 		}
 		return creds;
 	}

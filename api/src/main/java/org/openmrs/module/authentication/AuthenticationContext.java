@@ -23,31 +23,45 @@ import java.util.Map;
 public class AuthenticationContext implements Serializable {
 
     private User candidateUser;
-    private Map<String, AuthenticationCredentials> credentials = new HashMap<>();
+    private final Map<String, AuthenticationCredentials> credentials = new HashMap<>();
 
     public AuthenticationContext() {
     }
 
     // Accessors
 
+    /**
+     * @return the candidate User
+     */
     public User getCandidateUser() {
         return candidateUser;
     }
 
+    /**
+     * @param candidateUser the User to set as the Candidate to authenticate
+     */
     public void setCandidateUser(User candidateUser) {
         this.candidateUser = candidateUser;
     }
 
+    /**
+     * @return the AuthenticationCredentials for the given authentication schemeId
+     */
     public AuthenticationCredentials getCredentials(String schemeId) {
         return credentials.get(schemeId);
     }
 
-    public void setCredentials(String schemeId, AuthenticationCredentials authenticationCredentials) {
-        credentials.put(schemeId, authenticationCredentials);
+    /**
+     * @param authenticationCredentials the AuthenticationCredentials for the given authentication schemeId
+     */
+    public void addCredentials(AuthenticationCredentials authenticationCredentials) {
+        credentials.put(authenticationCredentials.getAuthenticationScheme(), authenticationCredentials);
     }
 
-    public void removeCredentials(String schemeId) {
-        credentials.remove(schemeId);
+    /**
+     * @param authenticationCredentials the AuthenticationCredentials to remove from the context
+     */
+    public void removeCredentials(AuthenticationCredentials authenticationCredentials) {
+        credentials.remove(authenticationCredentials.getAuthenticationScheme());
     }
-
 }

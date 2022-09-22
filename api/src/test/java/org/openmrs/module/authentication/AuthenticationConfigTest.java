@@ -1,11 +1,12 @@
 package org.openmrs.module.authentication;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.AuthenticationScheme;
-import org.openmrs.test.jupiter.BaseModuleContextSensitiveTest;
+import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -17,12 +18,7 @@ import static org.openmrs.module.authentication.AuthenticationConfig.SCHEME;
 import static org.openmrs.module.authentication.AuthenticationConfig.SETTINGS_CACHED;
 import static org.openmrs.module.authentication.AuthenticationConfig.WHITE_LIST;
 
-public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
-
-	@Before
-	public void setup() {
-		AuthenticationConfig.setConfig(new Properties());
-	}
+public class AuthenticationConfigTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldGetAndSetKeysAndProperties() {
@@ -68,10 +64,10 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 
 	@Test
 	public void shouldGetClass() {
-		AuthenticationConfig.setProperty("user", "org.openmrs.User");
-		Class<?> userClass = AuthenticationConfig.getClass("user", User.class);
+		AuthenticationConfig.setProperty("date", "java.util.Date");
+		Class<?> userClass = AuthenticationConfig.getClass("date", Date.class);
 		assertThat(userClass, notNullValue());
-		assertThat(userClass, equalTo(User.class));
+		assertThat(userClass, equalTo(Date.class));
 	}
 
 	@Test
@@ -103,7 +99,7 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 	}
 
 	@Test
-	public void shouldGetConfigSettingsCached() {
+	public void shouldGetConfigurationCacheEnabled() {
 		AuthenticationConfig.setProperty(SETTINGS_CACHED, "false");
 		assertThat(AuthenticationConfig.isConfigurationCacheEnabled(), equalTo(false));
 		AuthenticationConfig.setProperty(SETTINGS_CACHED, "true");
@@ -121,11 +117,28 @@ public class AuthenticationConfigTest extends BaseModuleContextSensitiveTest {
 	}
 
 	@Test
-	public void shouldGetAuthenticator() {
-		AuthenticationConfig.setProperty(SCHEME, "test");
+	public void shouldGetAuthenticationScheme() {
 		AuthenticationConfig.setProperty("authentication.scheme.test.type", "org.openmrs.module.authentication.TestAuthenticationScheme");
-		AuthenticationScheme authenticator = AuthenticationConfig.getAuthenticationScheme("test");
-		assertThat(authenticator, notNullValue());
-		assertThat(authenticator.getClass(), equalTo(TestAuthenticationScheme.class));
+		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
+		assertThat(scheme, notNullValue());
+		assertThat(scheme.getClass(), equalTo(UsernamePasswordAuthenticationScheme.class));
+		AuthenticationConfig.setProperty(SCHEME, "test");
+		scheme = AuthenticationConfig.getAuthenticationScheme();
+		assertThat(scheme, notNullValue());
+		assertThat(scheme.getClass(), equalTo(TestAuthenticationScheme.class));
+	}
+
+	@Test
+	public void shouldGetAuthenticationSchemeById() {
+		AuthenticationConfig.setProperty("authentication.scheme.test1.type", "org.openmrs.module.authentication.TestAuthenticationScheme");
+		AuthenticationConfig.setProperty("authentication.scheme.test2.type", "org.openmrs.module.authentication.TestAuthenticationScheme");
+		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme("test1");
+		assertThat(scheme, notNullValue());
+		assertThat(scheme.getClass(), equalTo(TestAuthenticationScheme.class));
+		assertThat(((TestAuthenticationScheme)scheme).getSchemeId(), equalTo("test1"));
+		scheme = AuthenticationConfig.getAuthenticationScheme("test2");
+		assertThat(scheme, notNullValue());
+		assertThat(scheme.getClass(), equalTo(TestAuthenticationScheme.class));
+		assertThat(((TestAuthenticationScheme)scheme).getSchemeId(), equalTo("test2"));
 	}
 }

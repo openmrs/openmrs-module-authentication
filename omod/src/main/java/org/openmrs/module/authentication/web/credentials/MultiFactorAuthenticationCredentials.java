@@ -10,22 +10,23 @@
 package org.openmrs.module.authentication.web.credentials;
 
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.web.scheme.MultiFactorAuthenticationScheme;
 
 /**
  * Represents the credentials collected during the authentication session
  */
 public class MultiFactorAuthenticationCredentials extends AuthenticationCredentials {
 
+    private String schemeId;
     private AuthenticationCredentials primaryCredentials;
     private AuthenticationCredentials secondaryCredentials;
 
-    public MultiFactorAuthenticationCredentials() {
+    public MultiFactorAuthenticationCredentials(String schemeId) {
+        this.schemeId = schemeId;
     }
 
     @Override
     public String getAuthenticationScheme() {
-        return MultiFactorAuthenticationScheme.class.getName();
+        return schemeId;
     }
 
     @Override

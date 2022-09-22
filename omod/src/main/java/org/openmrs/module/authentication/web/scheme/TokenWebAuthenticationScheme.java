@@ -33,20 +33,22 @@ public class TokenWebAuthenticationScheme implements WebAuthenticationScheme {
     public static final String LOGIN_PAGE = "loginPage";
     public static final String TOKEN_PARAM = "tokenParam";
 
-    private String instanceName;
+    private String schemeId;
     private String loginPage;
     private String tokenParam;
 
-    public TokenWebAuthenticationScheme() {}
-
-    @Override
-    public String getInstanceName() {
-        return instanceName;
+    public TokenWebAuthenticationScheme() {
+        this.schemeId = getClass().getName();
     }
 
     @Override
-    public void configure(String instanceName, Properties config) {
-        this.instanceName = instanceName;
+    public String getSchemeId() {
+        return schemeId;
+    }
+
+    @Override
+    public void configure(String schemeId, Properties config) {
+        this.schemeId = schemeId;
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/token.htm");
         tokenParam = config.getProperty(TOKEN_PARAM, "token");
     }
@@ -57,7 +59,7 @@ public class TokenWebAuthenticationScheme implements WebAuthenticationScheme {
         String token = session.getRequestParam(tokenParam);
         if (StringUtils.isNotBlank(token)) {
             User candidateUser = session.getAuthenticationContext().getCandidateUser();
-            credentials = new TokenAuthenticationCredentials(instanceName, candidateUser, token);
+            credentials = new TokenAuthenticationCredentials(schemeId, candidateUser, token);
         }
         return credentials;
     }
@@ -78,7 +80,7 @@ public class TokenWebAuthenticationScheme implements WebAuthenticationScheme {
         TokenAuthenticationCredentials tac = (TokenAuthenticationCredentials) credentials;
         // TODO: Temporary to demonstrate.  Replace with proper configuration and algorithm
         if (tac.getToken().equalsIgnoreCase("test")) {
-            return new BasicAuthenticated(tac.getCandidateUser(), getInstanceName());
+            return new BasicAuthenticated(tac.getCandidateUser(), schemeId);
         }
         else {
             throw new ContextAuthenticationException("Invalid token");

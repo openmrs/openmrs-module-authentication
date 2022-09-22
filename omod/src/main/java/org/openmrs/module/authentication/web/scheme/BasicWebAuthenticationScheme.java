@@ -10,8 +10,6 @@
 package org.openmrs.module.authentication.web.scheme;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
@@ -28,27 +26,27 @@ import java.util.Properties;
  */
 public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
 
-    protected final Log log = LogFactory.getLog(getClass());
-
     public static final String LOGIN_PAGE = "loginPage";
     public static final String USERNAME_PARAM = "usernameParam";
     public static final String PASSWORD_PARAM = "passwordParam";
 
-    private String instanceName;
+    private String schemeId;
     private String loginPage;
     private String usernameParam;
     private String passwordParam;
 
-    public BasicWebAuthenticationScheme() {}
-
-    @Override
-    public String getInstanceName() {
-        return instanceName;
+    public BasicWebAuthenticationScheme() {
+        this.schemeId = getClass().getName();
     }
 
     @Override
-    public void configure(String instanceName, Properties config) {
-        this.instanceName = instanceName;
+    public String getSchemeId() {
+        return schemeId;
+    }
+
+    @Override
+    public void configure(String schemeId, Properties config) {
+        this.schemeId = schemeId;
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/basicLogin.htm");
         usernameParam = config.getProperty(USERNAME_PARAM, "username");
         passwordParam = config.getProperty(PASSWORD_PARAM, "password");
@@ -60,15 +58,15 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
         String username = session.getRequestParam(usernameParam);
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
-            credentials = new BasicAuthenticationCredentials(username, password);
-            session.getAuthenticationContext().setCredentials(getInstanceName(), credentials);
+            credentials = new BasicAuthenticationCredentials(schemeId, username, password);
+            session.getAuthenticationContext().addCredentials(credentials);
         }
         return credentials;
     }
 
     @Override
     public String getChallengeUrl(AuthenticationSession session) {
-        if (session.getAuthenticationContext().getCredentials(getInstanceName()) == null) {
+        if (session.getAuthenticationContext().getCredentials(schemeId) == null) {
             return loginPage;
         }
         return null;

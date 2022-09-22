@@ -19,13 +19,13 @@ import java.util.Properties;
 public interface ConfigurableAuthenticationScheme extends AuthenticationScheme {
 
     /**
-     * @return the instanceName that this AuthenticationScheme was configured with
+     * @return the schemeId that this AuthenticationScheme was configured with
      */
-    String getInstanceName();
+    String getSchemeId();
 
     /**
-     * @param instanceName - the unique name that this Authenticator instance is configured with
+     * @param schemeId - the unique schemeId that this AuthenticationScheme instance is registered under
      * @param config - the configuration to use when constructing a new instance of this AuthenticationScheme
      */
-    void configure(String instanceName, Properties config);
+    void configure(String schemeId, Properties config);
 }

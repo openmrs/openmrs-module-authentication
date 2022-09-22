@@ -40,10 +40,10 @@ import java.util.Properties;
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the
  * configured login page controller. This filter is configurable via runtime properties,
  * which include whether the filter is enabled or disabled, and what url patterns do not require authentication:
- *
+ * <p>
  * authentication.filter.enabled = true/false
  * authentication.filter.skipPatterns = comma-delimited list of url patterns that should not require authentication
- *
+ * <p>
  * NOTE: If a pattern in unprotected urls starts with a "*", then
  * it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
  * indicated pattern In order to load the login page and successfully login on a 1.x system using
@@ -108,8 +108,7 @@ public class AuthenticationFilter implements Filter {
 							catch (ContextAuthenticationException e) {
 								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								if (challengeUrl == null) {
-									String schemeId = webAuthenticationScheme.getInstanceName();
-									session.getAuthenticationContext().removeCredentials(schemeId);
+									session.getAuthenticationContext().removeCredentials(credentials);
 									challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								}
 								if (challengeUrl == null) {

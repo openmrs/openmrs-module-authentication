@@ -182,18 +182,24 @@ public class AuthenticationConfig implements Serializable {
      * @param type the type of class expected
      * @return a class of the given type, with a type identified by the value of the given property
      */
+    @SuppressWarnings("unchecked")
     public static <T> Class<? extends T> getClass(String key, Class<T> type) {
-        Class<? extends T> ret = null;
+        Class<?> ret = null;
         try {
             String className = config.getProperty(key);
             if (StringUtils.isNotBlank(className)) {
-                ret = (Class<? extends T>) Context.loadClass(className);
+                try {
+                    ret = Context.loadClass(className);
+                }
+                catch (Throwable t) {
+                    ret = AuthenticationConfig.class.getClassLoader().loadClass(className);
+                }
             }
         }
         catch (Exception e) {
             throw new RuntimeException("Unable to load class " + type);
         }
-        return ret;
+        return (Class<? extends T>) ret;
     }
 
     /**

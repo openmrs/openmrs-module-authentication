@@ -9,7 +9,6 @@
  */
 package org.openmrs.module.authentication.credentials;
 
-import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 
 /**
@@ -17,19 +16,24 @@ import org.openmrs.api.context.UsernamePasswordCredentials;
  */
 public class BasicAuthenticationCredentials extends AuthenticationCredentials {
 
+    private String schemeId;
     private String username;
     private String password;
 
-    public BasicAuthenticationCredentials(String username, String password) {
+    public BasicAuthenticationCredentials(String schemeId, String username, String password) {
+        this.schemeId = schemeId;
         this.username = username;
         this.password = password;
     }
 
     @Override
     public String getAuthenticationScheme() {
-        return UsernamePasswordAuthenticationScheme.class.getName();
+        return schemeId;
     }
 
+    /**
+     * @return a UsernamePasswordCredentials instance with the same credentials
+     */
     public UsernamePasswordCredentials toUsernamePasswordCredentials() {
         return new UsernamePasswordCredentials(username, password);
     }

@@ -17,19 +17,19 @@ import org.openmrs.User;
  */
 public class TokenAuthenticationCredentials extends AuthenticationCredentials {
 
-    private final String authenticationScheme;
+    private final String schemeId;
     private final User candidateUser;
     private final String token;
 
-    public TokenAuthenticationCredentials(String authenticationScheme, User candidateUser, String token) {
-        this.authenticationScheme = authenticationScheme;
+    public TokenAuthenticationCredentials(String schemeId, User candidateUser, String token) {
+        this.schemeId = schemeId;
         this.candidateUser = candidateUser;
         this.token = token;
     }
 
     @Override
     public String getAuthenticationScheme() {
-        return authenticationScheme;
+        return schemeId;
     }
 
     @Override

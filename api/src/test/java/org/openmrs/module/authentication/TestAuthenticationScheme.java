@@ -9,7 +9,9 @@
  */
 package org.openmrs.module.authentication;
 
+import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
+import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 
@@ -20,35 +22,33 @@ import java.util.Properties;
  */
 public class TestAuthenticationScheme implements ConfigurableAuthenticationScheme {
 
-    private String instanceName;
+    private String schemeId;
     private Properties config;
 
     public TestAuthenticationScheme() {}
 
     @Override
-    public void configure(String instanceName, Properties config) {
-        this.instanceName = instanceName;
-        this.config = new Properties();
+    public void configure(String schemeId, Properties config) {
+        this.schemeId = schemeId;
+        this.config = config;
     }
 
     @Override
     public Authenticated authenticate(Credentials credentials) {
-        return null;
+        User user = new User();
+        user.setUsername(credentials.getClientName());
+        for (String propertyName : config.stringPropertyNames()) {
+            user.setUserProperty(propertyName, config.getProperty(propertyName));
+        }
+        return new BasicAuthenticated(user, schemeId);
     }
 
-    public String getInstanceName() {
-        return instanceName;
-    }
-
-    public void setInstanceName(String instanceName) {
-        this.instanceName = instanceName;
+    @Override
+    public String getSchemeId() {
+        return schemeId;
     }
 
     public Properties getConfig() {
         return config;
-    }
-
-    public void setConfig(Properties config) {
-        this.config = config;
     }
 }
