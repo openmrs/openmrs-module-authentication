@@ -60,21 +60,47 @@ public class AuthenticationFilter implements Filter {
 	
 	public AuthenticationFilter() {
 	}
-	
+
+	/**
+	 * This module is intended to be fully configurable by implementations and not configured statically here
+	 * @see Filter#init(FilterConfig)
+	 */
 	@Override
 	public void init(FilterConfig filterConfig) {
 		log.info("Authentication Filter initializing");
-		// Setup path matcher
 		matcher = new AntPathMatcher();
-		// matcher.setCaseSensitive(false); This is only available in Spring versions included in 2.5.x+
+		matcher.setCaseSensitive(false);
 		matcher.setTrimTokens(true);
 	}
-	
+
+	/**
+	 * @see Filter#destroy()
+	 */
 	@Override
 	public void destroy() {
 		matcher = null;
 	}
-	
+
+	/**
+	 * This filter operates on a specific type of AuthenticationScheme, which is a WebAuthenticationScheme
+	 * If the configured scheme (authentication.scheme in the runtime properties) is a WebAuthenticationScheme, and
+	 * if the user is not yet authenticated, then this filter will interact with the WebAuthenticationScheme to:
+	 * <ul>
+	 *     <li>Try to instantiate valid AuthenticationCredentials from the current request</li>
+	 *     <li>Determine if there is a challenge URL where the user should be redirected to submit credentials</li>
+	 *     <li>If credentials are incomplete, and a challenge URL is needed, redirect the user</li>
+	 *     <li>Otherwise, if credentials are complete and no further challenge urls are presented, authenticate</li>
+	 *     <li>Redirect back to a challenge URL if authentication fails</li>
+	 *     <li>Redirect to an appropriate success URL if authentication succeeds</li>
+	 * </ul>
+	 * In order to allow challengeUrl redirection to work, this filter also checks a list of white-listed URL
+	 * patterns to determine if a given URL should result in an authentication redirect or not.
+	 * This is configurable in OpenMRS runtime properties as `authentication.whiteList`
+	 * Typically this should be set to include any page and any resource (images, scripts, etc) that is needed for
+	 * the challenge urls that the WebAuthenticationScheme instances will redirect to.
+	 * <p>
+	 * @see Filter#doFilter(ServletRequest, ServletResponse, FilterChain)
+	 */
 	@Override
 	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
 	        throws IOException, ServletException {
@@ -143,6 +169,11 @@ public class AuthenticationFilter implements Filter {
 		}
 	}
 
+	/**
+	 * @param request the HttpServletRequest to check
+	 * @return true if the request is for a URL that matches a configured `authentication.whiteList` pattern
+	 * @see AuthenticationFilter#matchesPath(HttpServletRequest, String)
+	 */
 	protected boolean isWhiteListed(HttpServletRequest request) {
 		if (request.getMethod().equalsIgnoreCase("GET")) {
 			for (String pattern : AuthenticationConfig.getWhiteList()) {
@@ -155,7 +186,13 @@ public class AuthenticationFilter implements Filter {
 	}
 	
 	/**
-	 * @return true if either the servletPath or requestUri of the given request matches the given pattern
+	 * This checks the request servlet path, and the request requestURI against the given pattern
+	 * The requestURI that is checked should be relative to the context path.
+	 * So, if OpenMRS is deployed as a web application named "openmrs" at https://server:port/openmrs, a pattern
+	 * of `/index.htm` would match a path at https://server:port/openmrs/index.htm
+	 * This uses the ANT pattern matching syntax, with an additional feature that if a pattern starts with a "*",
+	 * then it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
+	 * indicated pattern.  So, instead of passing in `/**\/*.jpg`, one can instead pass in simply `*.jpg`
 	 */
 	protected boolean matchesPath(HttpServletRequest request, String pattern) {
 		if (pattern.startsWith("*")) {
@@ -213,7 +250,15 @@ public class AuthenticationFilter implements Filter {
 		}
 	}
 
-	private String determineSuccessRedirectUrl(HttpServletRequest request) {
+	/**
+	 * This returns an appropriate redirect URL following successful authentication
+	 * This first checks for a parameter named `redirect`, followed by a parameter named `refererURL`, and then
+	 * if neither of these are found, it will redirect to the root context path.
+	 * If an absolute path is found (eg. starts with '/'), then the OpenMRS context path is prepended to it
+	 * If a relative path is found, this will ensure that this path is relative to the OpenMRS context path
+	 * @param request the request to use to determine url redirection
+	 */
+	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
 		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
 		String redirect = request.getParameter("redirect");
 		if (StringUtils.isNotBlank(redirect)) {

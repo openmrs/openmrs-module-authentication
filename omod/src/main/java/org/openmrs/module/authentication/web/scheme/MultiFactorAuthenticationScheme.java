@@ -21,6 +21,7 @@ import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 import org.openmrs.module.authentication.web.credentials.MultiFactorAuthenticationCredentials;
 
@@ -56,11 +57,19 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		this.schemeId = getClass().getName();
 	}
 
+	/**
+	 * @return the configured schemeId
+	 */
 	@Override
 	public String getSchemeId() {
 		return schemeId;
 	}
 
+	/**
+	 * This supports configuring the `primaryOptions` and `secondaryOptions` that are supported factors
+	 * These are both expected to be comma-delimited lists of schemeIds
+	 * @see ConfigurableAuthenticationScheme#configure(String, Properties)
+	 */
 	@Override
 	public void configure(String schemeId, Properties config) {
 		this.schemeId = schemeId;
@@ -68,6 +77,9 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		secondaryOptions = parseOptions(config.getProperty("secondaryOptions"));
 	}
 
+	/**
+	 * @see WebAuthenticationScheme#getCredentials(AuthenticationSession)
+	 */
 	@Override
 	public AuthenticationCredentials getCredentials(AuthenticationSession session) {
 		AuthenticationContext context = session.getAuthenticationContext();
@@ -106,6 +118,9 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		return credentials;
 	}
 
+	/**
+	 * @see WebAuthenticationScheme#getChallengeUrl(AuthenticationSession)
+	 */
 	@Override
 	public String getChallengeUrl(AuthenticationSession session) {
 		AuthenticationContext context = session.getAuthenticationContext();
@@ -125,6 +140,9 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		return null;
 	}
 
+	/**
+	 * @see AuthenticationScheme#authenticate(Credentials)
+	 */
 	@Override
 	public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 
@@ -178,6 +196,14 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		return authenticated;
 	}
 
+	/**
+	 * This returns the WebAuthenticationScheme that is referenced in the given set of credentials.
+	 * If this is not specified on the credentials, then this will return the first configured authentication scheme
+	 * in the `primaryOptions` configuration property for this scheme.
+	 * If no AuthenticationScheme can be returned, or if it is not a WebAuthenticationScheme, an exception is thrown
+	 * @param credentials the MultiFactorAuthenticationCredentials to check for a configured WebAuthenticationScheme
+	 * @return the WebAuthenticationScheme to use for the given MultiFactorAuthenticationCredentials
+	 */
 	protected WebAuthenticationScheme getPrimaryAuthenticationScheme(MultiFactorAuthenticationCredentials credentials) {
 		AuthenticationCredentials primaryCredentials = credentials.getPrimaryCredentials();
 		String authScheme = null;
@@ -204,6 +230,13 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		}
 	}
 
+	/**
+	 * This returns the WebAuthenticationScheme that is configured for the given User
+	 * This is configured via a user property named `authentication.secondaryType`
+	 * This throws an Exception the configured AuthenticationScheme is not a WebAuthenticationScheme
+	 * @param user the User to check for configured secondary WebAuthenticationScheme
+	 * @return the WebAuthenticationScheme to use for the given MultiFactorAuthenticationCredentials
+	 */
 	protected WebAuthenticationScheme getSecondaryAuthenticationScheme(User user) {
 		if (user != null) {
 			String secondaryName = user.getUserProperty(AUTHENTICATION + DOT + SECONDARY_TYPE);
@@ -220,6 +253,12 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		return null;
 	}
 
+	/**
+	 * This returns the MultiFactorAuthenticationCredentials stored in the AuthenticationContext
+	 * If none are found, this will construct a new instance and set it on the AuthenticationContext before returning it
+	 * @param context the AuthenticationContext in which to retrieve the credentials
+	 * @return the MultiFactorAuthenticationCredentials from the AuthenticaitonContext, or a new instance if null
+	 */
 	protected MultiFactorAuthenticationCredentials getCredentialsFromContext(AuthenticationContext context) {
 		MultiFactorAuthenticationCredentials creds = (MultiFactorAuthenticationCredentials) context.getCredentials(schemeId);
 		if (creds == null) {
@@ -229,6 +268,11 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		return creds;
 	}
 
+	/**
+	 * Utility method to parse a String to a List of Strings, separated by ","
+	 * @param optionString the string to parse
+	 * @return a List of Strings parsed from the optionString
+	 */
 	protected List<String> parseOptions(String optionString) {
 		List<String> options = new ArrayList<>();
 		if (StringUtils.isNotBlank(optionString)) {

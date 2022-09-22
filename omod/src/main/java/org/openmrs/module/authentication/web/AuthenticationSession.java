@@ -20,7 +20,18 @@ import javax.servlet.http.HttpSession;
 import java.util.UUID;
 
 /**
- * Wrapper class for an HttpSession that provides access to the AuthenticationContext
+ * An AuthenticationSession is typically constructed in the servlet filter via the incoming request, but may also
+ * be constructed in HttpSessionListeners that only have access to the session and there is no incoming request.
+ * <p>
+ * The AuthenticationSession is essentially a wrapper around the HttpSession and the HttpServletRequest (if present),
+ * and supports two primary objectives:
+ * <p>
+ * 1. Manages the lifecycle and provides access to the AuthenticationContext in the HttpSession during the
+ * authentication process, to enable workflows to span multiple requests (i.e. two-factor authentication, etc.)
+ * 2. Ensures relevant Authentication data is added to (and removed from) the Logging context
+ * so that implementations can choose to log information about system authentication as needs evolve.  This
+ * information includes the IP Address, Username, UserId, HttpSession ID, and a unique ID that encompasses
+ * the user's entire Authentication Session from pre-login HTTP Session creation to post-logout HTTP session destroy
  */
 public class AuthenticationSession {
 
@@ -33,6 +44,14 @@ public class AuthenticationSession {
     private final HttpSession session;
     private HttpServletRequest request;
 
+    /**
+     * This constructor should be used in cases where there is an HttpSession available but not an
+     * HttpServletRequest.  Examples of this are in HttpSessionListeners.
+     * This constructor sets up data in the HTTP session for tracking authentication details
+     * If a new AuthenticationSession is constructed and a user is already authenticated or there is existing
+     * data in the LoggingContext on the current thread, ensure this is initialized
+     * @param session the HttpSession to use to construct this AuthenticationSession
+     */
     public AuthenticationSession(HttpSession session) {
         this.session = session;
         AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, getAuthenticationSessionId());
@@ -47,6 +66,13 @@ public class AuthenticationSession {
         }
     }
 
+    /**
+     * This constructor should be used in cases where there is a HttpServletRequest available that contains an
+     * HttpSession.  Examples of this would be in Servlet filters and Controllers
+     * This constructor sets up data in the HTTP session for tracking authentication details,
+     * and makes data from the request available for use in the session (request parameters, IP address, etc)
+     * @param request the HttpServletRequest to use to construct this AuthenticationSession
+     */
     public AuthenticationSession(HttpServletRequest request) {
         this(request.getSession());
         this.request = request;
@@ -62,6 +88,15 @@ public class AuthenticationSession {
         return ctx;
     }
 
+    /**
+     * This returns a unique ID for the authentication session that may span across multiple HTTP sessions,
+     * for example when the HTTP session is invalidated and recreated to guard against session fixation, without
+     * actually logging out the authenticated user.
+     * If no current value exists in the HTTP session, this will check if a value exists on the current thread.
+     * If no value exists on either, this will generate a new ID
+     * This will store the resulting ID in the session, and then return it.
+     * @return the authentication session id for the current authentication session
+     */
     public String getAuthenticationSessionId() {
         String authSessionId = (String) session.getAttribute(AUTHENTICATION_SESSION_ID_KEY);
         if (authSessionId == null) {
@@ -74,6 +109,14 @@ public class AuthenticationSession {
         return authSessionId;
     }
 
+    /**
+     * This returns the IP address stored on the current session
+     * If no value is found on the session, this will retrieve the IP address from the request
+     * If no request is available, this will retrieve the IP address stored on the current thread.
+     * This will store the resulting IP Address in the session, and then return it.
+     * If there is an IP address on the request, and this differs from the value in the session, an exception is thrown
+     * @return the authentication session id for the current authentication session
+     */
     public String getIpAddress() {
         String ipAddress = (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
         if (ipAddress != null && request != null && !ipAddress.equals(request.getRemoteAddr())) {
@@ -91,28 +134,48 @@ public class AuthenticationSession {
         return ipAddress;
     }
 
+    /**
+     * @return the username stored on the session
+     */
     public String getUsername() {
         return (String) session.getAttribute(AUTHENTICATION_USERNAME);
     }
 
+    /**
+     * This will persist the given username in the HTTP Session and also set it in the Logging context
+     * @param username the username to store on the session
+     */
     public void setUsername(String username) {
         session.setAttribute(AUTHENTICATION_USERNAME, username);
         AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, username);
     }
 
+    /**
+     * @return the userId stored on the session
+     */
     public String getUserId() {
         return (String) session.getAttribute(AUTHENTICATION_USER_ID);
     }
 
+    /**
+     * This will persist the given userId in the HTTP Session and also set it in the Logging context
+     * @param userId the userId to store on the session
+     */
     public void setUserId(String userId) {
         session.setAttribute(AUTHENTICATION_USER_ID, userId);
         AuthenticationLogger.addToContext(AuthenticationLogger.USER_ID, userId);
     }
 
+    /**
+     * @return the id of the associated HTTP Session
+     */
     public String getHttpSessionId() {
         return session.getId();
     }
 
+    /**
+     * @return the parameter value found in the associated request, if the request is not null.  Null otherwise.
+     */
     public String getRequestParam(String name) {
         if (request != null) {
             return request.getParameter(name);
@@ -120,17 +183,24 @@ public class AuthenticationSession {
         return null;
     }
 
+    /**
+     * This removes the AuthenticationContext from the HTTP Session
+     * Typically this would be called after authentication is complete, to remove any sensitive credential data
+     */
     public void removeAuthenticationContext() {
-        HttpSession session = request.getSession(false);
         if (session != null) {
             session.removeAttribute(AUTHENTICATION_CONTEXT_KEY);
         }
     }
 
+    /**
+     * This removes all data from the HTTP Session and from the Logging context
+     * Typically this would be called when a user is Logged out
+     */
     public void destroy() {
+        removeAuthenticationContext();
         if (session != null) {
             session.removeAttribute(AUTHENTICATION_SESSION_ID_KEY);
-            session.removeAttribute(AUTHENTICATION_CONTEXT_KEY);
             session.removeAttribute(AUTHENTICATION_IP_ADDRESS);
             session.removeAttribute(AUTHENTICATION_USERNAME);
             session.removeAttribute(AUTHENTICATION_USER_ID);

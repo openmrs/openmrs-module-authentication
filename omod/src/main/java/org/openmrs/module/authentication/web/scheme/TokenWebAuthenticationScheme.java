@@ -24,7 +24,7 @@ import org.openmrs.module.authentication.web.AuthenticationSession;
 import java.util.Properties;
 
 /**
- * Represents a particular method of authentication.
+ * This is currently a placeholder class to demonstrate a second factor of authentication
  */
 public class TokenWebAuthenticationScheme implements WebAuthenticationScheme {
 

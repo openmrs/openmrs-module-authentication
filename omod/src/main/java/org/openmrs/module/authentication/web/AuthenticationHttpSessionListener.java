@@ -21,6 +21,11 @@ import javax.servlet.http.HttpSessionListener;
 @Component
 public class AuthenticationHttpSessionListener implements HttpSessionListener {
 
+	/**
+	 * This ensures a new AuthenticationSession is created and initialized with appropriate values
+	 * @see AuthenticationSession which will initialize with existing values if an authenticated user is found
+	 * @param httpSessionEvent the event passed at session creation
+	 */
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
@@ -28,6 +33,11 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		AuthenticationLogger.logEvent(AuthenticationLogger.SESSION_CREATED, "httpSessionId=" + sessionId);
 	}
 
+	/**
+	 * This ensures a new AuthenticationSession is created and initialized with appropriate values
+	 * If this event coincides with a logged-out user, then ensure all authentication data is destroyed in the session
+	 * @param httpSessionEvent the event passed at session creation
+	 */
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
