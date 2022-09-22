@@ -93,6 +93,7 @@ public class AuthenticationFilter implements Filter {
 				if (authenticationScheme instanceof WebAuthenticationScheme) {
 					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
 					if (!isWhiteListed(request)) {
+						log.debug("Authentication required for " + request.getRequestURI());
 						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
 						String challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 						if (StringUtils.isNotBlank(challengeUrl)) {
@@ -134,9 +135,11 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	protected boolean isWhiteListed(HttpServletRequest request) {
-		for (String pattern : AuthenticationConfig.getWhiteList()) {
-			if (matchesPath(request, pattern)) {
-				return true;
+		if (request.getMethod().equalsIgnoreCase("GET")) {
+			for (String pattern : AuthenticationConfig.getWhiteList()) {
+				if (matchesPath(request, pattern)) {
+					return true;
+				}
 			}
 		}
 		return false;
