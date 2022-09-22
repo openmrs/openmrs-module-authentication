@@ -37,12 +37,14 @@ import java.util.Enumeration;
 import java.util.Properties;
 
 /**
- * This servlet filter checks whether the user is authenticated, and if not, redirects to the
- * configured login page controller. This filter is configurable via runtime properties,
- * which include whether the filter is enabled or disabled, and what url patterns do not require authentication:
+ * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
+ * This filter is configurable via runtime properties:
  * <p>
- * authentication.filter.enabled = true/false
- * authentication.filter.skipPatterns = comma-delimited list of url patterns that should not require authentication
+ * authentication.scheme = schemeId
+ * authentication.whiteList = comma-delimited list of url patterns that should not require authentication
+ * <p>
+ * If `authentication.scheme` references a `WebAuthenticationScheme`, then this filter will activate.
+ * If this is not configured, or does not implement `WebAuthenticationScheme`, no filtering will occur
  * <p>
  * NOTE: If a pattern in unprotected urls starts with a "*", then
  * it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
@@ -94,17 +96,25 @@ public class AuthenticationFilter implements Filter {
 					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
 					if (!isWhiteListed(request)) {
 						log.debug("Authentication required for " + request.getRequestURI());
+
+						// If any credentials were passed in the request or session, update the Context and return them
 						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
+
+						// Check whether the authentication scheme requires user input by retrieving challengeUrl
 						String challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
+
+						// If a challenge URL is supplied, then redirect to this for further user input
 						if (StringUtils.isNotBlank(challengeUrl)) {
 							response.sendRedirect(challengeUrl);
 						}
+						// Otherwise, if no challenge URL is returned, then credentials are complete, authenticate
 						else {
 							try {
 								Context.authenticate(credentials);
 								regenerateSession(request);  // Guard against session fixation attacks
 								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
+							// If authentication fails, redirect back to challenge url for user to attempt again
 							catch (ContextAuthenticationException e) {
 								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								if (challengeUrl == null) {

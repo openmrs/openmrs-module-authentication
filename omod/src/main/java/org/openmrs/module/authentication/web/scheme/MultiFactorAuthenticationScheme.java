@@ -97,6 +97,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 			}
 			catch (ContextAuthenticationException e) {
 				logEvent(PRIMARY_FAILED, credentials.getPrimaryCredentials().toString());
+				context.removeCredentials(credentials.getPrimaryCredentials());
 				credentials.setPrimaryCredentials(null);
 				context.setCandidateUser(null);
 			}
@@ -111,11 +112,13 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		MultiFactorAuthenticationCredentials credentials = getCredentialsFromContext(context);
 		if (credentials.getPrimaryCredentials() == null) {
 			WebAuthenticationScheme primaryScheme = getPrimaryAuthenticationScheme(credentials);
+			context.removeCredentials(primaryScheme.getSchemeId());
 			return primaryScheme.getChallengeUrl(session);
 		}
 		else if (credentials.getSecondaryCredentials() == null) {
 			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(context.getCandidateUser());
 			if (secondaryScheme != null) {
+				context.removeCredentials(secondaryScheme.getSchemeId());
 				return secondaryScheme.getChallengeUrl(session);
 			}
 		}
@@ -141,11 +144,13 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 		if (primaryCredentials == null) {
 			throw new ContextAuthenticationException("Primary authentication has not been completed");
 		}
-		authenticated = primaryScheme.authenticate(primaryCredentials);
-		if (authenticated == null) {
+		try {
+			authenticated = primaryScheme.authenticate(primaryCredentials);
+		}
+		catch (ContextAuthenticationException e) {
 			mfaCreds.setPrimaryCredentials(null);
 			mfaCreds.setSecondaryCredentials(null);
-			throw new ContextAuthenticationException("Primary authentication failed");
+			throw e;
 		}
 		AuthenticationLogger.addUserToContext(authenticated.getUser());
 

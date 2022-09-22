@@ -59,9 +59,16 @@ public class AuthenticationContext implements Serializable {
     }
 
     /**
+     * @param schemeId the AuthenticationCredentials to remove from the context
+     */
+    public void removeCredentials(String schemeId) {
+        credentials.remove(schemeId);
+    }
+
+    /**
      * @param authenticationCredentials the AuthenticationCredentials to remove from the context
      */
     public void removeCredentials(AuthenticationCredentials authenticationCredentials) {
-        credentials.remove(authenticationCredentials.getAuthenticationScheme());
+        removeCredentials(authenticationCredentials.getAuthenticationScheme());
     }
 }

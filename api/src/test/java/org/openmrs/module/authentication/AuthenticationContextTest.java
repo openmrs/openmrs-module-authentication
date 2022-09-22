@@ -18,6 +18,7 @@ import java.util.Properties;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 public class AuthenticationContextTest extends BaseAuthenticationTest {
 
@@ -66,4 +67,22 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 		}
 	}
 
+	@Test
+	public void shouldAddGetAndRemoveCredentials() {
+		AuthenticationContext ctx = new AuthenticationContext();
+		ctx.addCredentials(new BasicAuthenticationCredentials("c1", "user1", "pw1"));
+		ctx.addCredentials(new BasicAuthenticationCredentials("c2", "user2", "pw2"));
+		AuthenticationCredentials c1 = ctx.getCredentials("c1");
+		assertThat(c1.getAuthenticationScheme(), equalTo("c1"));
+		assertThat(c1.getClass(), equalTo(BasicAuthenticationCredentials.class));
+		assertThat(c1.getClientName(), equalTo("user1"));
+		AuthenticationCredentials c2 = ctx.getCredentials("c2");
+		assertThat(c2.getAuthenticationScheme(), equalTo("c2"));
+		assertThat(c2.getClass(), equalTo(BasicAuthenticationCredentials.class));
+		assertThat(c2.getClientName(), equalTo("user2"));
+		ctx.removeCredentials(c1);
+		assertThat(ctx.getCredentials("c1"), nullValue());
+		ctx.removeCredentials("c2");
+		assertThat(ctx.getCredentials("c2"), nullValue());
+	}
 }

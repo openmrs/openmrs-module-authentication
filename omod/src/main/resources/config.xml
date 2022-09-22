@@ -12,11 +12,6 @@
 
 	<require_version>${openmrsVersion}</require_version>
 
-	<servlet>
-		<servlet-name>authenticationServlet</servlet-name>
-		<servlet-class>org.openmrs.module.authentication.web.AuthenticationServlet</servlet-class>
-	</servlet>
-
 	<filter>
 		<filter-name>authenticationFilter</filter-name>
 		<filter-class>org.openmrs.module.authentication.web.AuthenticationFilter</filter-class>
