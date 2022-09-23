@@ -13,15 +13,16 @@ import java.util.Properties;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.notNullValue;
 
 /**
  * Base class for non-context-sensitive Authentication tests
  * Sets up loggers to enable testing of logging events
  */
-public class BaseAuthenticationTest {
+public abstract class BaseAuthenticationTest {
 
-	private Logger logger;
-	private MemoryAppender memoryAppender;
+	protected Logger logger;
+	protected MemoryAppender memoryAppender;
 
 	@BeforeEach
 	public void setup() {
@@ -51,6 +52,7 @@ public class BaseAuthenticationTest {
 	 * @param test if the last line logged by the AuthenticationLogger contains the given test, return true
 	 */
 	protected void assertLastLogContains(String test) {
+		assertThat(memoryAppender.getLogLines(), notNullValue());
 		int numLines = memoryAppender.getLogLines().size();
 		assertThat(numLines, greaterThan(0));
 		String line = memoryAppender.getLogLines().get(numLines-1);

@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.web.credentials;
 
+import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 
 /**
@@ -20,32 +21,54 @@ public class MultiFactorAuthenticationCredentials extends AuthenticationCredenti
     private AuthenticationCredentials primaryCredentials;
     private AuthenticationCredentials secondaryCredentials;
 
+    /**
+     * Instantiates a new set of credentials with the given schemeId that identifies the linked AuthenticationScheme
+     * @param schemeId the schemeId that identifies the particular AuthenticationScheme these are associated with
+     */
     public MultiFactorAuthenticationCredentials(String schemeId) {
         this.schemeId = schemeId;
     }
 
+    /**
+     * @see Credentials#getAuthenticationScheme()
+     */
     @Override
     public String getAuthenticationScheme() {
         return schemeId;
     }
 
+    /**
+     * @see Credentials#getClientName() ()
+     */
     @Override
     public String getClientName() {
         return (primaryCredentials != null ? primaryCredentials.getClientName() : null);
     }
 
+    /**
+     * @return the AuthenticationCredentials associated with the primary authentication scheme
+     */
     public AuthenticationCredentials getPrimaryCredentials() {
         return primaryCredentials;
     }
 
+    /**
+     * @param primaryCredentials the AuthenticationCredentials associated with the primary authentication scheme
+     */
     public void setPrimaryCredentials(AuthenticationCredentials primaryCredentials) {
         this.primaryCredentials = primaryCredentials;
     }
 
+    /**
+     * @return the AuthenticationCredentials associated with the secondary authentication scheme
+     */
     public AuthenticationCredentials getSecondaryCredentials() {
         return secondaryCredentials;
     }
 
+    /**
+     * @param secondaryCredentials the AuthenticationCredentials associated with the secondary authentication scheme
+     */
     public void setSecondaryCredentials(AuthenticationCredentials secondaryCredentials) {
         this.secondaryCredentials = secondaryCredentials;
     }

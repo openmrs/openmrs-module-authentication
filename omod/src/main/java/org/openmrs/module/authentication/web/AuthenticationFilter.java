@@ -188,8 +188,8 @@ public class AuthenticationFilter implements Filter {
 	/**
 	 * This checks the request servlet path, and the request requestURI against the given pattern
 	 * The requestURI that is checked should be relative to the context path.
-	 * So, if OpenMRS is deployed as a web application named "openmrs" at https://server:port/openmrs, a pattern
-	 * of `/index.htm` would match a path at https://server:port/openmrs/index.htm
+	 * So, if OpenMRS is deployed as a web application named "openmrs" at protocol://server:port/openmrs, a pattern
+	 * of `/index.htm` would match a path at protocol://server:port/openmrs/index.htm
 	 * This uses the ANT pattern matching syntax, with an additional feature that if a pattern starts with a "*",
 	 * then it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
 	 * indicated pattern.  So, instead of passing in `/**\/*.jpg`, one can instead pass in simply `*.jpg`
