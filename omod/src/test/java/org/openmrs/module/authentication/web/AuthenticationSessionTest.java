@@ -16,6 +16,8 @@ import org.openmrs.module.authentication.AuthenticationLogger;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 
+import java.util.Map;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
@@ -174,6 +176,17 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpSession session = newSession("testing", "12345");
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
 		assertThat(authenticationSession.getHttpSessionId(), equalTo(session.getId()));
+	}
+
+	@Test
+	public void shouldGetAllAttributesFromSession() {
+		MockHttpSession session = newSession("testing", "12345");
+		MockHttpServletRequest request = newGetRequest("/", "request-ip");
+		request.setSession(session);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationContext context = authenticationSession.getAuthenticationContext();
+		Map<String, Object> attributes = authenticationSession.getHttpSessionAttributes();
+		assertThat(attributes.size(), equalTo(5));
 	}
 
 	@Test

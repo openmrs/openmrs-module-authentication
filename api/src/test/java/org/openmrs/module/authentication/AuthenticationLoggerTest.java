@@ -4,6 +4,8 @@ import org.apache.logging.log4j.Marker;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 
+import java.util.Map;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -56,6 +58,16 @@ public class AuthenticationLoggerTest extends BaseAuthenticationTest {
 	}
 
 	@Test
+	public void shouldGetContextValuesFromContext() {
+		AuthenticationLogger.addToContext("username", "admin");
+		AuthenticationLogger.addToContext("userId", "1234");
+		Map<String, String> values = AuthenticationLogger.getContextValues();
+		assertThat(values.get("username"), equalTo("admin"));
+		assertThat(values.get("userId"), equalTo("1234"));
+		assertThat(values.size(), equalTo(2));
+	}
+
+	@Test
 	public void shouldRemoveFromContext() {
 		AuthenticationLogger.addToContext("username", "admin");
 		AuthenticationLogger.logEvent(AuthenticationLogger.LOGIN_SUCCEEDED);
@@ -71,9 +83,11 @@ public class AuthenticationLoggerTest extends BaseAuthenticationTest {
 		AuthenticationLogger.addToContext("userId", "1234");
 		assertThat(AuthenticationLogger.getFromContext("username"), equalTo("admin"));
 		assertThat(AuthenticationLogger.getFromContext("userId"), equalTo("1234"));
+		assertThat(AuthenticationLogger.getContextValues().size(), equalTo(2));
 		AuthenticationLogger.clearContext();
 		assertThat(AuthenticationLogger.getFromContext("username"), nullValue());
 		assertThat(AuthenticationLogger.getFromContext("userId"), nullValue());
+		assertThat(AuthenticationLogger.getContextValues().size(), equalTo(0));
 	}
 
 	@Test

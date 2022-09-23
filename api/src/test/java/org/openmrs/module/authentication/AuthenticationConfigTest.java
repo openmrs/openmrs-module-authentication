@@ -1,6 +1,5 @@
 package org.openmrs.module.authentication;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.AuthenticationScheme;
@@ -22,6 +21,7 @@ public class AuthenticationConfigTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldGetAndSetKeysAndProperties() {
+		AuthenticationConfig.setConfig(new Properties());
 		AuthenticationConfig.setProperty("testBoolean", "false");
 		AuthenticationConfig.setProperty(WHITE_LIST, "*.css");
 		assertThat(AuthenticationConfig.getKeys().size(), equalTo(2));

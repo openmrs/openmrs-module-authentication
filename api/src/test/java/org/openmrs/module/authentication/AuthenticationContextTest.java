@@ -41,6 +41,7 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 		ctx.addCredentials(new TokenAuthenticationCredentials("token", u, "testToken"));
 
 		File serializedDataFile = File.createTempFile(getClass().getSimpleName(), "dat");
+		serializedDataFile.deleteOnExit();
 		FileOutputStream fileOutputStream = new FileOutputStream(serializedDataFile);
 		try (ObjectOutputStream out = new ObjectOutputStream(fileOutputStream)) {
 			out.writeObject(ctx);

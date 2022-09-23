@@ -10,6 +10,8 @@ import org.openmrs.module.authentication.TestAuthenticationScheme;
 import org.openmrs.module.authentication.TestUsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
 
+import java.util.Properties;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -18,6 +20,7 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldDefaultToUsernameAndPasswordAuthenticationScheme() {
+		setRuntimeProperties(new Properties());
 		DelegatingAuthenticationScheme scheme = new DelegatingAuthenticationScheme();
 		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
 		assertThat(delegatedScheme, notNullValue());

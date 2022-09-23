@@ -17,6 +17,9 @@ import org.openmrs.module.authentication.AuthenticationLogger;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -171,6 +174,19 @@ public class AuthenticationSession {
      */
     public String getHttpSessionId() {
         return session.getId();
+    }
+
+    /**
+     * @return Map of all attributes in the http session
+     */
+    public Map<String, Object> getHttpSessionAttributes() {
+        Map<String, Object> ret = new HashMap<>();
+        Enumeration names = session.getAttributeNames();
+        while (names.hasMoreElements()) {
+            String attributeName = (String) names.nextElement();
+            ret.put(attributeName, session.getAttribute(attributeName));
+        }
+        return ret;
     }
 
     /**

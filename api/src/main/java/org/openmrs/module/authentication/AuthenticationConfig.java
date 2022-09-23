@@ -260,7 +260,8 @@ public class AuthenticationConfig implements Serializable {
      * @param applicationName the application name from OpenMRS that identifies the name of the runtime properties file
      */
     public static synchronized void reloadConfigFromRuntimeProperties(String applicationName) {
-        config = getPropertiesWithPrefix(OpenmrsUtil.getRuntimeProperties(applicationName), PREFIX, false);
+        Properties runtimeProperties = OpenmrsUtil.getRuntimeProperties(applicationName);
+        config = getPropertiesWithPrefix(runtimeProperties, PREFIX, false);
     }
 
     /**
@@ -268,7 +269,7 @@ public class AuthenticationConfig implements Serializable {
      * @param stripPrefix if true, this will remove the prefix in the resulting Properties
      * @return the Properties whose keys start with the given prefix, without the prefix if stripPrefix is true
      */
-    private static Properties getPropertiesWithPrefix(Properties properties, String prefix, boolean stripPrefix) {
+    public static Properties getPropertiesWithPrefix(Properties properties, String prefix, boolean stripPrefix) {
         Properties ret = new Properties();
         for (String key : properties.stringPropertyNames()) {
             if (key.startsWith(prefix)) {

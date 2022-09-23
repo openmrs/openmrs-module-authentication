@@ -108,10 +108,10 @@ public class AuthenticationFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		AuthenticationSession session = new AuthenticationSession(request);
+		AuthenticationSession session = getAuthenticationSession(request);
 
 		try {
-			if (!Context.isAuthenticated()) {
+			if (!session.isUserAuthenticated()) {
 
 				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
@@ -131,12 +131,12 @@ public class AuthenticationFilter implements Filter {
 
 						// If a challenge URL is supplied, then redirect to this for further user input
 						if (StringUtils.isNotBlank(challengeUrl)) {
-							response.sendRedirect(challengeUrl);
+							response.sendRedirect(contextualizeUrl(request, challengeUrl));
 						}
 						// Otherwise, if no challenge URL is returned, then credentials are complete, authenticate
 						else {
 							try {
-								Context.authenticate(credentials);
+								session.getAuthenticationContext().authenticate(credentials);
 								regenerateSession(request);  // Guard against session fixation attacks
 								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
@@ -150,7 +150,7 @@ public class AuthenticationFilter implements Filter {
 								if (challengeUrl == null) {
 									challengeUrl = "/";
 								}
-								response.sendRedirect(challengeUrl);
+								response.sendRedirect(contextualizeUrl(request, challengeUrl));
 							}
 						}
 					}
@@ -201,10 +201,7 @@ public class AuthenticationFilter implements Filter {
 		if (matcher.match(pattern, request.getServletPath())) {
 			return true;
 		}
-		// We need to account for urls that are behind OpenMRS servlets and serving various resources
-		// For example, the moduleServlet will show a servlet path of "/ms",
-		// module resources will show "/moduleResources",
-		return matcher.match(request.getContextPath() + pattern, request.getRequestURI());
+		return matcher.match(contextualizeUrl(request, pattern), request.getRequestURI());
 	}
 
 	/**
@@ -253,32 +250,46 @@ public class AuthenticationFilter implements Filter {
 	/**
 	 * This returns an appropriate redirect URL following successful authentication
 	 * This first checks for a parameter named `redirect`, followed by a parameter named `refererURL`, and then
-	 * if neither of these are found, it will redirect to the root context path.
-	 * If an absolute path is found (eg. starts with '/'), then the OpenMRS context path is prepended to it
-	 * If a relative path is found, this will ensure that this path is relative to the OpenMRS context path
+	 * for the original request URI if this was a GET request.  If nothing found, sets to "/".
+	 * This then ensures the url is within the OpenMRS context path.
 	 * @param request the request to use to determine url redirection
 	 */
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
 		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
 		String redirect = request.getParameter("redirect");
-		if (StringUtils.isNotBlank(redirect)) {
+		if (StringUtils.isBlank(redirect)) {
 			redirect = request.getParameter("refererURL");
+		}
+		if (StringUtils.isBlank(redirect) && "GET".equals(request.getMethod())) {
+			redirect = request.getRequestURI();
 		}
 		if (StringUtils.isBlank(redirect)) {
 			redirect = "/";
 		}
-
-		// If the redirect is not absolute URL, add the context path
-		if (redirect.startsWith("/")) {
-			redirect = request.getContextPath() + redirect;
-		}
-		// If the redirect is outside the context path, use the home page
-		else if (!redirect.startsWith(request.getContextPath())) {
-			redirect = request.getContextPath();
-		}
-
-		log.debug("Going to use redirect: '" + redirect + "'");
-
+		redirect = contextualizeUrl(request, redirect);
+		log.debug("Redirecting to: '" + redirect + "'");
 		return redirect;
+	}
+
+	/**
+	 * Appends the OpenMRS context path to the given URL if necessary
+	 * @param request the request containing the context path
+	 * @param url the url to contextualize
+	 * @return the url, prepended with the context path if necessary
+	 */
+	protected String contextualizeUrl(HttpServletRequest request, String url) {
+		if (!url.startsWith(request.getContextPath())) {
+			url = request.getContextPath() + (url.startsWith("/") ? "" : "/") + url;
+		}
+		return url;
+	}
+
+	/**
+	 * Return a valid AuthenticationSession for the given request
+	 * @param request the HttpServletRequest to use to retrieve the AuthenticationSession
+	 * @return the AuthenticationSession associated with this HttpServletRequest
+	 */
+	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request) {
+		return new AuthenticationSession(request);
 	}
 }

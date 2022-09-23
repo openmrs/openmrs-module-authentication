@@ -17,6 +17,8 @@ import org.apache.logging.log4j.MarkerManager;
 import org.apache.logging.log4j.ThreadContext;
 import org.openmrs.User;
 
+import java.util.Map;
+
 /**
  * This class is responsible for logging authentication events
  */
@@ -86,6 +88,13 @@ public class AuthenticationLogger {
      */
     public static String getFromContext(String key) {
         return ThreadContext.get(key);
+    }
+
+    /**
+     * @return all keys and values that have been added to the Context and not removed
+     */
+    public static Map<String, String> getContextValues() {
+        return ThreadContext.getContext();
     }
 
     /**

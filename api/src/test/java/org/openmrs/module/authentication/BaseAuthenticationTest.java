@@ -6,9 +6,17 @@ import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.openmrs.api.context.AuthenticationScheme;
+import org.openmrs.api.context.Context;
+import org.openmrs.api.context.UserContext;
 import org.openmrs.logging.MemoryAppender;
+import org.openmrs.util.OpenmrsConstants;
+import org.openmrs.util.OpenmrsUtil;
 
+import java.io.File;
+import java.lang.reflect.Field;
 import java.util.Properties;
+import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -23,9 +31,14 @@ public abstract class BaseAuthenticationTest {
 
 	protected Logger logger;
 	protected MemoryAppender memoryAppender;
+	protected File appDataDir;
+	protected File runtimePropertiesFile;
 
 	@BeforeEach
 	public void setup() {
+		appDataDir = createAppDataDir();
+		runtimePropertiesFile = new File(appDataDir, "openmrs-runtime.properties");
+		runtimePropertiesFile.deleteOnExit();
 		String pattern = "userId=%X{userId},username=%X{username},marker=%markerSimpleName,message=%m";
 		PatternLayout layout = PatternLayout.newBuilder().withPattern(pattern).build();
 		memoryAppender = MemoryAppender.newBuilder().setLayout(layout).build();
@@ -35,7 +48,44 @@ public abstract class BaseAuthenticationTest {
 		logger.setLevel(Level.INFO);
 		logger.addAppender(memoryAppender);
 		AuthenticationLogger.clearContext();
-		AuthenticationConfig.setConfig(new Properties());
+		setRuntimeProperties(new Properties());
+	}
+
+	protected File createAppDataDir() {
+		try {
+			File appDataDir = File.createTempFile(UUID.randomUUID().toString(), "");
+			appDataDir.delete();
+			appDataDir.mkdir();
+			appDataDir.deleteOnExit();
+			return appDataDir;
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	protected void setRuntimeProperties(Properties p) {
+		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
+			runtimePropertiesFile.delete();
+		}
+		p.setProperty(OpenmrsConstants.APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY, appDataDir.getAbsolutePath());
+		OpenmrsUtil.storeProperties(p, runtimePropertiesFile, "test");
+		Context.setRuntimeProperties(p);
+		AuthenticationConfig.reloadConfigFromRuntimeProperties("openmrs");
+		setAuthenticationSchemeOnContext();
+	}
+
+	protected void setAuthenticationSchemeOnContext() {
+		try {
+			AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
+			Field field = Context.class.getDeclaredField("authenticationScheme");
+			field.setAccessible(true);
+			field.set(null, scheme);
+			Context.setUserContext(new UserContext(scheme));
+		}
+		catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@AfterEach
@@ -46,6 +96,12 @@ public abstract class BaseAuthenticationTest {
 		memoryAppender = null;
 		logger = null;
 		AuthenticationLogger.clearContext();
+		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
+			runtimePropertiesFile.delete();
+		}
+		if (appDataDir != null && appDataDir.exists()) {
+			appDataDir.delete();
+		}
 	}
 
 	/**

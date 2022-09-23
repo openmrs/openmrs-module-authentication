@@ -10,6 +10,10 @@
 package org.openmrs.module.authentication;
 
 import org.openmrs.User;
+import org.openmrs.api.context.Authenticated;
+import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 
 import java.io.Serializable;
@@ -26,6 +30,15 @@ public class AuthenticationContext implements Serializable {
     private final Map<String, AuthenticationCredentials> credentials = new HashMap<>();
 
     public AuthenticationContext() {
+    }
+
+    /**
+     * Authenticates the given credentials with OpenMRS
+     * This mainly exists to encapsulate this functionality and allow for testing and mocking
+     * @see Context#authenticate(Credentials) 
+     */
+    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+        return Context.authenticate(credentials);
     }
 
     // Accessors
