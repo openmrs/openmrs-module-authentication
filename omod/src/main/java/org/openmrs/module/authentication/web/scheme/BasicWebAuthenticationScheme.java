@@ -12,9 +12,11 @@ package org.openmrs.module.authentication.web.scheme;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
+import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
+import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
@@ -104,6 +106,16 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
 
         BasicAuthenticationCredentials bac = (BasicAuthenticationCredentials) credentials;
         AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, bac.getUsername());
-        return new UsernamePasswordAuthenticationScheme().authenticate(bac.toUsernamePasswordCredentials());
+        Authenticated authenticated = authenticateWithUsernamePasswordCredentials(bac.toUsernamePasswordCredentials());
+        return new BasicAuthenticated(authenticated.getUser(), schemeId);
+    }
+
+    /**
+     * Method to delegate authentication to the UsernamePasswordAuthenticationScheme.
+     * This is separated out in a separate method to allow easier mocking
+     * @see UsernamePasswordAuthenticationScheme#authenticate(Credentials) 
+     */
+    protected Authenticated authenticateWithUsernamePasswordCredentials(UsernamePasswordCredentials credentials) {
+        return new UsernamePasswordAuthenticationScheme().authenticate(credentials);
     }
 }

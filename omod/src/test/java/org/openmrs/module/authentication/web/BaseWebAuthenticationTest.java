@@ -30,7 +30,7 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 		return request;
 	}
 
-	protected MockHttpServletRequest newPostRequest(String method, String ipAddress, String uri) {
+	protected MockHttpServletRequest newPostRequest(String ipAddress, String uri) {
 		MockHttpServletRequest request = new MockHttpServletRequest(servletContext, "POST", uri);
 		request.setRemoteAddr(ipAddress);
 		return request;
