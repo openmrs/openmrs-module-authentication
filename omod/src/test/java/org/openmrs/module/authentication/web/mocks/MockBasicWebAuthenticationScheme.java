@@ -15,17 +15,21 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
-import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 /**
  * Represents a particular method of authentication.
  */
 public class MockBasicWebAuthenticationScheme extends BasicWebAuthenticationScheme {
 
-    private final Properties usernamesAndPasswords = new Properties();
+    private static final Set<String> validCredentials = new HashSet<>();
+    private static Map<String, User> users = new HashMap<>();
 
     public MockBasicWebAuthenticationScheme() {
     }
@@ -33,18 +37,30 @@ public class MockBasicWebAuthenticationScheme extends BasicWebAuthenticationSche
     @Override
     public void configure(String schemeId, Properties config) {
         super.configure(schemeId, config);
-        String prefix = "credential.";
-        usernamesAndPasswords.putAll(AuthenticationConfig.getPropertiesWithPrefix(config, prefix, true));
+        String userConfig = config.getProperty("users");
+        if (userConfig != null) {
+            for (String username : userConfig.split(",")) {
+                String password = config.getProperty("users." + username + ".password");
+                String secondaryType = config.getProperty("users." + username + ".secondaryType");
+                User user = users.get(username);
+                if (user == null) {
+                    user = new User();
+                    user.setUsername(username);
+                    users.put(username, user);
+                }
+                validCredentials.add(username + ":" + password);
+                if (StringUtils.isNotBlank(secondaryType)) {
+                    user.setUserProperty("authentication.secondaryType", secondaryType);
+                }
+            }
+        }
     }
 
     @Override
     protected Authenticated authenticateWithUsernamePasswordCredentials(UsernamePasswordCredentials credentials) {
         if (StringUtils.isNotBlank(credentials.getUsername())) {
-            String password = usernamesAndPasswords.getProperty(credentials.getUsername());
-            if (StringUtils.isNotBlank(password) && password.equals(credentials.getPassword())) {
-                User user = new User();
-                user.setUsername(credentials.getUsername());
-                return new BasicAuthenticated(user, credentials.getAuthenticationScheme());
+            if (validCredentials.contains(credentials.getUsername() + ":" + credentials.getPassword())) {
+                return new BasicAuthenticated(users.get(credentials.getUsername()), getSchemeId());
             }
         }
         throw new ContextAuthenticationException("Authentication Failed");

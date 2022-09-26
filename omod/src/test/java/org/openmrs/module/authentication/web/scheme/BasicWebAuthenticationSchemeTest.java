@@ -37,7 +37,8 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.loginPage", "/login");
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.usernameParam", "uname");
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.passwordParam", "pw");
-		AuthenticationConfig.setProperty("authentication.scheme.basic.config.credential.admin", "adminPassword");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users", "admin");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users.admin.password", "adminPassword");
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		session = newSession();
 		request = newPostRequest("192.168.1.1", "/login");
@@ -91,7 +92,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 	}
 
 	@Test
-	public void shouldFailToAuthenticateWithInValidCredentials() {
+	public void shouldFailToAuthenticateWithInvalidCredentials() {
 		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials(
 				"basic", "admin", "test"
 		);

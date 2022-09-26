@@ -15,7 +15,7 @@ import org.openmrs.UserSessionListener;
 import org.springframework.stereotype.Component;
 
 /**
- * This class contains the logic that is run every time this module is either started or shutdown
+ * Implementation of UserSessionListener which logs message with a marker every time a user is logged in or out
  */
 @Component
 public class AuthenticationUserSessionListener implements UserSessionListener {

@@ -47,8 +47,7 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 		Class<?> customSchemeType = TestAuthenticationScheme.class;
 		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, "custom");
 		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME + ".custom.type", customSchemeType.getName());
-		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME + ".custom.config.timezone", "UTC");
-		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME + ".custom.config.locale", "en");
+		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME + ".custom.config.users", "admin");
 		DelegatingAuthenticationScheme scheme = new DelegatingAuthenticationScheme();
 		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
 		assertThat(delegatedScheme, notNullValue());
@@ -57,7 +56,5 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 		Authenticated authenticated = delegatedScheme.authenticate(credentials);
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("custom"));
 		assertThat(authenticated.getUser().getUsername(), equalTo("admin"));
-		assertThat(authenticated.getUser().getUserProperty("timezone"), equalTo("UTC"));
-		assertThat(authenticated.getUser().getUserProperty("locale"), equalTo("en"));
 	}
 }

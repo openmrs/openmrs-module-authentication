@@ -12,6 +12,7 @@ package org.openmrs.module.authentication;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
+import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 
@@ -35,12 +36,17 @@ public class TestAuthenticationScheme implements ConfigurableAuthenticationSchem
 
     @Override
     public Authenticated authenticate(Credentials credentials) {
-        User user = new User();
-        user.setUsername(credentials.getClientName());
-        for (String propertyName : config.stringPropertyNames()) {
-            user.setUserProperty(propertyName, config.getProperty(propertyName));
+        String users = config.getProperty("users");
+        if (users != null) {
+            for (String username : users.split(",")) {
+                if (username.equals(credentials.getClientName())) {
+                    User user = new User();
+                    user.setUsername(username);
+                    return new BasicAuthenticated(user, schemeId);
+                }
+            }
         }
-        return new BasicAuthenticated(user, schemeId);
+        throw new ContextAuthenticationException("No user " + credentials.getClientName() + " in list.");
     }
 
     @Override

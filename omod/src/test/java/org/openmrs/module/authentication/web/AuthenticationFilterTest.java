@@ -71,7 +71,8 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		AuthenticationConfig.setProperty("authentication.scheme", "basic");
 		AuthenticationConfig.setProperty("authentication.scheme.basic.type", MockBasicWebAuthenticationScheme.class.getName());
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.loginPage", "/login.htm");
-		AuthenticationConfig.setProperty("authentication.scheme.basic.config.credential.admin", "adminPassword");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users", "admin");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users.admin.password", "adminPassword");
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		authenticationSession.setAuthenticatedUser(null);
 		request.setMethod("GET");

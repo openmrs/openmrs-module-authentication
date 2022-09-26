@@ -217,7 +217,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 			throw new ContextAuthenticationException("No primary authentication scheme has been configured");
 		}
 		try {
-			AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(primaryOptions.get(0));
+			AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(authScheme);
 			if (scheme instanceof WebAuthenticationScheme) {
 				return (WebAuthenticationScheme) scheme;
 			}
@@ -279,5 +279,19 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 			options.addAll(Arrays.asList(optionString.split(",")));
 		}
 		return options;
+	}
+
+	/**
+	 * @return the primary authentication scheme options configured
+	 */
+	public List<String> getPrimaryOptions() {
+		return primaryOptions;
+	}
+
+	/**
+	 * @return the secondary authentication scheme options configured
+	 */
+	public List<String> getSecondaryOptions() {
+		return secondaryOptions;
 	}
 }
