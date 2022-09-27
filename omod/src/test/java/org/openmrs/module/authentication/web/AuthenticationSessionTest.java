@@ -10,7 +10,6 @@
 package org.openmrs.module.authentication.web;
 
 import org.junit.jupiter.api.Test;
-import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -24,7 +23,6 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 
@@ -124,15 +122,6 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, "thread-ip");
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
 		assertThat(authenticationSession.getIpAddress(), equalTo("thread-ip"));
-	}
-
-	@Test
-	public void shouldFailIfIpAddressOnSessionConflictsWithIpAddressOnRequest() {
-		MockHttpSession session = newSession("testing", "12345");
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS, "session-ip");
-		MockHttpServletRequest request = newGetRequest("/", "request-ip");
-		request.setSession(session);
-		assertThrows(ContextAuthenticationException.class, () -> new AuthenticationSession(request));
 	}
 
 	@Test

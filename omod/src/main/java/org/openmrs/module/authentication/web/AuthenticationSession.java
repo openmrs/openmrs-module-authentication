@@ -9,9 +9,10 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 
@@ -37,6 +38,8 @@ import java.util.UUID;
  * the user's entire Authentication Session from pre-login HTTP Session creation to post-logout HTTP session destroy
  */
 public class AuthenticationSession {
+
+    protected final Log log = LogFactory.getLog(getClass());
 
     public static final String AUTHENTICATION_SESSION_ID_KEY = "__authentication_session_id";
     public static final String AUTHENTICATION_CONTEXT_KEY = "__authentication_context";
@@ -82,6 +85,11 @@ public class AuthenticationSession {
         AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, getIpAddress());
     }
 
+    /**
+     * This will either return the AuthenticationContext stored on the session or a new AuthenticationContext
+     * Calling this method will always result in the returned AuthenticationContext stored on the http session
+     * @return the AuthenticationContext stored on the session, or a new AuthenticationContext
+     */
     public AuthenticationContext getAuthenticationContext() {
         AuthenticationContext ctx = (AuthenticationContext) session.getAttribute(AUTHENTICATION_CONTEXT_KEY);
         if (ctx == null) {
@@ -117,13 +125,13 @@ public class AuthenticationSession {
      * If no value is found on the session, this will retrieve the IP address from the request
      * If no request is available, this will retrieve the IP address stored on the current thread.
      * This will store the resulting IP Address in the session, and then return it.
-     * If there is an IP address on the request, and this differs from the value in the session, an exception is thrown
+     * If there is an IP address on the request, and this differs from the value in the session, a warning is logged
      * @return the authentication session id for the current authentication session
      */
     public String getIpAddress() {
         String ipAddress = (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
         if (ipAddress != null && request != null && !ipAddress.equals(request.getRemoteAddr())) {
-            throw new ContextAuthenticationException("IP Address has changed during authentication session");
+            log.warn("The IP Address in the session '" + ipAddress + "' is different that in the request + '" + request.getRemoteAddr() + "'");
         }
         if (ipAddress == null) {
             if (request != null) {
