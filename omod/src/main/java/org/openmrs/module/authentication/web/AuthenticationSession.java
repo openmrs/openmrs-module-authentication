@@ -129,20 +129,22 @@ public class AuthenticationSession {
      * @return the authentication session id for the current authentication session
      */
     public String getIpAddress() {
-        String ipAddress = (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
-        if (ipAddress != null && request != null && !ipAddress.equals(request.getRemoteAddr())) {
-            log.warn("The IP Address in the session '" + ipAddress + "' is different that in the request + '" + request.getRemoteAddr() + "'");
+        String sessionIpAddress = (String)session.getAttribute(AUTHENTICATION_IP_ADDRESS);
+        String requestIpAddress = (request == null ? null : request.getRemoteAddr());
+        if (sessionIpAddress != null && requestIpAddress != null && !sessionIpAddress.equals(requestIpAddress)) {
+            log.warn("IP Address change detected from '" + sessionIpAddress + "' to '" + requestIpAddress + "'");
+            sessionIpAddress = null;
         }
-        if (ipAddress == null) {
-            if (request != null) {
-                ipAddress = request.getRemoteAddr();
+        if (sessionIpAddress == null) {
+            if (requestIpAddress != null) {
+                sessionIpAddress = requestIpAddress;
             }
             else {
-                ipAddress = AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS);
+                sessionIpAddress = AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS);
             }
-            session.setAttribute(AUTHENTICATION_IP_ADDRESS, ipAddress);
+            session.setAttribute(AUTHENTICATION_IP_ADDRESS, sessionIpAddress);
         }
-        return ipAddress;
+        return sessionIpAddress;
     }
 
     /**

@@ -9,6 +9,9 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Logger;
 import org.junit.jupiter.api.Test;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
@@ -114,6 +117,21 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request);
 		assertThat(authenticationSession.getIpAddress(), equalTo("request-ip"));
+	}
+
+	@Test
+	public void shouldUpdateIpAddressInSessionAndLogWarningIfRequestIpDiffers() {
+		Logger sessionLogger = (Logger) LogManager.getLogger(AuthenticationSession.class);
+		sessionLogger.setAdditive(false);
+		sessionLogger.setLevel(Level.INFO);
+		sessionLogger.addAppender(memoryAppender);
+		MockHttpSession session = newSession("testing", "12345");
+		session.setAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS, "session-ip");
+		MockHttpServletRequest request = newGetRequest("/", "request-ip");
+		request.setSession(session);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		assertThat(authenticationSession.getIpAddress(), equalTo("request-ip"));
+		assertLastLogContains("IP Address change detected from 'session-ip' to 'request-ip'");
 	}
 
 	@Test
