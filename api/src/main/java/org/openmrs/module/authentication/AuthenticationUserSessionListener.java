@@ -22,7 +22,9 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
-		AuthenticationLogger.addUserToContext(user);
+		if (user != null) {
+			AuthenticationLogger.addUserToContext(user);
+		}
 		Marker marker = null;
 		if (event == Event.LOGIN) {
 			if (status == Status.SUCCESS) {
@@ -40,6 +42,7 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 				marker = AuthenticationLogger.LOGOUT_FAILED;
 			}
 		}
-		AuthenticationLogger.logEvent(marker, "user=" + user.getUsername());
+		String username = AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME);
+		AuthenticationLogger.logEvent(marker, "user=" + username);
 	}
 }
