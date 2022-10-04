@@ -97,7 +97,7 @@ authentication.scheme.mfa.config.secondaryOptions=token
 authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
 authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 
-authentication.scheme.token.type=org.openmrs.module.authentication.web.scheme.TokenWebAuthenticationScheme
+authentication.scheme.token.type=org.openmrs.module.authentication.web.scheme.SecretQuestionAuthenticationScheme
 authentication.scheme.token.config.loginPage=/module/authentication/token.htm
 ```
 
