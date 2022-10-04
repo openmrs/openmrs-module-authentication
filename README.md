@@ -88,17 +88,17 @@ authentication.scheme.basic.config.passwordParam=pw
 
 ```properties
 authentication.scheme=mfa
-authentication.whiteList=/**/authentication/basic.htm,/**/authentication/token.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
+authentication.whiteList=/**/authentication/basic.htm,/**/authentication/secret.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
 authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.MultiFactorAuthenticationScheme
 authentication.scheme.mfa.config.primaryOptions=basic
-authentication.scheme.mfa.config.secondaryOptions=token
+authentication.scheme.mfa.config.secondaryOptions=secret
 
 authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
 authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 
-authentication.scheme.token.type=org.openmrs.module.authentication.web.scheme.SecretQuestionAuthenticationScheme
-authentication.scheme.token.config.loginPage=/module/authentication/token.htm
+authentication.scheme.secret.type=org.openmrs.module.authentication.web.scheme.SecretQuestionAuthenticationScheme
+authentication.scheme.secret.config.loginPage=/module/authentication/secret.htm
 ```
 
 ## Background
