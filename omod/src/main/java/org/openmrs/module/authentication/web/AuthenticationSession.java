@@ -15,11 +15,13 @@ import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
+import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -46,6 +48,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_IP_ADDRESS = "__authentication_ip_address";
     public static final String AUTHENTICATION_USERNAME = "__authentication_username";
     public static final String AUTHENTICATION_USER_ID = "__authentication_user_id";
+    public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
 
     private final HttpSession session;
     private HttpServletRequest request;
@@ -239,5 +242,48 @@ public class AuthenticationSession {
      */
     public boolean isUserAuthenticated() {
         return Context.isSessionOpen() && Context.isAuthenticated();
+    }
+
+    /**
+     * This checks whether there is an authenticated or candidate user, and if so,
+     * this will set the context locale to this users default locale, and set a cookie to this locale.
+     * If there is none, this will look for an existing Cookie value, and if found, will set it as the Context locale
+     */
+    public void refreshDefaultLocale() {
+        Locale locale = null;
+        CookieLocaleResolver cookieLocaleResolver = new CookieLocaleResolver();
+        User user = null;
+        if (isUserAuthenticated()) {
+            user = Context.getAuthenticatedUser();
+        }
+        else if (getAuthenticationContext().getCandidateUser() != null) {
+            user = getAuthenticationContext().getCandidateUser();
+        }
+        if (user != null && Context.isSessionOpen()) {
+            locale = Context.getUserService().getDefaultLocaleForUser(user);
+            cookieLocaleResolver.setDefaultLocale(locale);
+        }
+        else if (request != null) {
+            locale = cookieLocaleResolver.resolveLocale(request);
+        }
+        if (Context.isSessionOpen() && locale != null) {
+            Context.getUserContext().setLocale(locale);
+        }
+    }
+
+    /**
+     * If an exception occurs during Authentication, this stores the details of that Exception
+     * @param errorMessage the errorMessage to record
+     */
+    public void setErrorMessage(String errorMessage) {
+        session.setAttribute(AUTHENTICATION_ERROR_MESSAGE, errorMessage);
+    }
+
+    /**
+     * If an exception occurs during Authentication, this returns the details of that Exception
+     * @return the error message previously set
+     */
+    public String getErrorMessage() {
+        return (String) session.getAttribute(AUTHENTICATION_ERROR_MESSAGE);
     }
 }

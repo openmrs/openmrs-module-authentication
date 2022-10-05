@@ -16,6 +16,7 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationConfig;
+import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 import org.openmrs.module.authentication.scheme.DelegatingAuthenticationScheme;
@@ -117,7 +118,9 @@ public class AuthenticationFilter implements Filter {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
 
+				AuthenticationContext authenticationContext = session.getAuthenticationContext();
 				AuthenticationScheme authenticationScheme = getAuthenticationScheme();
+
 				if (authenticationScheme instanceof WebAuthenticationScheme) {
 					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
 					if (!isWhiteListed(request)) {
@@ -136,12 +139,14 @@ public class AuthenticationFilter implements Filter {
 						// Otherwise, if no challenge URL is returned, then credentials are complete, authenticate
 						else {
 							try {
-								session.getAuthenticationContext().authenticate(credentials);
+								authenticationContext.authenticate(credentials);
 								regenerateSession(request);  // Guard against session fixation attacks
+								session.refreshDefaultLocale(); // Refresh context locale after authentication
 								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
 							// If authentication fails, redirect back to challenge url for user to attempt again
 							catch (ContextAuthenticationException e) {
+								session.setErrorMessage(e.getMessage());
 								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
 								if (challengeUrl == null) {
 									session.getAuthenticationContext().removeCredentials(credentials);

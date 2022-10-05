@@ -37,4 +37,8 @@ public class MockAuthenticationSession extends AuthenticationSession {
 	public void setAuthenticatedUser(User authenticatedUser) {
 		this.authenticatedUser = authenticatedUser;
 	}
+
+	@Override
+	public void refreshDefaultLocale() {
+	}
 }

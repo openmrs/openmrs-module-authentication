@@ -108,6 +108,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 				}
 			}
 			catch (ContextAuthenticationException e) {
+				session.setErrorMessage(e.getMessage());
 				logEvent(PRIMARY_FAILED, credentials.getPrimaryCredentials().toString());
 				context.removeCredentials(credentials.getPrimaryCredentials());
 				credentials.setPrimaryCredentials(null);
