@@ -110,7 +110,6 @@ public class AuthenticationFilter implements Filter {
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
 		AuthenticationSession session = getAuthenticationSession(request);
-		session.removeErrorMessage();
 
 		try {
 			if (!session.isUserAuthenticated()) {
@@ -126,6 +125,7 @@ public class AuthenticationFilter implements Filter {
 					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
 					if (!isWhiteListed(request)) {
 						log.debug("Authentication required for " + request.getRequestURI());
+						session.removeErrorMessage();
 
 						// If any credentials were passed in the request or session, update the Context and return them
 						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
