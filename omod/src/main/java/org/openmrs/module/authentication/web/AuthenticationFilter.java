@@ -110,6 +110,7 @@ public class AuthenticationFilter implements Filter {
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
 		AuthenticationSession session = getAuthenticationSession(request);
+		session.removeErrorMessage();
 
 		try {
 			if (!session.isUserAuthenticated()) {

@@ -272,7 +272,7 @@ public class AuthenticationSession {
     }
 
     /**
-     * If an exception occurs during Authentication, this stores the details of that Exception
+     * If an exception occurs during Authentication, this stores the details of that on the session
      * @param errorMessage the errorMessage to record
      */
     public void setErrorMessage(String errorMessage) {
@@ -280,8 +280,14 @@ public class AuthenticationSession {
     }
 
     /**
-     * If an exception occurs during Authentication, this returns the details of that Exception
-     * @return the error message previously set
+     * Removes any previously set error message from the session
+     */
+    public void removeErrorMessage() {
+        session.removeAttribute(AUTHENTICATION_ERROR_MESSAGE);
+    }
+
+    /**
+     * @return the error message previously set on the session
      */
     public String getErrorMessage() {
         return (String) session.getAttribute(AUTHENTICATION_ERROR_MESSAGE);
