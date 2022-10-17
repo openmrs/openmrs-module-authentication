@@ -18,6 +18,7 @@ import org.openmrs.module.authentication.AuthenticationLogger;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -52,6 +53,7 @@ public class AuthenticationSession {
 
     private final HttpSession session;
     private HttpServletRequest request;
+    private HttpServletResponse response;
 
     /**
      * This constructor should be used in cases where there is an HttpSession available but not an
@@ -82,9 +84,10 @@ public class AuthenticationSession {
      * and makes data from the request available for use in the session (request parameters, IP address, etc)
      * @param request the HttpServletRequest to use to construct this AuthenticationSession
      */
-    public AuthenticationSession(HttpServletRequest request) {
+    public AuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
         this(request.getSession());
         this.request = request;
+        this.response = response;
         AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, getIpAddress());
     }
 
@@ -268,6 +271,19 @@ public class AuthenticationSession {
         }
         if (Context.isSessionOpen() && locale != null) {
             Context.getUserContext().setLocale(locale);
+        }
+    }
+
+    /**
+     * Redirects to the given url
+     * @param url the url to redirect to
+     */
+    public void sendRedirect(String url) {
+        try {
+            response.sendRedirect(url);
+        }
+        catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 

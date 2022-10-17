@@ -109,7 +109,7 @@ public class AuthenticationFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		AuthenticationSession session = getAuthenticationSession(request);
+		AuthenticationSession session = getAuthenticationSession(request, response);
 
 		try {
 			if (!session.isUserAuthenticated()) {
@@ -295,7 +295,7 @@ public class AuthenticationFilter implements Filter {
 	 * @param request the HttpServletRequest to use to retrieve the AuthenticationSession
 	 * @return the AuthenticationSession associated with this HttpServletRequest
 	 */
-	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request) {
-		return new AuthenticationSession(request);
+	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
+		return new AuthenticationSession(request, response);
 	}
 }

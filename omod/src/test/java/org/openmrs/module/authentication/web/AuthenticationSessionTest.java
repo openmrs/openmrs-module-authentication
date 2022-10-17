@@ -51,7 +51,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 	public void shouldSetupWithRequestConstructor() {
 		MockHttpServletRequest request = newGetRequest("/", "192.168.1.1");
 		request.setSession(newSession("testing", "12345"));
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		testSetupOfSessionAttributes(authenticationSession);
 		assertThat(authenticationSession.getIpAddress(), equalTo("192.168.1.1"));
 		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS), equalTo("192.168.1.1"));
@@ -115,7 +115,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpSession session = newSession("testing", "12345");
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		assertThat(authenticationSession.getIpAddress(), equalTo("request-ip"));
 	}
 
@@ -129,7 +129,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		session.setAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS, "session-ip");
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		assertThat(authenticationSession.getIpAddress(), equalTo("request-ip"));
 		assertLastLogContains("IP Address change detected from 'session-ip' to 'request-ip'");
 	}
@@ -190,7 +190,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpSession session = newSession("testing", "12345");
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		AuthenticationContext context = authenticationSession.getAuthenticationContext();
 		Map<String, Object> attributes = authenticationSession.getHttpSessionAttributes();
 		assertThat(attributes.size(), equalTo(5));
@@ -202,7 +202,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setParameter("username", "admin");
 		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		assertThat(authenticationSession.getRequestParam("username"), equalTo("admin"));
 	}
 
@@ -222,7 +222,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpSession session = newSession("testing", "12345");
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		AuthenticationContext context = authenticationSession.getAuthenticationContext();
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), notNullValue());
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY), notNullValue());

@@ -13,6 +13,7 @@ import org.openmrs.User;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Mock Authentication Session, primarily useful to mock information about the authenticated user
@@ -21,8 +22,8 @@ public class MockAuthenticationSession extends AuthenticationSession {
 
 	private User authenticatedUser;
 
-	public MockAuthenticationSession(HttpServletRequest request) {
-		super(request);
+	public MockAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
+		super(request, response);
 	}
 
 	@Override

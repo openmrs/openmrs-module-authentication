@@ -1,6 +1,5 @@
 package org.openmrs.module.authentication.web.scheme;
 
-import liquibase.pro.packaged.U;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
@@ -10,11 +9,9 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
 import org.openmrs.module.authentication.credentials.SecretQuestionAuthenticationCredentials;
 import org.openmrs.module.authentication.web.BaseWebAuthenticationTest;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
-import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.openmrs.module.authentication.web.mocks.MockSecretQuestionAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
@@ -48,7 +45,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		request.setSession(session);
 		candidateUser = new User();
 		candidateUser.setUsername("testing");
-		authenticationSession = new MockAuthenticationSession(request);
+		authenticationSession = new MockAuthenticationSession(request, newResponse());
 		authenticationSession.getAuthenticationContext().setCandidateUser(candidateUser);
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockSecretQuestionAuthenticationScheme.class));

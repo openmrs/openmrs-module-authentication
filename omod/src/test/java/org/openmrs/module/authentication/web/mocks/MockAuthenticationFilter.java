@@ -14,6 +14,7 @@ import org.openmrs.module.authentication.web.AuthenticationSession;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * Mock Authentication Filter, primarily used to mock the authentication session
@@ -28,7 +29,7 @@ public class MockAuthenticationFilter extends AuthenticationFilter {
 	}
 
 	@Override
-	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request) {
+	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
 		return authenticationSession;
 	}
 

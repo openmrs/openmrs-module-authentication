@@ -57,7 +57,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.setRemoteAddr("192.168.1.1");
 		request.setContextPath("/openmrs");
 		request.setSession(session);
-		authenticationSession = new MockAuthenticationSession(request);
+		authenticationSession = new MockAuthenticationSession(request, newResponse());
 		filter = new MockAuthenticationFilter(newFilterConfig("authenticationFilter"));
 		filter.setAuthenticationSession(authenticationSession);
 		response = new MockHttpServletResponse();
@@ -154,14 +154,14 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("username", "admin");
 		request.addParameter("password", "adminPassword");
 		assertThat(session.isInvalid(), equalTo(false));
-		AuthenticationSession session1 = new AuthenticationSession(request);
+		AuthenticationSession session1 = new AuthenticationSession(request, newResponse());
 		String authenticationSessionId = session1.getAuthenticationSessionId();
 		String httpSessionId = session1.getHttpSessionId();
 		int numAttributes = session1.getHttpSessionAttributes().size();
 		filter.doFilter(request, response, chain);
 		assertThat(session.isInvalid(), equalTo(true));
 		assertThrows(IllegalStateException.class, session1::getAuthenticationSessionId);
-		AuthenticationSession session2 = new AuthenticationSession(request);
+		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
 		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
 		assertThat(session2.getHttpSessionId(), not(httpSessionId));
 		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));
@@ -242,13 +242,13 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 
 	@Test
 	public void shouldRegenerateSession() {
-		AuthenticationSession session1 = new AuthenticationSession(request);
+		AuthenticationSession session1 = new AuthenticationSession(request, newResponse());
 		String authenticationSessionId = session1.getAuthenticationSessionId();
 		String httpSessionId = session1.getHttpSessionId();
 		int numAttributes = session1.getHttpSessionAttributes().size();
 		filter.regenerateSession(request);
 		assertThrows(IllegalStateException.class, session1::getAuthenticationSessionId);
-		AuthenticationSession session2 = new AuthenticationSession(request);
+		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
 		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
 		assertThat(session2.getHttpSessionId(), not(httpSessionId));
 		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));

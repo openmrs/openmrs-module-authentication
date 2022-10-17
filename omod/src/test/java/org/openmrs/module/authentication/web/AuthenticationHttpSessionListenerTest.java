@@ -84,7 +84,7 @@ public class AuthenticationHttpSessionListenerTest extends BaseWebAuthentication
 		session.setAttribute(AuthenticationSession.AUTHENTICATION_USERNAME, "testing");
 		session.setAttribute(AuthenticationSession.AUTHENTICATION_USER_ID, "12345");
 
-		AuthenticationSession authenticationSession = new AuthenticationSession(request);
+		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
 		assertThat(authenticationSession.getAuthenticationSessionId(), notNullValue());
 		assertThat(authenticationSession.getUsername(), equalTo("testing"));
 		assertThat(authenticationSession.getUserId(), equalTo("12345"));

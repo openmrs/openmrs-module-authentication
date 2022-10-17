@@ -5,6 +5,7 @@ import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.BaseAuthenticationTest;
 import org.springframework.mock.web.MockFilterConfig;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mock.web.MockServletContext;
 
@@ -22,6 +23,7 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 	public void setup() {
 		super.setup();
 		servletContext = new MockServletContext();
+
 	}
 
 	protected MockHttpServletRequest newGetRequest(String uri, String ipAddress) {
@@ -34,6 +36,10 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 		MockHttpServletRequest request = new MockHttpServletRequest(servletContext, "POST", uri);
 		request.setRemoteAddr(ipAddress);
 		return request;
+	}
+
+	protected MockHttpServletResponse newResponse() {
+		return new MockHttpServletResponse();
 	}
 
 	protected MockHttpSession newSession() {

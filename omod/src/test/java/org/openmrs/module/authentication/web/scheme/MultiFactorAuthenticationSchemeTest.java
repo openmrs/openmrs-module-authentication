@@ -57,7 +57,7 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 		session = newSession();
 		request = newPostRequest("192.168.1.1", "/login");
 		request.setSession(session);
-		authenticationSession = new MockAuthenticationSession(request);
+		authenticationSession = new MockAuthenticationSession(request, newResponse());
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MultiFactorAuthenticationScheme.class));
 		authenticationScheme = (MultiFactorAuthenticationScheme) scheme;
