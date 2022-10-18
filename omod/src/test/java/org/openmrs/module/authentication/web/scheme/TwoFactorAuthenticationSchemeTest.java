@@ -8,12 +8,14 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.PrimaryAuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.TwoFactorAuthenticationCredentials;
 import org.openmrs.module.authentication.web.BaseWebAuthenticationTest;
-import org.openmrs.module.authentication.web.credentials.MultiFactorAuthenticationCredentials;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
 import java.util.List;
@@ -24,21 +26,22 @@ import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest {
+public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 
 	MockAuthenticationSession authenticationSession;
 	MockHttpSession session;
 	MockHttpServletRequest request;
-	MultiFactorAuthenticationScheme authenticationScheme;
+	MockHttpServletResponse response;
+	TwoFactorAuthenticationScheme authenticationScheme;
 
 	@BeforeEach
 	@Override
 	public void setup() {
 		super.setup();
-		AuthenticationConfig.setProperty("authentication.scheme", "mfa");
-		AuthenticationConfig.setProperty("authentication.scheme.mfa.type", MultiFactorAuthenticationScheme.class.getName());
-		AuthenticationConfig.setProperty("authentication.scheme.mfa.config.primaryOptions", "primary");
-		AuthenticationConfig.setProperty("authentication.scheme.mfa.config.secondaryOptions", "secondary");
+		AuthenticationConfig.setProperty("authentication.scheme", "2fa");
+		AuthenticationConfig.setProperty("authentication.scheme.2fa.type", TwoFactorAuthenticationScheme.class.getName());
+		AuthenticationConfig.setProperty("authentication.scheme.2fa.config.primaryOptions", "primary");
+		AuthenticationConfig.setProperty("authentication.scheme.2fa.config.secondaryOptions", "secondary");
 		AuthenticationConfig.setProperty("authentication.scheme.primary.type", MockBasicWebAuthenticationScheme.class.getName());
 		AuthenticationConfig.setProperty("authentication.scheme.primary.config.loginPage", "/primaryLogin");
 		AuthenticationConfig.setProperty("authentication.scheme.primary.config.usernameParam", "uname");
@@ -57,15 +60,48 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 		session = newSession();
 		request = newPostRequest("192.168.1.1", "/login");
 		request.setSession(session);
-		authenticationSession = new MockAuthenticationSession(request, newResponse());
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
-		assertThat(scheme.getClass(), equalTo(MultiFactorAuthenticationScheme.class));
-		authenticationScheme = (MultiFactorAuthenticationScheme) scheme;
+		assertThat(scheme.getClass(), equalTo(TwoFactorAuthenticationScheme.class));
+		authenticationScheme = (TwoFactorAuthenticationScheme) scheme;
+	}
+
+	protected TwoFactorAuthenticationCredentials primaryAuth(String username, String password) {
+		request = newPostRequest("192.168.1.1", "/login");
+		if (username != null) {
+			request.setParameter("uname", username);
+		}
+		if (password != null) {
+			request.setParameter("pw", password);
+		}
+		request.setSession(session);
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
+		return (TwoFactorAuthenticationCredentials) authenticationScheme.getCredentials(authenticationSession);
+	}
+
+	protected TwoFactorAuthenticationCredentials secondaryAuth(String username, String password) {
+		request = newPostRequest("192.168.1.1", "/login");
+		if (username != null) {
+			request.setParameter("uname2", username);
+		}
+		if (password != null) {
+			request.setParameter("pw2", password);
+		}
+		request.setSession(session);
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
+		return (TwoFactorAuthenticationCredentials) authenticationScheme.getCredentials(authenticationSession);
+	}
+
+	protected TwoFactorAuthenticationCredentials get2faCredentials() {
+		return (TwoFactorAuthenticationCredentials) authenticationSession.getAuthenticationContext().getCredentials("2fa");
 	}
 
 	@Test
 	public void shouldConfigureFromRuntimeProperties() {
-		assertThat(authenticationScheme.getSchemeId(), equalTo("mfa"));
+		assertThat(authenticationScheme.getSchemeId(), equalTo("2fa"));
 		assertThat(authenticationScheme.getPrimaryOptions().size(), equalTo(1));
 		assertThat(authenticationScheme.getPrimaryOptions().get(0), equalTo("primary"));
 		assertThat(authenticationScheme.getSecondaryOptions().size(), equalTo(1));
@@ -73,44 +109,27 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 	}
 
 	@Test
-	public void getCredentialsShouldReturnEmptyIfNoAuthentication() {
-		assertCredentialsEmpty();
+	public void getCredentialsShouldReturnNullAndRedirectToPrimaryLoginIfNoPrimaryAuthentication() {
+		TwoFactorAuthenticationCredentials credentials = primaryAuth(null, null);
+		assertThat(credentials, nullValue());
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getRedirectedUrl(), equalTo("/primaryLogin"));
 	}
 
 	@Test
-	public void getCredentialsShouldReturnValidPrimaryCredentialsFromSession() {
-		getCredentials();
-		assertCredentialsEmpty();
-		request.setParameter("uname", "admin");
-		request.setParameter("pw", "adminPassword");
-		MultiFactorAuthenticationCredentials credentials = getCredentials();
+	public void getCredentialsShouldReturnValidCredentialsIfNoSecondaryAuthenticationRequired() {
+		TwoFactorAuthenticationCredentials credentials = primaryAuth("admin", "adminPassword");
+		assertThat(credentials, notNullValue());
 		assertThat(credentials.getPrimaryCredentials(), notNullValue());
 		assertThat(credentials.getSecondaryCredentials(), nullValue());
-		assertThat(authenticationSession.getAuthenticationContext().getCredentials("primary"), notNullValue());
-	}
-
-	@Test
-	public void getCredentialsShouldGetValidPrimaryCredentialsFromSessionIfAlreadyAuthenticated() {
-		getCredentials();
-		assertCredentialsEmpty();
-		request.setParameter("uname", "admin");
-		request.setParameter("pw", "adminPassword");
-		MultiFactorAuthenticationCredentials credentials = getCredentials();
-		assertThat(credentials.getPrimaryCredentials(), notNullValue());
-		assertThat(credentials.getSecondaryCredentials(), nullValue());
-		credentials = getCredentials();
-		assertThat(credentials.getPrimaryCredentials(), notNullValue());
-		assertThat(credentials.getSecondaryCredentials(), nullValue());
-		assertThat(authenticationSession.getAuthenticationContext().getCredentials("primary"), notNullValue());
+		assertThat(response.isCommitted(), equalTo(false));
+		assertThat(response.getRedirectedUrl(), nullValue());
 	}
 
 	@Test
 	public void getCredentialsShouldNullifyPrimaryCredentialsIfInvalid() {
-		getCredentials();
-		assertCredentialsEmpty();
-		request.setParameter("uname", "admin");
-		request.setParameter("pw", "test");
-		MultiFactorAuthenticationCredentials credentials = getCredentials();
+		primaryAuth("admin", "test");
+		TwoFactorAuthenticationCredentials credentials = get2faCredentials();
 		assertThat(credentials.getPrimaryCredentials(), nullValue());
 		assertThat(credentials.getSecondaryCredentials(), nullValue());
 		assertThat(authenticationSession.getAuthenticationContext().getCredentials("primary"), nullValue());
@@ -118,82 +137,53 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void getCredentialsShouldLogEventIfPrimaryAuthenticationFails() {
-		MultiFactorAuthenticationCredentials credentials = getCredentials();
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials("primary", "admin", "test"));
-		getCredentials();
+		primaryAuth("admin", "test");
 		assertLastLogContains("marker=PRIMARY_AUTHENTICATION_FAILED");
 	}
 
 	@Test
 	public void getCredentialsShouldNotGetSecondaryCredentialsUnlessPrimaryCredentialsAreValid() {
-		MultiFactorAuthenticationCredentials credentials = getCredentials();
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials("secondary", "admin", "adminSecondPassword"));
-		credentials = getCredentials();
+		primaryAuth(null, null);
+		TwoFactorAuthenticationCredentials credentials = get2faCredentials();
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials("secondary", "admin", "adminSecondPassword"));
+		primaryAuth(null, null);
 		assertThat(credentials.getPrimaryCredentials(), nullValue());
 		assertThat(credentials.getSecondaryCredentials(), nullValue());
-		request.setParameter("uname", "tester");
-		request.setParameter("pw", "test");
-		credentials = getCredentials();
+		secondaryAuth("tester", "test");
+		primaryAuth(null, null);
 		assertThat(credentials.getPrimaryCredentials(), nullValue());
 		assertThat(credentials.getSecondaryCredentials(), nullValue());
-		request.setParameter("uname2", "tester");
-		request.setParameter("pw2", "secondaryPw");
-		credentials = getCredentials();
+		secondaryAuth("tester", "secondaryPw");
 		assertThat(credentials.getPrimaryCredentials(), nullValue());
 		assertThat(credentials.getSecondaryCredentials(), nullValue());
 	}
 
 	@Test
 	public void getCredentialsShouldGetSecondaryCredentialsIfPrimaryCredentialsAreValid() {
-		getCredentials();
-		request.setParameter("uname", "tester");
-		request.setParameter("pw", "primaryPw");
-		MultiFactorAuthenticationCredentials credentials = getCredentials();
+		primaryAuth("tester", "primaryPw");
+		TwoFactorAuthenticationCredentials credentials = (TwoFactorAuthenticationCredentials)
+				authenticationSession.getAuthenticationContext().getCredentials("2fa");
 		assertThat(credentials.getPrimaryCredentials(), notNullValue());
 		assertThat(credentials.getSecondaryCredentials(), nullValue());
-		request.setParameter("uname2", "tester");
-		request.setParameter("pw2", "secondaryPw");
-		credentials = getCredentials();
+		credentials = secondaryAuth("tester", "secondaryPw");
 		assertThat(credentials.getPrimaryCredentials(), notNullValue());
 		assertThat(credentials.getSecondaryCredentials(), notNullValue());
+		assertThat(response.isCommitted(), equalTo(false));
+		assertThat(response.getRedirectedUrl(), nullValue());
 	}
 
 	@Test
-	public void getChallengeUrlShouldReturnNullIfOnlyPrimaryCredentialsRequiredForUser() {
-		request.setParameter("uname", "admin");
-		request.setParameter("pw", "adminPassword");
-		getCredentials();
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), nullValue());
-	}
-
-	@Test
-	public void getChallengeUrlShouldReturnNullIfBothPrimaryAndSecondaryCredentialsAreFound() {
-		request.setParameter("uname", "tester");
-		request.setParameter("pw", "primaryPw");
-		request.setParameter("uname2", "tester");
-		request.setParameter("pw2", "secondaryPw");
-		getCredentials();
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), nullValue());
-	}
-
-	@Test
-	public void getChallengeUrlShouldReturnPrimaryChallengeUrlIfPrimaryCredentialsMissing() {
-		getCredentials();
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), equalTo("/primaryLogin"));
-	}
-
-	@Test
-	public void getChallengeUrlShouldReturnSecondarChallengeUrlIfSecondaryCredentialsMissing() {
-		request.setParameter("uname", "tester");
-		request.setParameter("pw", "primaryPw");
-		getCredentials();
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), equalTo("/secondaryLogin"));
+	public void getCredentialsShouldReturnNullAndRedirectToSecondaryLoginIfSecondaryCredentialsMissing() {
+		AuthenticationCredentials credentials = primaryAuth("tester", "primaryPw");
+		assertThat(credentials, nullValue());
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getRedirectedUrl(), equalTo("/secondaryLogin"));
 	}
 
 	@Test
 	public void shouldFailToAuthenticateIfPrimaryCredentialsAreMissing() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "tester", "secondaryPw"
 		));
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
@@ -201,11 +191,11 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldFailToAuthenticateIfPrimaryAuthenticationFails() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "tester", "test"
 		));
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "tester", "secondaryPw"
 		));
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
@@ -213,11 +203,11 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldResetCredentialsIfAuthenticationFails() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "tester", "test"
 		));
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "tester", "secondaryPw"
 		));
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
@@ -227,8 +217,8 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldAuthenticateIfPrimarySucceedsAndSecondaryNotConfigured() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "admin", "adminPassword"
 		));
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
@@ -237,8 +227,8 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldFailToAuthenticateIfPrimarySucceedsAndSecondaryMissing() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "tester", "test"
 		));
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
@@ -246,11 +236,11 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldFailToAuthenticateIfPrimarySucceedsAndSecondaryFails() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "tester", "primaryPw"
 		));
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "tester", "test"
 		));
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
@@ -258,11 +248,11 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldResetSecondaryCredentialsIfSecondaryAuthenticationFails() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "tester", "primaryPw"
 		));
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "tester", "test"
 		));
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
@@ -272,11 +262,11 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldAuthenticateWithValidCredentials() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "admin", "adminPassword"
 		));
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "admin", "adminSecondPassword"
 		));
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
@@ -287,7 +277,7 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldFailToAuthenticateWithInvalidCredentials() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
 	}
 
@@ -299,8 +289,8 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldGetPrimaryAuthenticationSchemeFromCredentialsIfConfigured() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "admin", "adminPassword"
 		));
 		assertThat(authenticationScheme.getPrimaryAuthenticationScheme(credentials).getSchemeId(), equalTo("secondary"));
@@ -308,25 +298,25 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 
 	@Test
 	public void shouldGetPrimaryAuthenticationSchemeFromDefault() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
 		assertThat(authenticationScheme.getPrimaryAuthenticationScheme(credentials).getSchemeId(), equalTo("primary"));
 	}
 
 	@Test
 	public void shouldThrowExceptionIfNoDefaultPrimaryAuthenticationSchemeConfigured() {
-		AuthenticationConfig.setProperty("authentication.scheme.mfa.config.primaryOptions", "");
-		authenticationScheme = (MultiFactorAuthenticationScheme) AuthenticationConfig.getAuthenticationScheme();
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
+		AuthenticationConfig.setProperty("authentication.scheme.2fa.config.primaryOptions", "");
+		authenticationScheme = (TwoFactorAuthenticationScheme) AuthenticationConfig.getAuthenticationScheme();
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.getPrimaryAuthenticationScheme(credentials));
 	}
 
 	@Test
 	public void shouldGetSecondaryAuthenticationScheme() {
-		MultiFactorAuthenticationCredentials credentials = new MultiFactorAuthenticationCredentials("mfa");
-		credentials.setPrimaryCredentials(new BasicAuthenticationCredentials(
+		TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials("2fa");
+		credentials.setPrimaryCredentials(new PrimaryAuthenticationCredentials(
 				"primary", "tester", "primaryPw"
 		));
-		credentials.setSecondaryCredentials(new BasicAuthenticationCredentials(
+		credentials.setSecondaryCredentials(new PrimaryAuthenticationCredentials(
 				"secondary", "tester", "secondaryPw"
 		));
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
@@ -336,9 +326,9 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 	@Test
 	public void shouldGetCredentialsFromContext() {
 		AuthenticationContext ctx = authenticationSession.getAuthenticationContext();
-		MultiFactorAuthenticationCredentials c1 = authenticationScheme.getCredentialsFromContext(ctx);
-		assertThat(c1.getClass(), equalTo(MultiFactorAuthenticationCredentials.class));
-		MultiFactorAuthenticationCredentials c2 = authenticationScheme.getCredentialsFromContext(ctx);
+		TwoFactorAuthenticationCredentials c1 = authenticationScheme.getCredentialsFromContext(ctx);
+		assertThat(c1.getClass(), equalTo(TwoFactorAuthenticationCredentials.class));
+		TwoFactorAuthenticationCredentials c2 = authenticationScheme.getCredentialsFromContext(ctx);
 		assertThat(c1, equalTo(c2));
 	}
 
@@ -351,16 +341,11 @@ public class MultiFactorAuthenticationSchemeTest extends BaseWebAuthenticationTe
 		assertThat(options.get(2), equalTo("three"));
 	}
 
-	protected MultiFactorAuthenticationCredentials getCredentials() {
-		return (MultiFactorAuthenticationCredentials) authenticationScheme.getCredentials(authenticationSession);
-	}
-
-	protected void assertCredentialsEmpty() {
-		MultiFactorAuthenticationCredentials creds = getCredentials();
+	protected void assertCredentialsEmpty(TwoFactorAuthenticationCredentials creds) {
 		assertThat(creds, notNullValue());
 		assertThat(creds.getPrimaryCredentials(), nullValue());
 		assertThat(creds.getSecondaryCredentials(), nullValue());
-		assertThat(creds.getAuthenticationScheme(), equalTo("mfa"));
+		assertThat(creds.getAuthenticationScheme(), equalTo("2fa"));
 		assertThat(creds.getClientName(), nullValue());
 	}
 }

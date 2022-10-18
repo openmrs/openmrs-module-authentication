@@ -8,7 +8,7 @@ import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.BaseAuthenticationTest;
 import org.openmrs.module.authentication.TestAuthenticationScheme;
 import org.openmrs.module.authentication.TestUsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.PrimaryAuthenticationCredentials;
 
 import java.util.Properties;
 
@@ -36,7 +36,7 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
 		assertThat(delegatedScheme, notNullValue());
 		assertThat(delegatedScheme.getClass(), equalTo(customSchemeType));
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials("custom", "admin", "test");
+		PrimaryAuthenticationCredentials credentials = new PrimaryAuthenticationCredentials("custom", "admin", "test");
 		Authenticated authenticated = delegatedScheme.authenticate(credentials);
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("custom"));
 		assertThat(authenticated.getUser().getUsername(), equalTo("admin"));
@@ -52,7 +52,7 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
 		assertThat(delegatedScheme, notNullValue());
 		assertThat(delegatedScheme.getClass(), equalTo(customSchemeType));
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials("custom", "admin", "test");
+		PrimaryAuthenticationCredentials credentials = new PrimaryAuthenticationCredentials("custom", "admin", "test");
 		Authenticated authenticated = delegatedScheme.authenticate(credentials);
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("custom"));
 		assertThat(authenticated.getUser().getUsername(), equalTo("admin"));

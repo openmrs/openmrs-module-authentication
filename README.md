@@ -90,7 +90,7 @@ authentication.scheme.basic.config.passwordParam=pw
 authentication.scheme=mfa
 authentication.whiteList=/**/authentication/basic.htm,/**/authentication/secret.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
-authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.MultiFactorAuthenticationScheme
+authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.TwoFactorAuthenticationScheme
 authentication.scheme.mfa.config.primaryOptions=basic
 authentication.scheme.mfa.config.secondaryOptions=secret
 

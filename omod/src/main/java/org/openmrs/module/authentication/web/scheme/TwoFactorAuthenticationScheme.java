@@ -21,9 +21,9 @@ import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.TwoFactorAuthenticationCredentials;
 import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.web.AuthenticationSession;
-import org.openmrs.module.authentication.web.credentials.MultiFactorAuthenticationCredentials;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,9 +34,9 @@ import static org.openmrs.module.authentication.AuthenticationLogger.getMarker;
 import static org.openmrs.module.authentication.AuthenticationLogger.logEvent;
 
 /**
- * An authentication scheme that supports a primary and secondary authentication factors
+ * An authentication scheme that supports a primary and secondary authentication factor
  */
-public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme implements WebAuthenticationScheme {
+public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme implements WebAuthenticationScheme {
 
 	public static final Marker PRIMARY_SUCCEEDED = getMarker("PRIMARY_AUTHENTICATION_SUCCEEDED");
 	public static final Marker PRIMARY_FAILED = getMarker("PRIMARY_AUTHENTICATION_FAILED");
@@ -53,7 +53,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	private List<String> primaryOptions = new ArrayList<>();
 	private List<String> secondaryOptions = new ArrayList<>();
 
-	public MultiFactorAuthenticationScheme() {
+	public TwoFactorAuthenticationScheme() {
 		this.schemeId = getClass().getName();
 	}
 
@@ -83,11 +83,15 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	@Override
 	public AuthenticationCredentials getCredentials(AuthenticationSession session) {
 		AuthenticationContext context = session.getAuthenticationContext();
-		MultiFactorAuthenticationCredentials credentials = getCredentialsFromContext(context);
+		TwoFactorAuthenticationCredentials credentials = getCredentialsFromContext(context);
 		WebAuthenticationScheme primaryScheme = getPrimaryAuthenticationScheme(credentials);
 		if (credentials.getPrimaryCredentials() == null) {
-			credentials.setPrimaryCredentials(primaryScheme.getCredentials(session));
+			AuthenticationCredentials primary = primaryScheme.getCredentials(session);
+			credentials.setPrimaryCredentials(primary);
 			credentials.setSecondaryCredentials(null);
+			if (primary == null) {
+				return null;
+			}
 		}
 		if (credentials.getPrimaryCredentials() != null) {
 			try {
@@ -103,7 +107,13 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 				if (credentials.getSecondaryCredentials() == null) {
 					WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(candidateUser);
 					if (secondaryScheme != null) {
-						credentials.setSecondaryCredentials(secondaryScheme.getCredentials(session));
+						AuthenticationCredentials secondary = secondaryScheme.getCredentials(session);
+						if (secondary == null) {
+							return null;
+						}
+						else {
+							credentials.setSecondaryCredentials(secondary);
+						}
 					}
 				}
 			}
@@ -120,39 +130,17 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	}
 
 	/**
-	 * @see WebAuthenticationScheme#getChallengeUrl(AuthenticationSession)
-	 */
-	@Override
-	public String getChallengeUrl(AuthenticationSession session) {
-		AuthenticationContext context = session.getAuthenticationContext();
-		MultiFactorAuthenticationCredentials credentials = getCredentialsFromContext(context);
-		if (credentials.getPrimaryCredentials() == null) {
-			WebAuthenticationScheme primaryScheme = getPrimaryAuthenticationScheme(credentials);
-			context.removeCredentials(primaryScheme.getSchemeId());
-			return primaryScheme.getChallengeUrl(session);
-		}
-		else if (credentials.getSecondaryCredentials() == null) {
-			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(context.getCandidateUser());
-			if (secondaryScheme != null) {
-				context.removeCredentials(secondaryScheme.getSchemeId());
-				return secondaryScheme.getChallengeUrl(session);
-			}
-		}
-		return null;
-	}
-
-	/**
 	 * @see AuthenticationScheme#authenticate(Credentials)
 	 */
 	@Override
 	public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 
 		// Ensure the credentials provided are of the expected type
-		if (!(credentials instanceof MultiFactorAuthenticationCredentials)) {
+		if (!(credentials instanceof TwoFactorAuthenticationCredentials)) {
 			throw new ContextAuthenticationException("The credentials provided are invalid.");
 		}
 
-		MultiFactorAuthenticationCredentials mfaCreds = (MultiFactorAuthenticationCredentials) credentials;
+		TwoFactorAuthenticationCredentials mfaCreds = (TwoFactorAuthenticationCredentials) credentials;
 
 		Authenticated authenticated = null;
 		Authenticated secondaryAuthenticated = null;
@@ -205,7 +193,7 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	 * @param credentials the MultiFactorAuthenticationCredentials to check for a configured WebAuthenticationScheme
 	 * @return the WebAuthenticationScheme to use for the given MultiFactorAuthenticationCredentials
 	 */
-	protected WebAuthenticationScheme getPrimaryAuthenticationScheme(MultiFactorAuthenticationCredentials credentials) {
+	protected WebAuthenticationScheme getPrimaryAuthenticationScheme(TwoFactorAuthenticationCredentials credentials) {
 		AuthenticationCredentials primaryCredentials = credentials.getPrimaryCredentials();
 		String authScheme = null;
 		if (primaryCredentials != null) {
@@ -260,10 +248,10 @@ public class MultiFactorAuthenticationScheme extends DaoAuthenticationScheme imp
 	 * @param context the AuthenticationContext in which to retrieve the credentials
 	 * @return the MultiFactorAuthenticationCredentials from the AuthenticaitonContext, or a new instance if null
 	 */
-	protected MultiFactorAuthenticationCredentials getCredentialsFromContext(AuthenticationContext context) {
-		MultiFactorAuthenticationCredentials creds = (MultiFactorAuthenticationCredentials) context.getCredentials(schemeId);
+	protected TwoFactorAuthenticationCredentials getCredentialsFromContext(AuthenticationContext context) {
+		TwoFactorAuthenticationCredentials creds = (TwoFactorAuthenticationCredentials) context.getCredentials(schemeId);
 		if (creds == null) {
-			creds = new MultiFactorAuthenticationCredentials(schemeId);
+			creds = new TwoFactorAuthenticationCredentials(schemeId);
 			context.addCredentials(creds);
 		}
 		return creds;

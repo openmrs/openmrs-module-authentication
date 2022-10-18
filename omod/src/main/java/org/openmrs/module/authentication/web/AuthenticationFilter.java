@@ -129,34 +129,18 @@ public class AuthenticationFilter implements Filter {
 
 						// If any credentials were passed in the request or session, update the Context and return them
 						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
-
-						// Check whether the authentication scheme requires user input by retrieving challengeUrl
-						String challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
-
-						// If a challenge URL is supplied, then redirect to this for further user input
-						if (StringUtils.isNotBlank(challengeUrl)) {
-							response.sendRedirect(contextualizeUrl(request, challengeUrl));
-						}
-						// Otherwise, if no challenge URL is returned, then credentials are complete, authenticate
-						else {
+						if (credentials != null) {
 							try {
 								authenticationContext.authenticate(credentials);
 								regenerateSession(request);  // Guard against session fixation attacks
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
 								response.sendRedirect(determineSuccessRedirectUrl(request));
 							}
-							// If authentication fails, redirect back to challenge url for user to attempt again
+							// If authentication fails, remove credentials and redirect back to re-initiate auth
 							catch (ContextAuthenticationException e) {
 								session.setErrorMessage(e.getMessage());
-								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
-								if (challengeUrl == null) {
-									session.getAuthenticationContext().removeCredentials(credentials);
-									challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
-								}
-								if (challengeUrl == null) {
-									challengeUrl = "/";
-								}
-								response.sendRedirect(contextualizeUrl(request, challengeUrl));
+								session.getAuthenticationContext().removeCredentials(credentials);
+								response.sendRedirect(request.getRequestURI());
 							}
 						}
 					}

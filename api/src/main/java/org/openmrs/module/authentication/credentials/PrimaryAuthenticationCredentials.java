@@ -14,21 +14,15 @@ import org.openmrs.api.context.UsernamePasswordCredentials;
 /**
  * AuthenticationCredentials supporting basic authentication - username and password
  */
-public class BasicAuthenticationCredentials extends AuthenticationCredentials {
+public class PrimaryAuthenticationCredentials extends AuthenticationCredentials {
 
-    private String schemeId;
-    private String username;
-    private String password;
+    private final String username;
+    private final String password;
 
-    public BasicAuthenticationCredentials(String schemeId, String username, String password) {
-        this.schemeId = schemeId;
+    public PrimaryAuthenticationCredentials(String schemeId, String username, String password) {
+        super(schemeId);
         this.username = username;
         this.password = password;
-    }
-
-    @Override
-    public String getAuthenticationScheme() {
-        return schemeId;
     }
 
     /**
@@ -47,15 +41,7 @@ public class BasicAuthenticationCredentials extends AuthenticationCredentials {
         return username;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
     public String getPassword() {
         return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 }

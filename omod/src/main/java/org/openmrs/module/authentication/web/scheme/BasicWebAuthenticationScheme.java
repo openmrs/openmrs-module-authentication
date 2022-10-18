@@ -19,7 +19,7 @@ import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.PrimaryAuthenticationCredentials;
 import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 
@@ -31,6 +31,8 @@ import java.util.Properties;
  * This scheme supports configuration parameters that enable implementations to utilize it with their own login pages
  * This includes the ability to configure the `loginPage` that the user should be taken to, as well as the
  * `usernameParam` and `passwordParam` that should be read from the http request submission to authenticate.
+ * This Step is also configured to handle setting the user's session Location if this is passed in the request,
+ * to meet the requirements of existing user interfaces that allow location selection on the login page.
  */
 public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
 
@@ -38,10 +40,14 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
     public static final String USERNAME_PARAM = "usernameParam";
     public static final String PASSWORD_PARAM = "passwordParam";
 
+    public static final String USERNAME = "username";
+    public static final String PASSWORD = "password";
+
     private String schemeId;
     private String loginPage;
     private String usernameParam;
     private String passwordParam;
+
 
     public BasicWebAuthenticationScheme() {
         this.schemeId = getClass().getName();
@@ -56,15 +62,14 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
     }
 
     /**
-     * This supports a `loginPage`, `usernameParam`, and `passwordParam` property
      * @see ConfigurableAuthenticationScheme#configure(String, Properties)
      */
     @Override
     public void configure(String schemeId, Properties config) {
         this.schemeId = schemeId;
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/basicLogin.htm");
-        usernameParam = config.getProperty(USERNAME_PARAM, "username");
-        passwordParam = config.getProperty(PASSWORD_PARAM, "password");
+        usernameParam = config.getProperty(USERNAME_PARAM, USERNAME);
+        passwordParam = config.getProperty(PASSWORD_PARAM, PASSWORD);
     }
 
     /**
@@ -72,25 +77,21 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
      */
     @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        BasicAuthenticationCredentials credentials = null;
+        AuthenticationCredentials credentials = session.getAuthenticationContext().getCredentials(schemeId);
+        if (credentials != null) {
+            return credentials;
+        }
         String username = session.getRequestParam(usernameParam);
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
-            credentials = new BasicAuthenticationCredentials(schemeId, username, password);
+            credentials = new PrimaryAuthenticationCredentials(schemeId, username, password);
             session.getAuthenticationContext().addCredentials(credentials);
+            return credentials;
         }
-        return credentials;
-    }
-
-    /**
-     * @see WebAuthenticationScheme#getChallengeUrl(AuthenticationSession)
-     */
-    @Override
-    public String getChallengeUrl(AuthenticationSession session) {
-        if (session.getAuthenticationContext().getCredentials(schemeId) == null) {
-            return loginPage;
+        else {
+            session.sendRedirect(loginPage);
+            return null;
         }
-        return null;
     }
 
     /**
@@ -100,11 +101,11 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 
         // Ensure the credentials provided are of the expected type
-        if (!(credentials instanceof BasicAuthenticationCredentials)) {
+        if (!(credentials instanceof PrimaryAuthenticationCredentials)) {
             throw new ContextAuthenticationException("The credentials provided are invalid.");
         }
 
-        BasicAuthenticationCredentials bac = (BasicAuthenticationCredentials) credentials;
+        PrimaryAuthenticationCredentials bac = (PrimaryAuthenticationCredentials) credentials;
         AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, bac.getUsername());
         Authenticated authenticated = authenticateWithUsernamePasswordCredentials(bac.toUsernamePasswordCredentials());
         return new BasicAuthenticated(authenticated.getUser(), schemeId);

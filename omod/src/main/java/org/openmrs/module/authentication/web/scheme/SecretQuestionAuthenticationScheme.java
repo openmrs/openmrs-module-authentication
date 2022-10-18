@@ -3,7 +3,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
@@ -18,9 +18,11 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.SecretQuestionAuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.SecondaryAuthenticationCredentials;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -35,6 +37,9 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     public static final String LOGIN_PAGE = "loginPage";
     public static final String QUESTION_PARAM = "questionParam";
     public static final String ANSWER_PARAM = "answerParam";
+
+    public static final String QUESTION = "question";
+    public static final String ANSWER = "answer";
 
     private String schemeId;
     private String loginPage;
@@ -54,62 +59,65 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     public void configure(String schemeId, Properties config) {
         this.schemeId = schemeId;
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/secretQuestion.htm");
-        questionParam = config.getProperty(QUESTION_PARAM, "question");
-        answerParam = config.getProperty(ANSWER_PARAM, "answer");
+        questionParam = config.getProperty(QUESTION_PARAM, QUESTION);
+        answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
     }
 
     @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        SecretQuestionAuthenticationCredentials credentials = null;
+        AuthenticationCredentials credentials = session.getAuthenticationContext().getCredentials(schemeId);
+        if (credentials != null) {
+            return credentials;
+        }
         String question = session.getRequestParam(questionParam);
         String answer = session.getRequestParam(answerParam);
         if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
             User candidateUser = session.getAuthenticationContext().getCandidateUser();
-            credentials = new SecretQuestionAuthenticationCredentials(schemeId, candidateUser, question, answer);
+            Map<String, String> data = new HashMap<>();
+            data.put(QUESTION, question);
+            data.put(ANSWER, answer);
+            credentials = new SecondaryAuthenticationCredentials(schemeId, candidateUser, data);
+            session.getAuthenticationContext().addCredentials(credentials);
+            return credentials;
         }
-        return credentials;
-    }
-
-    @Override
-    public String getChallengeUrl(AuthenticationSession session) {
-        if (session.getAuthenticationContext().getCredentials(schemeId) == null) {
-            return loginPage;
+        else {
+            session.sendRedirect(loginPage);
+            return null;
         }
-        return null;
     }
 
     @Override
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 
         // Ensure the credentials provided are of the expected type
-        if (!(credentials instanceof SecretQuestionAuthenticationCredentials)) {
+        if (!(credentials instanceof SecondaryAuthenticationCredentials)) {
             throw new ContextAuthenticationException("The credentials provided are invalid.");
         }
-        SecretQuestionAuthenticationCredentials ac = (SecretQuestionAuthenticationCredentials) credentials;
+        SecondaryAuthenticationCredentials c = (SecondaryAuthenticationCredentials) credentials;
 
-        if (ac.getUser() == null) {
+        if (c.getCandidateUser() == null) {
             throw new ContextAuthenticationException("User missing from credentials");
         }
-        if (StringUtils.isBlank(ac.getQuestion())) {
+        if (StringUtils.isBlank(c.getUserData().get(QUESTION))) {
             throw new ContextAuthenticationException("Question missing from credentials");
         }
-        if (StringUtils.isBlank(ac.getAnswer())) {
+        if (StringUtils.isBlank(c.getUserData().get(ANSWER))) {
             throw new ContextAuthenticationException("Answer missing from credentials");
         }
 
-        String expectedQuestion = getSecretQuestion(ac.getUser());
+        String expectedQuestion = getSecretQuestion(c.getCandidateUser());
         if (StringUtils.isBlank(expectedQuestion)) {
             throw new ContextAuthenticationException("User does not have a secret question configured");
         }
-        if (!expectedQuestion.equalsIgnoreCase(ac.getQuestion())) {
+        if (!expectedQuestion.equalsIgnoreCase(c.getUserData().get(QUESTION))) {
             throw new ContextAuthenticationException("Invalid question submitted");
         }
 
-        if (!isSecretAnswer(ac.getUser(), ac.getAnswer())) {
+        if (!isSecretAnswer(c.getCandidateUser(), c.getUserData().get(ANSWER))) {
             throw new ContextAuthenticationException("Incorrect secret answer");
         }
 
-        return new BasicAuthenticated(ac.getUser(), credentials.getAuthenticationScheme());
+        return new BasicAuthenticated(c.getCandidateUser(), credentials.getAuthenticationScheme());
     }
 
     /**

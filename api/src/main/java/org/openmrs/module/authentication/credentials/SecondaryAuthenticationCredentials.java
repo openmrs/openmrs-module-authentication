@@ -11,25 +11,19 @@ package org.openmrs.module.authentication.credentials;
 
 import org.openmrs.User;
 
+import java.util.Map;
+
 /**
- * Credentials supporting token-based authentication.
- * This is generally intended to be used as a secondary authentication factor
+ * Credentials supporting secondary-authentication.
  */
-public class TokenAuthenticationCredentials extends AuthenticationCredentials {
+public class SecondaryAuthenticationCredentials extends AuthenticationCredentials {
 
-    private final String schemeId;
     private final User candidateUser;
-    private final String token;
 
-    public TokenAuthenticationCredentials(String schemeId, User candidateUser, String token) {
-        this.schemeId = schemeId;
+    public SecondaryAuthenticationCredentials(String schemeId, User candidateUser, Map<String, String> data) {
+        super(schemeId);
         this.candidateUser = candidateUser;
-        this.token = token;
-    }
-
-    @Override
-    public String getAuthenticationScheme() {
-        return schemeId;
+        getUserData().putAll(data);
     }
 
     @Override
@@ -39,9 +33,5 @@ public class TokenAuthenticationCredentials extends AuthenticationCredentials {
 
     public User getCandidateUser() {
         return candidateUser;
-    }
-
-    public String getToken() {
-        return token;
     }
 }

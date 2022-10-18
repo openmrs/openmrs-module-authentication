@@ -26,12 +26,4 @@ public interface WebAuthenticationScheme extends ConfigurableAuthenticationSchem
      * @return Credentials that could be passed to the authenticate method to attempt authentication or null if none
      */
     AuthenticationCredentials getCredentials(AuthenticationSession session);
-
-    /**
-     * This method provides a means for an AuthenticationScheme to return an appropriate challenge URL
-     * to enable submission of additional AuthenticationCredentials
-     * If no additional challenge URL is required or configured, this should return null
-     * @param session the current AuthenticationSession
-     */
-    String getChallengeUrl(AuthenticationSession session);
 }

@@ -15,7 +15,7 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
+import org.openmrs.module.authentication.credentials.PrimaryAuthenticationCredentials;
 import org.springframework.stereotype.Component;
 
 /**
@@ -33,8 +33,8 @@ public class DelegatingAuthenticationScheme implements AuthenticationScheme {
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
         AuthenticationScheme authenticationScheme = getDelegatedAuthenticationScheme();
         if (authenticationScheme instanceof UsernamePasswordAuthenticationScheme) {
-            if (credentials instanceof BasicAuthenticationCredentials) {
-                credentials = ((BasicAuthenticationCredentials) credentials).toUsernamePasswordCredentials();
+            if (credentials instanceof PrimaryAuthenticationCredentials) {
+                credentials = ((PrimaryAuthenticationCredentials) credentials).toUsernamePasswordCredentials();
             }
         }
         return authenticationScheme.authenticate(credentials);
