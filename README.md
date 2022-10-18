@@ -87,12 +87,12 @@ authentication.scheme.basic.config.passwordParam=pw
 ### Two-factor authentication example
 
 ```properties
-authentication.scheme=mfa
+authentication.scheme=2fa
 authentication.whiteList=/**/authentication/basic.htm,/**/authentication/secret.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
-authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.TwoFactorAuthenticationScheme
-authentication.scheme.mfa.config.primaryOptions=basic
-authentication.scheme.mfa.config.secondaryOptions=secret
+authentication.scheme.2fa.type=org.openmrs.module.authentication.web.scheme.TwoFactorAuthenticationScheme
+authentication.scheme.2fa.config.primaryOptions=basic
+authentication.scheme.2fa.config.secondaryOptions=secret
 
 authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
 authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm

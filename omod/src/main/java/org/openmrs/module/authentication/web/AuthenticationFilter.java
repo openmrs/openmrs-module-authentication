@@ -14,7 +14,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
@@ -32,10 +31,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.Properties;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
@@ -132,15 +128,17 @@ public class AuthenticationFilter implements Filter {
 						if (credentials != null) {
 							try {
 								authenticationContext.authenticate(credentials);
-								regenerateSession(request);  // Guard against session fixation attacks
+								session.regenerateHttpSession();  // Guard against session fixation attacks
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
 								response.sendRedirect(determineSuccessRedirectUrl(request));
+								return;
 							}
 							// If authentication fails, remove credentials and redirect back to re-initiate auth
-							catch (ContextAuthenticationException e) {
+							catch (Exception e) {
 								session.setErrorMessage(e.getMessage());
 								session.getAuthenticationContext().removeCredentials(credentials);
 								response.sendRedirect(request.getRequestURI());
+								return;
 							}
 						}
 					}
@@ -150,9 +148,7 @@ public class AuthenticationFilter implements Filter {
 				session.removeAuthenticationContext();  // If authenticated, remove authentication details from session
 			}
 
-			if (!response.isCommitted()) {
-				chain.doFilter(servletRequest, servletResponse);
-			}
+			chain.doFilter(servletRequest, servletResponse);
 		}
 		finally {
 			AuthenticationLogger.clearContext();
@@ -205,36 +201,6 @@ public class AuthenticationFilter implements Filter {
 			return delegatingScheme.getDelegatedAuthenticationScheme();
 		}
 		return authenticationScheme;
-	}
-
-	/**
-	 * This regenerates the session associated with a request, by invalidating existing session, and creating a new
-	 * session that contains the same attributes as the existing session.
-	 * See:  <a href="https://stackoverflow.com/questions/8162646/how-to-refresh-jsessionid-cookie-after-login">SO</a>
-	 * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
-	 * @param request the request containing the session to regenerate
-	 */
-	protected void regenerateSession(HttpServletRequest request) {
-		Properties sessionAttributes = new Properties();
-		HttpSession existingSession = request.getSession(false);
-		if (existingSession != null) {
-			Enumeration<?> attrNames = existingSession.getAttributeNames();
-			if (attrNames != null) {
-				while (attrNames.hasMoreElements()) {
-					String attribute = (String) attrNames.nextElement();
-					sessionAttributes.put(attribute, existingSession.getAttribute(attribute));
-				}
-			}
-			existingSession.invalidate();
-		}
-		HttpSession newSession = request.getSession(true);
-		Enumeration<Object> attrNames = sessionAttributes.keys();
-		if (attrNames != null) {
-			while (attrNames.hasMoreElements()) {
-				String attribute = (String) attrNames.nextElement();
-				newSession.setAttribute(attribute, sessionAttributes.get(attribute));
-			}
-		}
 	}
 
 	/**

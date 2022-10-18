@@ -3,7 +3,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
@@ -24,6 +24,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 /**
@@ -51,7 +52,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_USER_ID = "__authentication_user_id";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
 
-    private final HttpSession session;
+    private HttpSession session;
     private HttpServletRequest request;
     private HttpServletResponse response;
 
@@ -83,6 +84,7 @@ public class AuthenticationSession {
      * This constructor sets up data in the HTTP session for tracking authentication details,
      * and makes data from the request available for use in the session (request parameters, IP address, etc)
      * @param request the HttpServletRequest to use to construct this AuthenticationSession
+     * @param response the HttpServletResponse to use to construct this AuthenticationSession
      */
     public AuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
         this(request.getSession());
@@ -245,6 +247,34 @@ public class AuthenticationSession {
      */
     public boolean isUserAuthenticated() {
         return Context.isSessionOpen() && Context.isAuthenticated();
+    }
+
+    /**
+     * This regenerates the underlying HTTP Session, by invalidating existing session, and creating a new
+     * session that contains the same attributes as the existing session.
+     * See:  <a href="https://stackoverflow.com/questions/8162646/how-to-refresh-jsessionid-cookie-after-login">SO</a>
+     * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
+     */
+    public void regenerateHttpSession() {
+        Properties sessionAttributes = new Properties();
+        if (session != null) {
+            Enumeration<?> attrNames = session.getAttributeNames();
+            if (attrNames != null) {
+                while (attrNames.hasMoreElements()) {
+                    String attribute = (String) attrNames.nextElement();
+                    sessionAttributes.put(attribute, session.getAttribute(attribute));
+                }
+            }
+            session.invalidate();
+        }
+        session = request.getSession(true);
+        Enumeration<Object> attrNames = sessionAttributes.keys();
+        if (attrNames != null) {
+            while (attrNames.hasMoreElements()) {
+                String attribute = (String) attrNames.nextElement();
+                session.setAttribute(attribute, sessionAttributes.get(attribute));
+            }
+        }
     }
 
     /**

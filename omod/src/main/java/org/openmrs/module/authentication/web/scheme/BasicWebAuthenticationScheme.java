@@ -31,8 +31,6 @@ import java.util.Properties;
  * This scheme supports configuration parameters that enable implementations to utilize it with their own login pages
  * This includes the ability to configure the `loginPage` that the user should be taken to, as well as the
  * `usernameParam` and `passwordParam` that should be read from the http request submission to authenticate.
- * This Step is also configured to handle setting the user's session Location if this is passed in the request,
- * to meet the requirements of existing user interfaces that allow location selection on the login page.
  */
 public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
 

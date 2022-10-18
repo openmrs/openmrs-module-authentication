@@ -26,6 +26,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 
@@ -251,5 +252,18 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 	public void shouldReturnFalseForUserAuthenticatedIfNoSessionIsOpen() {
 		AuthenticationSession session = new AuthenticationSession(newSession("admin", "test"));
 		assertThat(session.isUserAuthenticated(), is(false));
+	}
+
+	@Test
+	public void shouldRegenerateSession() {
+		AuthenticationSession session = new AuthenticationSession(new MockHttpServletRequest(), newResponse());
+		String authenticationSessionId = session.getAuthenticationSessionId();
+		String httpSessionId = session.getHttpSessionId();
+		int numAttributes = session.getHttpSessionAttributes().size();
+		session.regenerateHttpSession();
+		AuthenticationSession session2 = new AuthenticationSession(new MockHttpServletRequest(), newResponse());
+		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
+		assertThat(session2.getHttpSessionId(), not(httpSessionId));
+		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));
 	}
 }
