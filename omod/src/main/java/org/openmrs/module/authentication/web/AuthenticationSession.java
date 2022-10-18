@@ -12,9 +12,14 @@ package org.openmrs.module.authentication.web;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
+import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import javax.servlet.http.HttpServletRequest;
@@ -247,6 +252,31 @@ public class AuthenticationSession {
      */
     public boolean isUserAuthenticated() {
         return Context.isSessionOpen() && Context.isAuthenticated();
+    }
+
+    /**
+     * Authenticates the given credentials against the given authentication scheme
+     * If this is the main authentication scheme registered with OpenMRS, then authentication is done via the Context
+     * This ensures that any authentication hooks are executed before and after the authentication itself
+     * @see Context#authenticate(Credentials)
+     */
+    public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
+        Authenticated authenticated;
+        try {
+            scheme.beforeAuthentication(this);
+            if (scheme.equals(Context.getAuthenticationScheme())) {
+                authenticated = Context.authenticate(credentials);
+            }
+            else {
+                authenticated = scheme.authenticate(credentials);
+            }
+            scheme.afterAuthenticationSuccess(this);
+        }
+        catch (Exception e) {
+            scheme.afterAuthenticationFailure(this);
+            throw new ContextAuthenticationException(e.getMessage(), e);
+        }
+        return authenticated;
     }
 
     /**

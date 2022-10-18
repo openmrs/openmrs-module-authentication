@@ -48,49 +48,6 @@ public class AuthenticationUtil {
     }
 
     /**
-     * @param className the string class name
-     * @param type the type of class expected
-     * @return a new instance of the given type of class, with a type identified by the passed className
-     */
-    public static <T> T getClassInstance(String className, Class<T> type) {
-        T ret = null;
-        Class<? extends T> clazz = getClass(className, type);
-        if (clazz != null) {
-            try {
-                ret = (T) clazz.getDeclaredConstructor().newInstance();
-            }
-            catch (Exception e) {
-                throw new RuntimeException("Unable to instantiate class " + type);
-            }
-        }
-        return ret;
-    }
-
-    /**
-     * @param className the string class name
-     * @param type the type of class expected
-     * @return a class of the given type, with a type identified by the passed className
-     */
-    @SuppressWarnings("unchecked")
-    public static <T> Class<? extends T> getClass(String className, Class<T> type) {
-        Class<?> ret = null;
-        try {
-            if (StringUtils.isNotBlank(className)) {
-                try {
-                    ret = Context.loadClass(className.trim());
-                }
-                catch (Throwable t) {
-                    ret = AuthenticationUtil.class.getClassLoader().loadClass(className.trim());
-                }
-            }
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Unable to load class " + type);
-        }
-        return (Class<? extends T>) ret;
-    }
-
-    /**
      * @param prefix the prefix to search in the keys of the given Properties
      * @param stripPrefix if true, this will remove the prefix in the resulting Properties
      * @return the Properties whose keys start with the given prefix, without the prefix if stripPrefix is true

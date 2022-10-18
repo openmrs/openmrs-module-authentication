@@ -32,15 +32,6 @@ public class AuthenticationContext implements Serializable {
     public AuthenticationContext() {
     }
 
-    /**
-     * Authenticates the given credentials with OpenMRS
-     * This mainly exists to encapsulate this functionality and allow for testing and mocking
-     * @see Context#authenticate(Credentials) 
-     */
-    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
-        return Context.authenticate(credentials);
-    }
-
     // Accessors
 
     /**

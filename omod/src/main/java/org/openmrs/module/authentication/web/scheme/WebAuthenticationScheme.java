@@ -26,4 +26,25 @@ public interface WebAuthenticationScheme extends ConfigurableAuthenticationSchem
      * @return Credentials that could be passed to the authenticate method to attempt authentication or null if none
      */
     AuthenticationCredentials getCredentials(AuthenticationSession session);
+
+    /**
+     * A WebAuthenticationScheme has hooks that allow for adding additional functionality within the authentication
+     * workflow as desired.  This method will execute prior to each authentication attempt
+     */
+    default void beforeAuthentication(AuthenticationSession session) {
+    }
+
+    /**
+     * A WebAuthenticationScheme has hooks that allow for adding additional functionality within the authentication
+     * workflow as desired.  This method will execute following a successful authentication
+     */
+    default void afterAuthenticationSuccess(AuthenticationSession session) {
+    }
+
+    /**
+     * A WebAuthenticationScheme has hooks that allow for adding additional functionality within the authentication
+     * workflow as desired.  This method will execute following a failed authentication
+     */
+    default void afterAuthenticationFailure(AuthenticationSession session) {
+    }
 }

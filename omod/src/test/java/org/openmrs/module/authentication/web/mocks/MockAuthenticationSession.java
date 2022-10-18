@@ -10,7 +10,10 @@
 package org.openmrs.module.authentication.web.mocks;
 
 import org.openmrs.User;
+import org.openmrs.api.context.Authenticated;
+import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.AuthenticationSession;
+import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -29,6 +32,13 @@ public class MockAuthenticationSession extends AuthenticationSession {
 	@Override
 	public boolean isUserAuthenticated() {
 		return authenticatedUser != null;
+	}
+
+	@Override
+	public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
+		Authenticated authenticated = scheme.authenticate(credentials);
+		this.authenticatedUser = authenticated.getUser();
+		return authenticated;
 	}
 
 	public User getAuthenticatedUser() {

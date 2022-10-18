@@ -95,7 +95,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 		}
 		if (credentials.getPrimaryCredentials() != null) {
 			try {
-				User candidateUser = primaryScheme.authenticate(credentials.getPrimaryCredentials()).getUser();
+				User candidateUser = session.authenticate(primaryScheme, credentials.getPrimaryCredentials()).getUser();
 				AuthenticationLogger.addUserToContext(candidateUser);
 				if (context.getCandidateUser() == null) {
 					context.setCandidateUser(candidateUser);

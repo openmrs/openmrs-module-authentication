@@ -14,9 +14,11 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
+import org.openmrs.util.OpenmrsClassLoader;
 import org.openmrs.util.OpenmrsUtil;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -81,6 +83,8 @@ public class AuthenticationConfig implements Serializable {
 
     private static Properties config;
 
+    private static final List<ClassLoader> classLoaders = new ArrayList<>();
+
     /**
      * @return the configured properties, loading from runtime properties if necessary
      */
@@ -89,6 +93,13 @@ public class AuthenticationConfig implements Serializable {
             config = AuthenticationUtil.getPropertiesWithPrefix(Context.getRuntimeProperties(), PREFIX, false);
         }
         return config;
+    }
+
+    /**
+     * @param classLoader a classLoader to add to the list of classLoaders that can resolve classes for instantiation
+     */
+    public static void registerClassLoader(ClassLoader classLoader) {
+        AuthenticationConfig.classLoaders.add(classLoader);
     }
 
     /**
@@ -154,10 +165,15 @@ public class AuthenticationConfig implements Serializable {
      * @return a new instance of the given type of class, with a type identified by the value of the given property
      */
     public static <T> T getClassInstance(String key, Class<T> type) {
-        String className = config.getProperty(key);
-        if (StringUtils.isNotBlank(className)) {
-            return AuthenticationUtil.getClassInstance(className, type);
+        Class<? extends T> clazz = getClass(key, type);
+        if (clazz != null) {
+            try {
+                return clazz.getDeclaredConstructor().newInstance();
             }
+            catch (Exception e) {
+                throw new RuntimeException("Unable to instantiate class " + type);
+            }
+        }
         return null;
     }
 
@@ -166,10 +182,21 @@ public class AuthenticationConfig implements Serializable {
      * @param type the type of class expected
      * @return a class of the given type, with a type identified by the value of the given property
      */
+    @SuppressWarnings("unchecked")
     public static <T> Class<? extends T> getClass(String key, Class<T> type) {
-            String className = config.getProperty(key);
-            if (StringUtils.isNotBlank(className)) {
-            return AuthenticationUtil.getClass(className, type);
+        String className = config.getProperty(key);
+        if (StringUtils.isNotBlank(className)) {
+            List<ClassLoader> loaders = new ArrayList<>();
+            loaders.add(OpenmrsClassLoader.getInstance());
+            loaders.add(AuthenticationUtil.class.getClassLoader());
+            loaders.addAll(classLoaders);
+            for (ClassLoader loader : loaders) {
+                try {
+                    return (Class<? extends T>) loader.loadClass(className.trim());
+                } catch (Throwable ignored) {
+                }
+            }
+            throw new RuntimeException("Unable to load class " + type);
         }
         return null;
     }

@@ -127,7 +127,7 @@ public class AuthenticationFilter implements Filter {
 						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
 						if (credentials != null) {
 							try {
-								authenticationContext.authenticate(credentials);
+								session.authenticate(webAuthenticationScheme, credentials);
 								session.regenerateHttpSession();  // Guard against session fixation attacks
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
 								response.sendRedirect(determineSuccessRedirectUrl(request));
