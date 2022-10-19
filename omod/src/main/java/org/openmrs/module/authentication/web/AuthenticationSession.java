@@ -16,15 +16,18 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
+import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.Serializable;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -263,14 +266,16 @@ public class AuthenticationSession {
     public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
         Authenticated authenticated;
         try {
+            String schemeId = scheme.getSchemeId();
             scheme.beforeAuthentication(this);
-            if (scheme.equals(Context.getAuthenticationScheme())) {
+            if (schemeId.equals(AuthenticationConfig.getProperty(AuthenticationConfig.SCHEME))) {
                 authenticated = Context.authenticate(credentials);
             }
             else {
                 authenticated = scheme.authenticate(credentials);
             }
             scheme.afterAuthenticationSuccess(this);
+            getAuthenticationContext().addValidatedCredential(schemeId);
         }
         catch (Exception e) {
             scheme.afterAuthenticationFailure(this);
@@ -335,6 +340,26 @@ public class AuthenticationSession {
     }
 
     /**
+     * Sets an attribute on the HttpSession
+     * @param key the attribute name
+     * @param value the attribute value
+     */
+    public void setHttpSessionAttribute(String key, Serializable value) {
+        session.setAttribute(key, value);
+    }
+
+    /**
+     * Sets a cookie value on the response, if present
+     * @param key the cookie name
+     * @param value the cookie value
+     */
+    public void setCookieValue(String key, String value) {
+        if (response != null) {
+            response.addCookie(new Cookie(key, value));
+        }
+    }
+
+    /**
      * Redirects to the given url
      * @param url the url to redirect to
      */
@@ -367,5 +392,26 @@ public class AuthenticationSession {
      */
     public String getErrorMessage() {
         return (String) session.getAttribute(AUTHENTICATION_ERROR_MESSAGE);
+    }
+
+    /**
+     * @return the HttpSession for this AuthenticationSession
+     */
+    public HttpSession getHttpSession() {
+        return session;
+    }
+
+    /**
+     * @return the HttpServletRequest for this AuthenticationSession
+     */
+    public HttpServletRequest getHttpRequest() {
+        return request;
+    }
+
+    /**
+     * @return the HttpServletResponse for this AuthenticationSession
+     */
+    public HttpServletResponse getHttpResponse() {
+        return response;
     }
 }

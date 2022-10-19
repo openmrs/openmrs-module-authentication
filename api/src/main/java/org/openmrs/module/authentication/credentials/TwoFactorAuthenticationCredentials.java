@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.credentials;
 
+import org.openmrs.User;
 import org.openmrs.api.context.Credentials;
 
 /**
@@ -18,6 +19,7 @@ public class TwoFactorAuthenticationCredentials extends AuthenticationCredential
 
     private AuthenticationCredentials primaryCredentials;
     private AuthenticationCredentials secondaryCredentials;
+    private User candidateUser;
 
     /**
      * Instantiates a new set of credentials with the given schemeId that identifies the linked AuthenticationScheme
@@ -61,5 +63,19 @@ public class TwoFactorAuthenticationCredentials extends AuthenticationCredential
      */
     public void setSecondaryCredentials(AuthenticationCredentials secondaryCredentials) {
         this.secondaryCredentials = secondaryCredentials;
+    }
+
+    /**
+     * @return the candidate user authenticated by the primary authentication credentials
+     */
+    public User getCandidateUser() {
+        return candidateUser;
+    }
+
+    /**
+     * @param candidateUser the candidate user authenticated by the primary authentication credentials
+     */
+    public void setCandidateUser(User candidateUser) {
+        this.candidateUser = candidateUser;
     }
 }

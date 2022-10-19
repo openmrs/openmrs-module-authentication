@@ -19,9 +19,15 @@ import org.openmrs.module.authentication.web.AuthenticationSession;
 public interface WebAuthenticationScheme extends ConfigurableAuthenticationScheme {
 
     /**
-     * This method is intended to be used by implementations to inspect the AuthenticationSession for any
-     * submitted credentials.  If found, this should construct and return valid AuthenticatorCredentials.
-     * If not found, should return null.
+     * This method should return the challenge url at which a user could submit credentials
+     * @param session the current AuthenticationSession
+     */
+    String getChallengeUrl(AuthenticationSession session);
+
+    /**
+     * This method is intended to be used by implementations to inspect the AuthenticationSession and
+     * associated session and response for any submitted credentials.  If found, this should construct and
+     * return valid AuthenticatorCredentials.  If not found, this should return null.
      * @param session the current AuthenticationSession
      * @return Credentials that could be passed to the authenticate method to attempt authentication or null if none
      */

@@ -38,6 +38,7 @@ public class MockAuthenticationSession extends AuthenticationSession {
 	public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
 		Authenticated authenticated = scheme.authenticate(credentials);
 		this.authenticatedUser = authenticated.getUser();
+		getAuthenticationContext().addValidatedCredential(scheme.getSchemeId());
 		return authenticated;
 	}
 

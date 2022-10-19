@@ -15,7 +15,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 import org.openmrs.module.authentication.scheme.DelegatingAuthenticationScheme;
@@ -114,32 +113,36 @@ public class AuthenticationFilter implements Filter {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
 
-				AuthenticationContext authenticationContext = session.getAuthenticationContext();
 				AuthenticationScheme authenticationScheme = getAuthenticationScheme();
 
 				if (authenticationScheme instanceof WebAuthenticationScheme) {
-					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
+
+					WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
+
 					if (!isWhiteListed(request)) {
-						log.debug("Authentication required for " + request.getRequestURI());
+						log.debug("Authentication required: " + request.getMethod() + " " + request.getRequestURI());
 						session.removeErrorMessage();
 
 						// If any credentials were passed in the request or session, update the Context and return them
-						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
+						AuthenticationCredentials credentials = webScheme.getCredentials(session);
+						String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
 						if (credentials != null) {
 							try {
-								session.authenticate(webAuthenticationScheme, credentials);
+								session.authenticate(webScheme, credentials);
 								session.regenerateHttpSession();  // Guard against session fixation attacks
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
-								response.sendRedirect(determineSuccessRedirectUrl(request));
-								return;
+								String successUrl = determineSuccessRedirectUrl(request);
+								response.sendRedirect(successUrl);
 							}
 							// If authentication fails, remove credentials and redirect back to re-initiate auth
 							catch (Exception e) {
 								session.setErrorMessage(e.getMessage());
 								session.getAuthenticationContext().removeCredentials(credentials);
-								response.sendRedirect(request.getRequestURI());
-								return;
+								session.sendRedirect(challengeUrl);
 							}
+						}
+						else {
+							session.sendRedirect(challengeUrl);
 						}
 					}
 				}
@@ -148,7 +151,9 @@ public class AuthenticationFilter implements Filter {
 				session.removeAuthenticationContext();  // If authenticated, remove authentication details from session
 			}
 
-			chain.doFilter(servletRequest, servletResponse);
+			if (!response.isCommitted()) {
+				chain.doFilter(servletRequest, servletResponse);
+			}
 		}
 		finally {
 			AuthenticationLogger.clearContext();
@@ -187,7 +192,11 @@ public class AuthenticationFilter implements Filter {
 		if (matcher.match(pattern, request.getServletPath())) {
 			return true;
 		}
-		return matcher.match(contextualizeUrl(request, pattern), request.getRequestURI());
+		String patternWithContext = contextualizeUrl(request, pattern);
+		if (matcher.match(patternWithContext, request.getRequestURI())) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -222,9 +231,7 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isBlank(redirect)) {
 			redirect = "/";
 		}
-		redirect = contextualizeUrl(request, redirect);
-		log.debug("Redirecting to: '" + redirect + "'");
-		return redirect;
+		return contextualizeUrl(request, redirect);
 	}
 
 	/**
@@ -234,6 +241,9 @@ public class AuthenticationFilter implements Filter {
 	 * @return the url, prepended with the context path if necessary
 	 */
 	protected String contextualizeUrl(HttpServletRequest request, String url) {
+		if (url == null) {
+			url = request.getContextPath();
+		}
 		if (!url.startsWith(request.getContextPath())) {
 			url = request.getContextPath() + (url.startsWith("/") ? "" : "/") + url;
 		}

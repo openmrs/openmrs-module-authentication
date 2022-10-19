@@ -54,7 +54,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		session = new MockHttpSession();
 		request = new MockHttpServletRequest();
 		request.setRemoteAddr("192.168.1.1");
-		request.setContextPath("/openmrs");
+		request.setContextPath("/");
 		request.setSession(session);
 		response = new MockHttpServletResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
@@ -75,7 +75,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		authenticationSession.setAuthenticatedUser(null);
 		request.setMethod("GET");
-		request.setRequestURI("/openmrs/patientDashboard.htm");
+		request.setRequestURI("/patientDashboard.htm");
 	}
 
 	@Test
@@ -144,7 +144,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("password", "adminPassword");
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(response.getRedirectedUrl(), equalTo("/openmrs/patientDashboard.htm"));
+		assertThat(response.getRedirectedUrl(), equalTo("/patientDashboard.htm"));
 	}
 
 	@Test
@@ -178,7 +178,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
 		assertThat(authenticationSession.getAuthenticationContext().getCredentials("basic"), nullValue());
-		assertThat(response.getRedirectedUrl(), equalTo("/openmrs/patientDashboard.htm"));
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
 
 	@Test

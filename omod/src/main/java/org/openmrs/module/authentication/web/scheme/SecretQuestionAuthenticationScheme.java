@@ -10,6 +10,8 @@
 package org.openmrs.module.authentication.web.scheme;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Authenticated;
@@ -34,6 +36,8 @@ import java.util.Properties;
  */
 public class SecretQuestionAuthenticationScheme implements WebAuthenticationScheme {
 
+    protected final Log log = LogFactory.getLog(getClass());
+
     public static final String LOGIN_PAGE = "loginPage";
     public static final String QUESTION_PARAM = "questionParam";
     public static final String ANSWER_PARAM = "answerParam";
@@ -41,10 +45,10 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     public static final String QUESTION = "question";
     public static final String ANSWER = "answer";
 
-    private String schemeId;
-    private String loginPage;
-    private String questionParam;
-    private String answerParam;
+    protected String schemeId;
+    protected String loginPage;
+    protected String questionParam;
+    protected String answerParam;
 
     public SecretQuestionAuthenticationScheme() {
         this.schemeId = getClass().getName();
@@ -64,6 +68,11 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     }
 
     @Override
+    public String getChallengeUrl(AuthenticationSession session) {
+        return loginPage;
+    }
+
+    @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
         AuthenticationCredentials credentials = session.getAuthenticationContext().getCredentials(schemeId);
         if (credentials != null) {
@@ -80,10 +89,7 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
             session.getAuthenticationContext().addCredentials(credentials);
             return credentials;
         }
-        else {
-            session.sendRedirect(loginPage);
-            return null;
-        }
+        return null;
     }
 
     @Override

@@ -79,10 +79,8 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 	}
 
 	@Test
-	public void shouldRedirectToChallengeUrlIfNoCredentialsInSession() {
+	public void shouldReturnNullIfNoCredentialsInSession() {
 		assertThat(getCredentials(null, null), nullValue());
-		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(response.getRedirectedUrl(), equalTo("/login"));
 	}
 
 	@Test

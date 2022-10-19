@@ -10,6 +10,8 @@
 package org.openmrs.module.authentication.web.scheme;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
@@ -34,6 +36,8 @@ import java.util.Properties;
  */
 public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
 
+    protected final Log log = LogFactory.getLog(getClass());
+
     public static final String LOGIN_PAGE = "loginPage";
     public static final String USERNAME_PARAM = "usernameParam";
     public static final String PASSWORD_PARAM = "passwordParam";
@@ -41,10 +45,10 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
     public static final String USERNAME = "username";
     public static final String PASSWORD = "password";
 
-    private String schemeId;
-    private String loginPage;
-    private String usernameParam;
-    private String passwordParam;
+    protected String schemeId;
+    protected String loginPage;
+    protected String usernameParam;
+    protected String passwordParam;
 
 
     public BasicWebAuthenticationScheme() {
@@ -71,6 +75,14 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
     }
 
     /**
+     * @see WebAuthenticationScheme#getChallengeUrl(AuthenticationSession)
+     */
+    @Override
+    public String getChallengeUrl(AuthenticationSession session) {
+        return loginPage;
+    }
+
+    /**
      * @see WebAuthenticationScheme#getCredentials(AuthenticationSession)
      */
     @Override
@@ -86,10 +98,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
             session.getAuthenticationContext().addCredentials(credentials);
             return credentials;
         }
-        else {
-            session.sendRedirect(loginPage);
-            return null;
-        }
+        return null;
     }
 
     /**

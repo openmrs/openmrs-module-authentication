@@ -226,6 +226,7 @@ public class AuthenticationConfig implements Serializable {
         return getStringList(WHITE_LIST);
     }
 
+
     /**
      * @return the configured authentication scheme, defaulting to a UsernamePasswordAuthenticationScheme if not found
      */

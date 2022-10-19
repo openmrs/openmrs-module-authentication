@@ -88,10 +88,8 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 	}
 
 	@Test
-	public void shouldRedirectToChallengeUrlIfNoCredentialsInSession() {
-		getCredentials(null, null);
-		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(response.getRedirectedUrl(), equalTo("/secretQuestion"));
+	public void shouldReturnNullIfNoCredentialsInSession() {
+		assertThat(getCredentials(null, null), nullValue());
 	}
 
 	@Test
