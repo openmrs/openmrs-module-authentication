@@ -10,7 +10,7 @@
 package org.openmrs.module.authentication.web.mocks;
 
 import org.openmrs.User;
-import org.openmrs.module.authentication.web.scheme.SecretQuestionAuthenticationScheme;
+import org.openmrs.module.authentication.web.SecretQuestionAuthenticationScheme;
 
 /**
  * Represents a particular method of authentication.

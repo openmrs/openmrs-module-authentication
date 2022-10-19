@@ -13,7 +13,6 @@ import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 import org.openmrs.util.OpenmrsClassLoader;
 import org.openmrs.util.OpenmrsUtil;
 
@@ -196,7 +195,7 @@ public class AuthenticationConfig implements Serializable {
                 } catch (Throwable ignored) {
                 }
             }
-            throw new RuntimeException("Unable to load class " + type);
+            throw new RuntimeException("Unable to load class " + key);
         }
         return null;
     }

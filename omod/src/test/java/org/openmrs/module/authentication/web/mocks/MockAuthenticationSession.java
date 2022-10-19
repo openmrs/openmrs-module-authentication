@@ -11,9 +11,9 @@ package org.openmrs.module.authentication.web.mocks;
 
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.AuthenticationSession;
-import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
+import org.openmrs.module.authentication.web.WebAuthenticationScheme;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;

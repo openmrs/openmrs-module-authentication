@@ -3,7 +3,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
@@ -15,7 +15,7 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
-import org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme;
+import org.openmrs.module.authentication.web.BasicWebAuthenticationScheme;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,7 +29,7 @@ import java.util.Set;
 public class MockBasicWebAuthenticationScheme extends BasicWebAuthenticationScheme {
 
     private static final Set<String> validCredentials = new HashSet<>();
-    private static Map<String, User> users = new HashMap<>();
+    private static final Map<String, User> users = new HashMap<>();
 
     public MockBasicWebAuthenticationScheme() {
     }
@@ -57,7 +57,7 @@ public class MockBasicWebAuthenticationScheme extends BasicWebAuthenticationSche
     }
 
     @Override
-    protected Authenticated authenticateWithUsernamePasswordCredentials(UsernamePasswordCredentials credentials) {
+    protected Authenticated authenticateWithUsernamePasswordScheme(UsernamePasswordCredentials credentials) {
         if (StringUtils.isNotBlank(credentials.getUsername())) {
             if (validCredentials.contains(credentials.getUsername() + ":" + credentials.getPassword())) {
                 return new BasicAuthenticated(users.get(credentials.getUsername()), getSchemeId());

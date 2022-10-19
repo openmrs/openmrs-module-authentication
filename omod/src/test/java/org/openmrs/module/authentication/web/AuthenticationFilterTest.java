@@ -21,7 +21,6 @@ import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationFilter;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
-import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;

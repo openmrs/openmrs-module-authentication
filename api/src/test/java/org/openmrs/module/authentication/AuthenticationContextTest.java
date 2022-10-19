@@ -3,9 +3,6 @@ package org.openmrs.module.authentication;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.PrimaryAuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.SecondaryAuthenticationCredentials;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -13,8 +10,6 @@ import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -38,12 +33,9 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 
 		AuthenticationContext ctx = new AuthenticationContext();
 		User u = new User();
+		u.setUsername("admin");
 		ctx.setCandidateUser(u);
-		ctx.addCredentials(new PrimaryAuthenticationCredentials("basic", "admin", "test"));
-		Map<String, String> data = new HashMap<>();
-		data.put("question", "myQuestion");
-		data.put("answer", "myAnswer");
-		ctx.addCredentials(new SecondaryAuthenticationCredentials("token", u, data));
+		ctx.addCredentials(new TestAuthenticationCredentials("test", u));
 
 		File serializedDataFile = File.createTempFile(getClass().getSimpleName(), "dat");
 		serializedDataFile.deleteOnExit();
@@ -56,41 +48,36 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 			AuthenticationContext deserialized = (AuthenticationContext) in.readObject();
 			assertThat(deserialized, notNullValue());
 			assertThat(deserialized.getCandidateUser(), equalTo(u));
-			AuthenticationCredentials c1 = deserialized.getCredentials("basic");
-			assertThat(c1, notNullValue());
-			assertThat(c1.getClass(), equalTo(PrimaryAuthenticationCredentials.class));
-			PrimaryAuthenticationCredentials basic = (PrimaryAuthenticationCredentials) c1;
-			assertThat(basic.getAuthenticationScheme(), equalTo("basic"));
-			assertThat(basic.getUsername(), equalTo("admin"));
-			assertThat(basic.getPassword(), equalTo("test"));
-			AuthenticationCredentials c2 = deserialized.getCredentials("token");
-			assertThat(c2, notNullValue());
-			assertThat(c2.getClass(), equalTo(SecondaryAuthenticationCredentials.class));
-			SecondaryAuthenticationCredentials token = (SecondaryAuthenticationCredentials) c2;
-			assertThat(token.getAuthenticationScheme(), equalTo("token"));
-			assertThat(token.getCandidateUser(), equalTo(u));
-			assertThat(token.getUserData().size(), equalTo(2));
-			assertThat(token.getUserData().get("question"), equalTo("myQuestion"));
-			assertThat(token.getUserData().get("answer"), equalTo("myAnswer"));
+			AuthenticationCredentials credentials = deserialized.getCredentials("test");
+			assertThat(credentials, notNullValue());
+			assertThat(credentials.getClass(), equalTo(TestAuthenticationCredentials.class));
+			TestAuthenticationCredentials testCredentials = (TestAuthenticationCredentials) credentials;
+			assertThat(testCredentials.getAuthenticationScheme(), equalTo("test"));
+			assertThat(testCredentials.getClientName(), equalTo("admin"));
+			assertThat(testCredentials.getUser(), equalTo(u));
 		}
 	}
 
 	@Test
 	public void shouldAddGetAndRemoveCredentials() {
 		AuthenticationContext ctx = new AuthenticationContext();
-		ctx.addCredentials(new PrimaryAuthenticationCredentials("c1", "user1", "pw1"));
-		ctx.addCredentials(new PrimaryAuthenticationCredentials("c2", "user2", "pw2"));
-		AuthenticationCredentials c1 = ctx.getCredentials("c1");
-		assertThat(c1.getAuthenticationScheme(), equalTo("c1"));
-		assertThat(c1.getClass(), equalTo(PrimaryAuthenticationCredentials.class));
+		User user1 = new User();
+		user1.setUsername("user1");
+		ctx.addCredentials(new TestAuthenticationCredentials("scheme1", user1));
+		User user2 = new User();
+		user2.setUsername("user2");
+		ctx.addCredentials(new TestAuthenticationCredentials("scheme2", user2));
+		AuthenticationCredentials c1 = ctx.getCredentials("scheme1");
+		assertThat(c1.getAuthenticationScheme(), equalTo("scheme1"));
+		assertThat(c1.getClass(), equalTo(TestAuthenticationCredentials.class));
 		assertThat(c1.getClientName(), equalTo("user1"));
-		AuthenticationCredentials c2 = ctx.getCredentials("c2");
-		assertThat(c2.getAuthenticationScheme(), equalTo("c2"));
-		assertThat(c2.getClass(), equalTo(PrimaryAuthenticationCredentials.class));
+		AuthenticationCredentials c2 = ctx.getCredentials("scheme2");
+		assertThat(c2.getAuthenticationScheme(), equalTo("scheme2"));
+		assertThat(c2.getClass(), equalTo(TestAuthenticationCredentials.class));
 		assertThat(c2.getClientName(), equalTo("user2"));
 		ctx.removeCredentials(c1);
-		assertThat(ctx.getCredentials("c1"), nullValue());
-		ctx.removeCredentials("c2");
-		assertThat(ctx.getCredentials("c2"), nullValue());
+		assertThat(ctx.getCredentials("scheme1"), nullValue());
+		ctx.removeCredentials("scheme2");
+		assertThat(ctx.getCredentials("scheme2"), nullValue());
 	}
 }

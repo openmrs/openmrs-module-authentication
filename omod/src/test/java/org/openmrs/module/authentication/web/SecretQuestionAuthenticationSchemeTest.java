@@ -1,4 +1,4 @@
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,16 +8,12 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.credentials.SecondaryAuthenticationCredentials;
-import org.openmrs.module.authentication.web.BaseWebAuthenticationTest;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockSecretQuestionAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -57,7 +53,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		authenticationScheme = (MockSecretQuestionAuthenticationScheme) scheme;
 	}
 
-	protected SecondaryAuthenticationCredentials getCredentials(String question, String answer) {
+	protected AuthenticationCredentials getCredentials(String question, String answer) {
 		request = newPostRequest("192.168.1.1", "/login");
 		if (question != null) {
 			request.setParameter("secretQ", question);
@@ -68,7 +64,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		request.setSession(session);
 		response = newResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
-		return (SecondaryAuthenticationCredentials) authenticationScheme.getCredentials(authenticationSession);
+		return authenticationScheme.getCredentials(authenticationSession);
 	}
 
 	@Test
@@ -81,7 +77,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		assertThat(getCredentials(null, null), nullValue());
 		assertThat(getCredentials("Favorite color?", null), nullValue());
 		assertThat(getCredentials(null, "Red"), nullValue());
-		SecondaryAuthenticationCredentials credentials = getCredentials("Favorite color?", "Red");
+		AuthenticationCredentials credentials = getCredentials("Favorite color?", "Red");
 		assertThat(credentials, notNullValue());
 		assertThat(credentials.getClientName(), equalTo("testing"));
 		assertThat(credentials.getAuthenticationScheme(), equalTo("secret"));
@@ -94,12 +90,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 
 	@Test
 	public void shouldAuthenticateWithValidCredentials() {
-		Map<String, String> data = new HashMap<>();
-		data.put("question", "testing question");
-		data.put("answer", "testing answer");
-		SecondaryAuthenticationCredentials credentials = new SecondaryAuthenticationCredentials(
-				"secret", candidateUser, data
-		);
+		AuthenticationCredentials credentials = getCredentials("testing question", "testing answer");
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
 		assertThat(authenticated, notNullValue());
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("secret"));
@@ -108,11 +99,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 
 	@Test
 	public void shouldFailToAuthenticateWithInvalidCredentials() {
-		Map<String, String> data = new HashMap<>();
-		data.put("testing question", "incorrect answer");
-		SecondaryAuthenticationCredentials credentials = new SecondaryAuthenticationCredentials(
-				"secret", candidateUser, data
-		);
+		AuthenticationCredentials credentials = getCredentials("testing question", "incorrect answer");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
 	}
 

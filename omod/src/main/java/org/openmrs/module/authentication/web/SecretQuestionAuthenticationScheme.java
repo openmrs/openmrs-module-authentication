@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -19,12 +19,8 @@ import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.SecondaryAuthenticationCredentials;
-import org.openmrs.module.authentication.web.AuthenticationSession;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -82,10 +78,7 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
         String answer = session.getRequestParam(answerParam);
         if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
             User candidateUser = session.getAuthenticationContext().getCandidateUser();
-            Map<String, String> data = new HashMap<>();
-            data.put(QUESTION, question);
-            data.put(ANSWER, answer);
-            credentials = new SecondaryAuthenticationCredentials(schemeId, candidateUser, data);
+            credentials = new SecretQuestionAuthenticationCredentials(candidateUser, question, answer);
             session.getAuthenticationContext().addCredentials(credentials);
             return credentials;
         }
@@ -96,34 +89,23 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 
         // Ensure the credentials provided are of the expected type
-        if (!(credentials instanceof SecondaryAuthenticationCredentials)) {
-            throw new ContextAuthenticationException("The credentials provided are invalid.");
+        if (!(credentials instanceof SecretQuestionAuthenticationCredentials)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
-        SecondaryAuthenticationCredentials c = (SecondaryAuthenticationCredentials) credentials;
+        SecretQuestionAuthenticationCredentials c = (SecretQuestionAuthenticationCredentials) credentials;
 
-        if (c.getCandidateUser() == null) {
-            throw new ContextAuthenticationException("User missing from credentials");
+        if (c.user == null || StringUtils.isBlank(c.question) || StringUtils.isBlank(c.answer)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
-        if (StringUtils.isBlank(c.getUserData().get(QUESTION))) {
-            throw new ContextAuthenticationException("Question missing from credentials");
+        String expectedQuestion = getSecretQuestion(c.user);
+        if (StringUtils.isBlank(expectedQuestion) || !expectedQuestion.equalsIgnoreCase(c.question)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
-        if (StringUtils.isBlank(c.getUserData().get(ANSWER))) {
-            throw new ContextAuthenticationException("Answer missing from credentials");
-        }
-
-        String expectedQuestion = getSecretQuestion(c.getCandidateUser());
-        if (StringUtils.isBlank(expectedQuestion)) {
-            throw new ContextAuthenticationException("User does not have a secret question configured");
-        }
-        if (!expectedQuestion.equalsIgnoreCase(c.getUserData().get(QUESTION))) {
-            throw new ContextAuthenticationException("Invalid question submitted");
+        if (!isSecretAnswer(c.user, c.answer)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
 
-        if (!isSecretAnswer(c.getCandidateUser(), c.getUserData().get(ANSWER))) {
-            throw new ContextAuthenticationException("Incorrect secret answer");
-        }
-
-        return new BasicAuthenticated(c.getCandidateUser(), credentials.getAuthenticationScheme());
+        return new BasicAuthenticated(c.user, credentials.getAuthenticationScheme());
     }
 
     /**
@@ -138,5 +120,31 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
      */
     protected boolean isSecretAnswer(User user, String answer) {
         return Context.getUserService().isSecretAnswer(user, answer);
+    }
+
+    /**
+     * Credentials inner class, to enable access and visibility of credential details to be limited to scheme
+     */
+    public class SecretQuestionAuthenticationCredentials implements AuthenticationCredentials {
+
+        protected final User user;
+        protected final String question;
+        protected final String answer;
+
+        @Override
+        public String getAuthenticationScheme() {
+            return schemeId;
+        }
+
+        protected SecretQuestionAuthenticationCredentials(User user, String question, String answer) {
+            this.user = user;
+            this.question = question;
+            this.answer = answer;
+        }
+
+        @Override
+        public String getClientName() {
+            return user == null ? null : user.getUsername();
+        }
     }
 }

@@ -191,7 +191,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
+		authenticationSession.getAuthenticationContext();
 		Map<String, Object> attributes = authenticationSession.getHttpSessionAttributes();
 		assertThat(attributes.size(), equalTo(5));
 	}
@@ -223,7 +223,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
+		authenticationSession.getAuthenticationContext();
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), notNullValue());
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY), notNullValue());
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS), notNullValue());

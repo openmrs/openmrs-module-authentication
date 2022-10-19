@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -22,12 +22,10 @@ import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.DaoAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.AuthenticationUtil;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.TwoFactorAuthenticationCredentials;
-import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
-import org.openmrs.module.authentication.web.AuthenticationSession;
+import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -149,12 +147,14 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 				}
 			}
 			if (secondaryScheme == null || context.isCredentialValidated(secondaryScheme.getSchemeId())) {
-				TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials(schemeId);
-				credentials.setPrimaryCredentials(context.getCredentials(primaryScheme.getSchemeId()));
-				credentials.setCandidateUser(context.getCandidateUser());
+				AuthenticationCredentials primaryCredentials = context.getCredentials(primaryScheme.getSchemeId());
+				AuthenticationCredentials secondaryCredentials = null;
 				if (secondaryScheme != null) {
-					credentials.setSecondaryCredentials(context.getCredentials(secondaryScheme.getSchemeId()));
+					secondaryCredentials = context.getCredentials(secondaryScheme.getSchemeId());
 				}
+				TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials(
+						context.getCandidateUser(), primaryCredentials, secondaryCredentials
+				);
 				context.addCredentials(credentials);
 				return credentials;
 			}
@@ -170,22 +170,19 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
 		// Ensure the credentials provided are of the expected type
 		if (!(credentials instanceof TwoFactorAuthenticationCredentials)) {
-			throw new ContextAuthenticationException("The credentials provided are invalid.");
+			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
 		TwoFactorAuthenticationCredentials mfaCreds = (TwoFactorAuthenticationCredentials) credentials;
-		User candidateUser = mfaCreds.getCandidateUser();
-		AuthenticationCredentials primaryCredentials = mfaCreds.getPrimaryCredentials();
-		if (primaryCredentials == null || candidateUser == null) {
-			throw new ContextAuthenticationException("Primary authentication required");
+		if (mfaCreds.primary == null || mfaCreds.user == null) {
+			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
-		AuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(candidateUser);
+		AuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(mfaCreds.user);
 		if (secondaryScheme != null) {
-			AuthenticationCredentials secondaryCredentials = mfaCreds.getSecondaryCredentials();
-			if (secondaryCredentials == null) {
-				throw new ContextAuthenticationException("Secondary authentication required");
+			if (mfaCreds.secondary == null) {
+				throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 			}
 		}
-		return new BasicAuthenticated(candidateUser, credentials.getAuthenticationScheme());
+		return new BasicAuthenticated(mfaCreds.user, credentials.getAuthenticationScheme());
 	}
 
 	/**
@@ -251,5 +248,31 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	 */
 	public List<String> getSecondaryOptions() {
 		return secondaryOptions;
+	}
+
+	/**
+	 * Credentials inner class, to enable access and visibility of credential details to be limited to scheme
+	 */
+	public class TwoFactorAuthenticationCredentials implements AuthenticationCredentials {
+
+		protected final User user;
+		protected final AuthenticationCredentials primary;
+		protected final AuthenticationCredentials secondary;
+
+		@Override
+		public String getAuthenticationScheme() {
+			return schemeId;
+		}
+
+		protected TwoFactorAuthenticationCredentials(User user, AuthenticationCredentials primary, AuthenticationCredentials secondary) {
+			this.user = user;
+			this.primary = primary;
+			this.secondary = secondary;
+		}
+
+		@Override
+		public String getClientName() {
+			return user == null ? null : user.getUsername();
+		}
 	}
 }

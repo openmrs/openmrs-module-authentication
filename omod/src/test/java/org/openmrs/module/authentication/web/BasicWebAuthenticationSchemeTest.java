@@ -1,4 +1,4 @@
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,9 +7,7 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.PrimaryAuthenticationCredentials;
-import org.openmrs.module.authentication.web.BaseWebAuthenticationTest;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -85,9 +83,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldAuthenticateWithValidCredentials() {
-		PrimaryAuthenticationCredentials credentials = new PrimaryAuthenticationCredentials(
-				"basic", "admin", "adminPassword"
-		);
+		AuthenticationCredentials credentials = getCredentials("admin", "adminPassword");
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
 		assertThat(authenticated, notNullValue());
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("basic"));
@@ -96,9 +92,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldFailToAuthenticateWithInvalidCredentials() {
-		PrimaryAuthenticationCredentials credentials = new PrimaryAuthenticationCredentials(
-				"basic", "admin", "test"
-		);
+		AuthenticationCredentials credentials = getCredentials("admin", "test");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
 	}
 

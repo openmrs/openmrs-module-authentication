@@ -16,9 +16,8 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationLogger;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.scheme.DelegatingAuthenticationScheme;
-import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
+import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 

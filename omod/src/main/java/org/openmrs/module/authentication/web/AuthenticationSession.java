@@ -19,8 +19,7 @@ import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import javax.servlet.http.Cookie;

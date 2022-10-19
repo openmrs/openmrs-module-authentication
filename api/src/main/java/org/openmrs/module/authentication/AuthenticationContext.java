@@ -10,7 +10,6 @@
 package org.openmrs.module.authentication;
 
 import org.openmrs.User;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 
 import java.io.Serializable;
 import java.util.HashMap;

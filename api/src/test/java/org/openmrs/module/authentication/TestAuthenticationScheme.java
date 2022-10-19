@@ -14,7 +14,6 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
-import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
 
 import java.util.Properties;
 
