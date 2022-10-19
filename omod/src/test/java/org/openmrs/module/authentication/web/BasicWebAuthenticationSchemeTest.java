@@ -1,4 +1,4 @@
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -7,12 +7,11 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
-import org.openmrs.module.authentication.web.BaseWebAuthenticationTest;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,6 +25,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 	MockAuthenticationSession authenticationSession;
 	MockHttpSession session;
 	MockHttpServletRequest request;
+	MockHttpServletResponse response;
 	MockBasicWebAuthenticationScheme authenticationScheme;
 
 	@BeforeEach
@@ -41,12 +41,23 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users.admin.password", "adminPassword");
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		session = newSession();
-		request = newPostRequest("192.168.1.1", "/login");
-		request.setSession(session);
-		authenticationSession = new MockAuthenticationSession(request, newResponse());
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockBasicWebAuthenticationScheme.class));
 		authenticationScheme = (MockBasicWebAuthenticationScheme) scheme;
+	}
+
+	protected AuthenticationCredentials getCredentials(String username, String password) {
+		request = newPostRequest("192.168.1.1", "/login");
+		if (username != null) {
+			request.setParameter("uname", username);
+		}
+		if (password != null) {
+			request.setParameter("pw", password);
+		}
+		request.setSession(session);
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
+		return authenticationScheme.getCredentials(authenticationSession);
 	}
 
 	@Test
@@ -56,35 +67,23 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldGetCompleteCredentialsOrReturnNull() {
-		assertThat(authenticationScheme.getCredentials(authenticationSession), nullValue());
-		request.setParameter("uname", "admin");
-		assertThat(authenticationScheme.getCredentials(authenticationSession), nullValue());
-		request.removeParameter("uname");
-		request.setParameter("pw", "test");
-		assertThat(authenticationScheme.getCredentials(authenticationSession), nullValue());
-		request.setParameter("uname", "admin");
-		request.setParameter("pw", "adminPassword");
-		AuthenticationCredentials credentials = authenticationScheme.getCredentials(authenticationSession);
+		assertThat(getCredentials(null, null), nullValue());
+		assertThat(getCredentials("admin", null), nullValue());
+		assertThat(getCredentials(null, "test"), nullValue());
+		AuthenticationCredentials credentials = getCredentials("admin", "adminPassword");
 		assertThat(credentials, notNullValue());
 		assertThat(credentials.getClientName(), equalTo("admin"));
 		assertThat(credentials.getAuthenticationScheme(), equalTo("basic"));
 	}
 
 	@Test
-	public void shouldGetChallengeUrlIfNoCredentialsInSession() {
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), equalTo("/login"));
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials(
-				"basic", "admin", "adminPassword"
-		);
-		authenticationSession.getAuthenticationContext().addCredentials(credentials);
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), nullValue());
+	public void shouldReturnNullIfNoCredentialsInSession() {
+		assertThat(getCredentials(null, null), nullValue());
 	}
 
 	@Test
 	public void shouldAuthenticateWithValidCredentials() {
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials(
-				"basic", "admin", "adminPassword"
-		);
+		AuthenticationCredentials credentials = getCredentials("admin", "adminPassword");
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
 		assertThat(authenticated, notNullValue());
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("basic"));
@@ -93,9 +92,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldFailToAuthenticateWithInvalidCredentials() {
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials(
-				"basic", "admin", "test"
-		);
+		AuthenticationCredentials credentials = getCredentials("admin", "test");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
 	}
 

@@ -7,15 +7,12 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.scheme;
+package org.openmrs.module.authentication;
 
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
-import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
 import org.springframework.stereotype.Component;
 
 /**
@@ -26,17 +23,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class DelegatingAuthenticationScheme implements AuthenticationScheme {
 
-    public DelegatingAuthenticationScheme() {
-    }
-
     @Override
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
         AuthenticationScheme authenticationScheme = getDelegatedAuthenticationScheme();
-        if (authenticationScheme instanceof UsernamePasswordAuthenticationScheme) {
-            if (credentials instanceof BasicAuthenticationCredentials) {
-                credentials = ((BasicAuthenticationCredentials) credentials).toUsernamePasswordCredentials();
-            }
-        }
         return authenticationScheme.authenticate(credentials);
     }
 

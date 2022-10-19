@@ -3,7 +3,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
@@ -12,18 +12,26 @@ package org.openmrs.module.authentication.web;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
+import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.api.context.Credentials;
+import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.Serializable;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 
 /**
@@ -51,7 +59,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_USER_ID = "__authentication_user_id";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
 
-    private final HttpSession session;
+    private HttpSession session;
     private HttpServletRequest request;
     private HttpServletResponse response;
 
@@ -83,6 +91,7 @@ public class AuthenticationSession {
      * This constructor sets up data in the HTTP session for tracking authentication details,
      * and makes data from the request available for use in the session (request parameters, IP address, etc)
      * @param request the HttpServletRequest to use to construct this AuthenticationSession
+     * @param response the HttpServletResponse to use to construct this AuthenticationSession
      */
     public AuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
         this(request.getSession());
@@ -248,6 +257,61 @@ public class AuthenticationSession {
     }
 
     /**
+     * Authenticates the given credentials against the given authentication scheme
+     * If this is the main authentication scheme registered with OpenMRS, then authentication is done via the Context
+     * This ensures that any authentication hooks are executed before and after the authentication itself
+     * @see Context#authenticate(Credentials)
+     */
+    public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
+        Authenticated authenticated;
+        try {
+            String schemeId = scheme.getSchemeId();
+            scheme.beforeAuthentication(this);
+            if (schemeId.equals(AuthenticationConfig.getProperty(AuthenticationConfig.SCHEME))) {
+                authenticated = Context.authenticate(credentials);
+            }
+            else {
+                authenticated = scheme.authenticate(credentials);
+            }
+            scheme.afterAuthenticationSuccess(this);
+            getAuthenticationContext().addValidatedCredential(schemeId);
+        }
+        catch (Exception e) {
+            scheme.afterAuthenticationFailure(this);
+            throw new ContextAuthenticationException(e.getMessage(), e);
+        }
+        return authenticated;
+    }
+
+    /**
+     * This regenerates the underlying HTTP Session, by invalidating existing session, and creating a new
+     * session that contains the same attributes as the existing session.
+     * See:  <a href="https://stackoverflow.com/questions/8162646/how-to-refresh-jsessionid-cookie-after-login">SO</a>
+     * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
+     */
+    public void regenerateHttpSession() {
+        Properties sessionAttributes = new Properties();
+        if (session != null) {
+            Enumeration<?> attrNames = session.getAttributeNames();
+            if (attrNames != null) {
+                while (attrNames.hasMoreElements()) {
+                    String attribute = (String) attrNames.nextElement();
+                    sessionAttributes.put(attribute, session.getAttribute(attribute));
+                }
+            }
+            session.invalidate();
+        }
+        session = request.getSession(true);
+        Enumeration<Object> attrNames = sessionAttributes.keys();
+        if (attrNames != null) {
+            while (attrNames.hasMoreElements()) {
+                String attribute = (String) attrNames.nextElement();
+                session.setAttribute(attribute, sessionAttributes.get(attribute));
+            }
+        }
+    }
+
+    /**
      * This checks whether there is an authenticated or candidate user, and if so,
      * this will set the context locale to this users default locale, and set a cookie to this locale.
      * If there is none, this will look for an existing Cookie value, and if found, will set it as the Context locale
@@ -271,6 +335,26 @@ public class AuthenticationSession {
         }
         if (Context.isSessionOpen() && locale != null) {
             Context.getUserContext().setLocale(locale);
+        }
+    }
+
+    /**
+     * Sets an attribute on the HttpSession
+     * @param key the attribute name
+     * @param value the attribute value
+     */
+    public void setHttpSessionAttribute(String key, Serializable value) {
+        session.setAttribute(key, value);
+    }
+
+    /**
+     * Sets a cookie value on the response, if present
+     * @param key the cookie name
+     * @param value the cookie value
+     */
+    public void setCookieValue(String key, String value) {
+        if (response != null) {
+            response.addCookie(new Cookie(key, value));
         }
     }
 
@@ -307,5 +391,26 @@ public class AuthenticationSession {
      */
     public String getErrorMessage() {
         return (String) session.getAttribute(AUTHENTICATION_ERROR_MESSAGE);
+    }
+
+    /**
+     * @return the HttpSession for this AuthenticationSession
+     */
+    public HttpSession getHttpSession() {
+        return session;
+    }
+
+    /**
+     * @return the HttpServletRequest for this AuthenticationSession
+     */
+    public HttpServletRequest getHttpRequest() {
+        return request;
+    }
+
+    /**
+     * @return the HttpServletResponse for this AuthenticationSession
+     */
+    public HttpServletResponse getHttpResponse() {
+        return response;
     }
 }

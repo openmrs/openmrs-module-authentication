@@ -3,13 +3,15 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
 import org.openmrs.api.UserService;
 import org.openmrs.api.context.Authenticated;
@@ -17,9 +19,7 @@ import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.SecretQuestionAuthenticationCredentials;
-import org.openmrs.module.authentication.web.AuthenticationSession;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 
 import java.util.Properties;
 
@@ -32,14 +32,19 @@ import java.util.Properties;
  */
 public class SecretQuestionAuthenticationScheme implements WebAuthenticationScheme {
 
+    protected final Log log = LogFactory.getLog(getClass());
+
     public static final String LOGIN_PAGE = "loginPage";
     public static final String QUESTION_PARAM = "questionParam";
     public static final String ANSWER_PARAM = "answerParam";
 
-    private String schemeId;
-    private String loginPage;
-    private String questionParam;
-    private String answerParam;
+    public static final String QUESTION = "question";
+    public static final String ANSWER = "answer";
+
+    protected String schemeId;
+    protected String loginPage;
+    protected String questionParam;
+    protected String answerParam;
 
     public SecretQuestionAuthenticationScheme() {
         this.schemeId = getClass().getName();
@@ -54,26 +59,28 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     public void configure(String schemeId, Properties config) {
         this.schemeId = schemeId;
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/secretQuestion.htm");
-        questionParam = config.getProperty(QUESTION_PARAM, "question");
-        answerParam = config.getProperty(ANSWER_PARAM, "answer");
-    }
-
-    @Override
-    public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        SecretQuestionAuthenticationCredentials credentials = null;
-        String question = session.getRequestParam(questionParam);
-        String answer = session.getRequestParam(answerParam);
-        if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
-            User candidateUser = session.getAuthenticationContext().getCandidateUser();
-            credentials = new SecretQuestionAuthenticationCredentials(schemeId, candidateUser, question, answer);
-        }
-        return credentials;
+        questionParam = config.getProperty(QUESTION_PARAM, QUESTION);
+        answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
     }
 
     @Override
     public String getChallengeUrl(AuthenticationSession session) {
-        if (session.getAuthenticationContext().getCredentials(schemeId) == null) {
-            return loginPage;
+        return loginPage;
+    }
+
+    @Override
+    public AuthenticationCredentials getCredentials(AuthenticationSession session) {
+        AuthenticationCredentials credentials = session.getAuthenticationContext().getCredentials(schemeId);
+        if (credentials != null) {
+            return credentials;
+        }
+        String question = session.getRequestParam(questionParam);
+        String answer = session.getRequestParam(answerParam);
+        if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
+            User candidateUser = session.getAuthenticationContext().getCandidateUser();
+            credentials = new SecretQuestionAuthenticationCredentials(candidateUser, question, answer);
+            session.getAuthenticationContext().addCredentials(credentials);
+            return credentials;
         }
         return null;
     }
@@ -83,33 +90,22 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
 
         // Ensure the credentials provided are of the expected type
         if (!(credentials instanceof SecretQuestionAuthenticationCredentials)) {
-            throw new ContextAuthenticationException("The credentials provided are invalid.");
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
-        SecretQuestionAuthenticationCredentials ac = (SecretQuestionAuthenticationCredentials) credentials;
+        SecretQuestionAuthenticationCredentials c = (SecretQuestionAuthenticationCredentials) credentials;
 
-        if (ac.getUser() == null) {
-            throw new ContextAuthenticationException("User missing from credentials");
+        if (c.user == null || StringUtils.isBlank(c.question) || StringUtils.isBlank(c.answer)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
-        if (StringUtils.isBlank(ac.getQuestion())) {
-            throw new ContextAuthenticationException("Question missing from credentials");
+        String expectedQuestion = getSecretQuestion(c.user);
+        if (StringUtils.isBlank(expectedQuestion) || !expectedQuestion.equalsIgnoreCase(c.question)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
-        if (StringUtils.isBlank(ac.getAnswer())) {
-            throw new ContextAuthenticationException("Answer missing from credentials");
-        }
-
-        String expectedQuestion = getSecretQuestion(ac.getUser());
-        if (StringUtils.isBlank(expectedQuestion)) {
-            throw new ContextAuthenticationException("User does not have a secret question configured");
-        }
-        if (!expectedQuestion.equalsIgnoreCase(ac.getQuestion())) {
-            throw new ContextAuthenticationException("Invalid question submitted");
+        if (!isSecretAnswer(c.user, c.answer)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
 
-        if (!isSecretAnswer(ac.getUser(), ac.getAnswer())) {
-            throw new ContextAuthenticationException("Incorrect secret answer");
-        }
-
-        return new BasicAuthenticated(ac.getUser(), credentials.getAuthenticationScheme());
+        return new BasicAuthenticated(c.user, credentials.getAuthenticationScheme());
     }
 
     /**
@@ -124,5 +120,31 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
      */
     protected boolean isSecretAnswer(User user, String answer) {
         return Context.getUserService().isSecretAnswer(user, answer);
+    }
+
+    /**
+     * Credentials inner class, to enable access and visibility of credential details to be limited to scheme
+     */
+    public class SecretQuestionAuthenticationCredentials implements AuthenticationCredentials {
+
+        protected final User user;
+        protected final String question;
+        protected final String answer;
+
+        @Override
+        public String getAuthenticationScheme() {
+            return schemeId;
+        }
+
+        protected SecretQuestionAuthenticationCredentials(User user, String question, String answer) {
+            this.user = user;
+            this.question = question;
+            this.answer = answer;
+        }
+
+        @Override
+        public String getClientName() {
+            return user == null ? null : user.getUsername();
+        }
     }
 }

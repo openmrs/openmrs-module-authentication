@@ -1,4 +1,4 @@
-package org.openmrs.module.authentication.web.scheme;
+package org.openmrs.module.authentication.web;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -8,12 +8,11 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.credentials.SecretQuestionAuthenticationCredentials;
-import org.openmrs.module.authentication.web.BaseWebAuthenticationTest;
+import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockSecretQuestionAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -27,6 +26,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 	MockAuthenticationSession authenticationSession;
 	MockHttpSession session;
 	MockHttpServletRequest request;
+	MockHttpServletResponse response;
 	MockSecretQuestionAuthenticationScheme authenticationScheme;
 	User candidateUser;
 
@@ -43,6 +43,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		session = newSession();
 		request = newPostRequest("192.168.1.1", "/login");
 		request.setSession(session);
+		response = newResponse();
 		candidateUser = new User();
 		candidateUser.setUsername("testing");
 		authenticationSession = new MockAuthenticationSession(request, newResponse());
@@ -52,6 +53,20 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		authenticationScheme = (MockSecretQuestionAuthenticationScheme) scheme;
 	}
 
+	protected AuthenticationCredentials getCredentials(String question, String answer) {
+		request = newPostRequest("192.168.1.1", "/login");
+		if (question != null) {
+			request.setParameter("secretQ", question);
+		}
+		if (answer != null) {
+			request.setParameter("secretA", answer);
+		}
+		request.setSession(session);
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
+		return authenticationScheme.getCredentials(authenticationSession);
+	}
+
 	@Test
 	public void shouldConfigureFromRuntimeProperties() {
 		assertThat(authenticationScheme.getSchemeId(), equalTo("secret"));
@@ -59,35 +74,23 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 
 	@Test
 	public void shouldGetCompleteCredentialsOrReturnNull() {
-		assertThat(authenticationScheme.getCredentials(authenticationSession), nullValue());
-		request.setParameter("secretQ", "Favorite color?");
-		assertThat(authenticationScheme.getCredentials(authenticationSession), nullValue());
-		request.removeParameter("secretQ");
-		request.setParameter("secretA", "Red");
-		assertThat(authenticationScheme.getCredentials(authenticationSession), nullValue());
-		request.setParameter("secretQ", "Favorite color?");
-		request.setParameter("secretA", "Red");
-		AuthenticationCredentials credentials = authenticationScheme.getCredentials(authenticationSession);
+		assertThat(getCredentials(null, null), nullValue());
+		assertThat(getCredentials("Favorite color?", null), nullValue());
+		assertThat(getCredentials(null, "Red"), nullValue());
+		AuthenticationCredentials credentials = getCredentials("Favorite color?", "Red");
 		assertThat(credentials, notNullValue());
 		assertThat(credentials.getClientName(), equalTo("testing"));
 		assertThat(credentials.getAuthenticationScheme(), equalTo("secret"));
 	}
 
 	@Test
-	public void shouldGetChallengeUrlIfNoCredentialsInSession() {
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), equalTo("/secretQuestion"));
-		SecretQuestionAuthenticationCredentials credentials = new SecretQuestionAuthenticationCredentials(
-				"secret", candidateUser, "testing question", "testing answer"
-		);
-		authenticationSession.getAuthenticationContext().addCredentials(credentials);
-		assertThat(authenticationScheme.getChallengeUrl(authenticationSession), nullValue());
+	public void shouldReturnNullIfNoCredentialsInSession() {
+		assertThat(getCredentials(null, null), nullValue());
 	}
 
 	@Test
 	public void shouldAuthenticateWithValidCredentials() {
-		SecretQuestionAuthenticationCredentials credentials = new SecretQuestionAuthenticationCredentials(
-				"secret", candidateUser, "testing question", "testing answer"
-		);
+		AuthenticationCredentials credentials = getCredentials("testing question", "testing answer");
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
 		assertThat(authenticated, notNullValue());
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("secret"));
@@ -96,9 +99,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 
 	@Test
 	public void shouldFailToAuthenticateWithInvalidCredentials() {
-		SecretQuestionAuthenticationCredentials credentials = new SecretQuestionAuthenticationCredentials(
-				"secret", candidateUser, "testing question", "incorrect answer"
-		);
+		AuthenticationCredentials credentials = getCredentials("testing question", "incorrect answer");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
 	}
 

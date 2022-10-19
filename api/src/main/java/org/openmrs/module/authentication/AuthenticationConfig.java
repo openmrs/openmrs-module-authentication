@@ -3,7 +3,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
@@ -13,12 +13,11 @@ import org.apache.commons.lang.StringUtils;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.scheme.ConfigurableAuthenticationScheme;
+import org.openmrs.util.OpenmrsClassLoader;
 import org.openmrs.util.OpenmrsUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -83,14 +82,23 @@ public class AuthenticationConfig implements Serializable {
 
     private static Properties config;
 
+    private static final List<ClassLoader> classLoaders = new ArrayList<>();
+
     /**
      * @return the configured properties, loading from runtime properties if necessary
      */
     public static Properties getConfig() {
         if (config == null) {
-            config = getPropertiesWithPrefix(Context.getRuntimeProperties(), PREFIX, false);
+            config = AuthenticationUtil.getPropertiesWithPrefix(Context.getRuntimeProperties(), PREFIX, false);
         }
         return config;
+    }
+
+    /**
+     * @param classLoader a classLoader to add to the list of classLoaders that can resolve classes for instantiation
+     */
+    public static void registerClassLoader(ClassLoader classLoader) {
+        AuthenticationConfig.classLoaders.add(classLoader);
     }
 
     /**
@@ -122,7 +130,12 @@ public class AuthenticationConfig implements Serializable {
      * @param value the value to update for the given configuration key
      */
     public static void setProperty(String key, String value) {
-        getConfig().setProperty(key, value);
+        if (value == null) {
+            getConfig().remove(key);
+        }
+        else {
+            getConfig().setProperty(key, value);
+        }
     }
 
     /**
@@ -138,11 +151,8 @@ public class AuthenticationConfig implements Serializable {
      * @return the value of the given key, parsed to a boolean, or the default value if null
      */
     public static boolean getBoolean(String key, boolean defaultValue) {
-        String val = getProperty(key);
-        if (StringUtils.isBlank(val)) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(val);
+        return AuthenticationUtil.getBoolean(getProperty(key), defaultValue);
+
     }
 
     /**
@@ -150,12 +160,7 @@ public class AuthenticationConfig implements Serializable {
      * @return the value of the property, parsed into a List, split by comma, or an empty list if not found
      */
     public static List<String> getStringList(String key) {
-        List<String> ret = new ArrayList<>();
-        String val = getProperty(key);
-        if (StringUtils.isNotBlank(val)) {
-            ret.addAll(Arrays.asList(val.split(",")));
-        }
-        return ret;
+        return AuthenticationUtil.getStringList(getProperty(key), ",");
     }
 
     /**
@@ -164,17 +169,16 @@ public class AuthenticationConfig implements Serializable {
      * @return a new instance of the given type of class, with a type identified by the value of the given property
      */
     public static <T> T getClassInstance(String key, Class<T> type) {
-        T ret = null;
         Class<? extends T> clazz = getClass(key, type);
         if (clazz != null) {
             try {
-                ret = (T) clazz.getDeclaredConstructor().newInstance();
+                return clazz.getDeclaredConstructor().newInstance();
             }
             catch (Exception e) {
                 throw new RuntimeException("Unable to instantiate class " + type);
             }
         }
-        return ret;
+        return null;
     }
 
     /**
@@ -184,22 +188,21 @@ public class AuthenticationConfig implements Serializable {
      */
     @SuppressWarnings("unchecked")
     public static <T> Class<? extends T> getClass(String key, Class<T> type) {
-        Class<?> ret = null;
-        try {
-            String className = config.getProperty(key);
-            if (StringUtils.isNotBlank(className)) {
+        String className = config.getProperty(key);
+        if (StringUtils.isNotBlank(className)) {
+            List<ClassLoader> loaders = new ArrayList<>();
+            loaders.add(OpenmrsClassLoader.getInstance());
+            loaders.add(AuthenticationUtil.class.getClassLoader());
+            loaders.addAll(classLoaders);
+            for (ClassLoader loader : loaders) {
                 try {
-                    ret = Context.loadClass(className);
-                }
-                catch (Throwable t) {
-                    ret = AuthenticationConfig.class.getClassLoader().loadClass(className);
+                    return (Class<? extends T>) loader.loadClass(className.trim());
+                } catch (Throwable ignored) {
                 }
             }
+            throw new RuntimeException("Unable to load class " + key);
         }
-        catch (Exception e) {
-            throw new RuntimeException("Unable to load class " + type);
-        }
-        return (Class<? extends T>) ret;
+        return null;
     }
 
     /**
@@ -208,7 +211,7 @@ public class AuthenticationConfig implements Serializable {
      * @return the configuration properties that start with the given prefix, without the prefix if stripPrefix is true
      */
     public static Properties getSubsetWithPrefix(String prefix, boolean stripPrefix) {
-        return getPropertiesWithPrefix(config, prefix, stripPrefix);
+        return AuthenticationUtil.getPropertiesWithPrefix(config, prefix, stripPrefix);
     }
 
     // Configuration
@@ -226,6 +229,7 @@ public class AuthenticationConfig implements Serializable {
     public static List<String> getWhiteList() {
         return getStringList(WHITE_LIST);
     }
+
 
     /**
      * @return the configured authentication scheme, defaulting to a UsernamePasswordAuthenticationScheme if not found
@@ -261,25 +265,6 @@ public class AuthenticationConfig implements Serializable {
      */
     public static synchronized void reloadConfigFromRuntimeProperties(String applicationName) {
         Properties runtimeProperties = OpenmrsUtil.getRuntimeProperties(applicationName);
-        config = getPropertiesWithPrefix(runtimeProperties, PREFIX, false);
-    }
-
-    /**
-     * @param prefix the prefix to search in the keys of the given Properties
-     * @param stripPrefix if true, this will remove the prefix in the resulting Properties
-     * @return the Properties whose keys start with the given prefix, without the prefix if stripPrefix is true
-     */
-    public static Properties getPropertiesWithPrefix(Properties properties, String prefix, boolean stripPrefix) {
-        Properties ret = new Properties();
-        for (String key : properties.stringPropertyNames()) {
-            if (key.startsWith(prefix)) {
-                String value = properties.getProperty(key);
-                if (stripPrefix) {
-                    key = key.substring(prefix.length());
-                }
-                ret.put(key, value);
-            }
-        }
-        return ret;
+        config = AuthenticationUtil.getPropertiesWithPrefix(runtimeProperties, PREFIX, false);
     }
 }

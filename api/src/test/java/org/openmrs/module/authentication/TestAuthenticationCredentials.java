@@ -7,26 +7,22 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.credentials;
+package org.openmrs.module.authentication;
 
+import liquibase.pro.packaged.U;
 import org.openmrs.User;
 
 /**
- * Credentials that enable validating a user's secret question and answer
- * This is generally intended to be used as a secondary authentication factor
+ * Represents a set of Test Credentials, primarily to test serialization and deserialization
  */
-public class SecretQuestionAuthenticationCredentials extends AuthenticationCredentials {
+public class TestAuthenticationCredentials implements AuthenticationCredentials {
 
-    private final String schemeId;
-    private final User user;
-    private final String question;
-    private final String answer;
+    private String schemeId;
+    private User user;
 
-    public SecretQuestionAuthenticationCredentials(String schemeId, User user, String question, String answer) {
+    public TestAuthenticationCredentials(String schemeId, User user) {
         this.schemeId = schemeId;
         this.user = user;
-        this.question = question;
-        this.answer = answer;
     }
 
     @Override
@@ -39,19 +35,19 @@ public class SecretQuestionAuthenticationCredentials extends AuthenticationCrede
         return user.getUsername();
     }
 
-    public User getUser() {
-        return user;
-    }
-
     public String getSchemeId() {
         return schemeId;
     }
 
-    public String getQuestion() {
-        return question;
+    public void setSchemeId(String schemeId) {
+        this.schemeId = schemeId;
     }
 
-    public String getAnswer() {
-        return answer;
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }

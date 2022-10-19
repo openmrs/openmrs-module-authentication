@@ -7,7 +7,7 @@
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
-package org.openmrs.module.authentication.credentials;
+package org.openmrs.module.authentication;
 
 import org.openmrs.api.context.Credentials;
 
@@ -17,10 +17,6 @@ import java.io.Serializable;
  * Interface for all Credentials supported by Authenticator instances.
  * The primary purpose of this class is to extend Credentials by marking them as Serializable
  */
-public abstract class AuthenticationCredentials implements Credentials, Serializable {
+public interface AuthenticationCredentials extends Credentials, Serializable {
 
-    @Override
-    public String toString() {
-        return "scheme=" + getAuthenticationScheme() + ", clientName=" + getClientName();
-    }
 }

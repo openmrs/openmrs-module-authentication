@@ -14,13 +14,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationLogger;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
-import org.openmrs.module.authentication.scheme.DelegatingAuthenticationScheme;
-import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
+import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -32,10 +29,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.Properties;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
@@ -118,46 +112,36 @@ public class AuthenticationFilter implements Filter {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
 
-				AuthenticationContext authenticationContext = session.getAuthenticationContext();
 				AuthenticationScheme authenticationScheme = getAuthenticationScheme();
 
 				if (authenticationScheme instanceof WebAuthenticationScheme) {
-					WebAuthenticationScheme webAuthenticationScheme = (WebAuthenticationScheme) authenticationScheme;
+
+					WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
+
 					if (!isWhiteListed(request)) {
-						log.debug("Authentication required for " + request.getRequestURI());
+						log.debug("Authentication required: " + request.getMethod() + " " + request.getRequestURI());
 						session.removeErrorMessage();
 
 						// If any credentials were passed in the request or session, update the Context and return them
-						AuthenticationCredentials credentials = webAuthenticationScheme.getCredentials(session);
-
-						// Check whether the authentication scheme requires user input by retrieving challengeUrl
-						String challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
-
-						// If a challenge URL is supplied, then redirect to this for further user input
-						if (StringUtils.isNotBlank(challengeUrl)) {
-							response.sendRedirect(contextualizeUrl(request, challengeUrl));
-						}
-						// Otherwise, if no challenge URL is returned, then credentials are complete, authenticate
-						else {
+						AuthenticationCredentials credentials = webScheme.getCredentials(session);
+						String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
+						if (credentials != null) {
 							try {
-								authenticationContext.authenticate(credentials);
-								regenerateSession(request);  // Guard against session fixation attacks
+								session.authenticate(webScheme, credentials);
+								session.regenerateHttpSession();  // Guard against session fixation attacks
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
-								response.sendRedirect(determineSuccessRedirectUrl(request));
+								String successUrl = determineSuccessRedirectUrl(request);
+								response.sendRedirect(successUrl);
 							}
-							// If authentication fails, redirect back to challenge url for user to attempt again
-							catch (ContextAuthenticationException e) {
+							// If authentication fails, remove credentials and redirect back to re-initiate auth
+							catch (Exception e) {
 								session.setErrorMessage(e.getMessage());
-								challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
-								if (challengeUrl == null) {
-									session.getAuthenticationContext().removeCredentials(credentials);
-									challengeUrl = webAuthenticationScheme.getChallengeUrl(session);
-								}
-								if (challengeUrl == null) {
-									challengeUrl = "/";
-								}
-								response.sendRedirect(contextualizeUrl(request, challengeUrl));
+								session.getAuthenticationContext().removeCredentials(credentials);
+								session.sendRedirect(challengeUrl);
 							}
+						}
+						else {
+							session.sendRedirect(challengeUrl);
 						}
 					}
 				}
@@ -207,7 +191,11 @@ public class AuthenticationFilter implements Filter {
 		if (matcher.match(pattern, request.getServletPath())) {
 			return true;
 		}
-		return matcher.match(contextualizeUrl(request, pattern), request.getRequestURI());
+		String patternWithContext = contextualizeUrl(request, pattern);
+		if (matcher.match(patternWithContext, request.getRequestURI())) {
+			return true;
+		}
+		return false;
 	}
 
 	/**
@@ -221,36 +209,6 @@ public class AuthenticationFilter implements Filter {
 			return delegatingScheme.getDelegatedAuthenticationScheme();
 		}
 		return authenticationScheme;
-	}
-
-	/**
-	 * This regenerates the session associated with a request, by invalidating existing session, and creating a new
-	 * session that contains the same attributes as the existing session.
-	 * See:  <a href="https://stackoverflow.com/questions/8162646/how-to-refresh-jsessionid-cookie-after-login">SO</a>
-	 * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
-	 * @param request the request containing the session to regenerate
-	 */
-	protected void regenerateSession(HttpServletRequest request) {
-		Properties sessionAttributes = new Properties();
-		HttpSession existingSession = request.getSession(false);
-		if (existingSession != null) {
-			Enumeration<?> attrNames = existingSession.getAttributeNames();
-			if (attrNames != null) {
-				while (attrNames.hasMoreElements()) {
-					String attribute = (String) attrNames.nextElement();
-					sessionAttributes.put(attribute, existingSession.getAttribute(attribute));
-				}
-			}
-			existingSession.invalidate();
-		}
-		HttpSession newSession = request.getSession(true);
-		Enumeration<Object> attrNames = sessionAttributes.keys();
-		if (attrNames != null) {
-			while (attrNames.hasMoreElements()) {
-				String attribute = (String) attrNames.nextElement();
-				newSession.setAttribute(attribute, sessionAttributes.get(attribute));
-			}
-		}
 	}
 
 	/**
@@ -272,9 +230,7 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isBlank(redirect)) {
 			redirect = "/";
 		}
-		redirect = contextualizeUrl(request, redirect);
-		log.debug("Redirecting to: '" + redirect + "'");
-		return redirect;
+		return contextualizeUrl(request, redirect);
 	}
 
 	/**
@@ -284,6 +240,9 @@ public class AuthenticationFilter implements Filter {
 	 * @return the url, prepended with the context path if necessary
 	 */
 	protected String contextualizeUrl(HttpServletRequest request, String url) {
+		if (url == null) {
+			url = request.getContextPath();
+		}
 		if (!url.startsWith(request.getContextPath())) {
 			url = request.getContextPath() + (url.startsWith("/") ? "" : "/") + url;
 		}

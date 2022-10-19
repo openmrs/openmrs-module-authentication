@@ -3,22 +3,19 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, You can
  * obtain one at http://mozilla.org/MPL/2.0/. OpenMRS is also distributed under
  * the terms of the Healthcare Disclaimer located at http://openmrs.org/license.
- *
+ * <p>
  * Copyright (C) OpenMRS Inc. OpenMRS is a registered trademark and the OpenMRS
  * graphic logo is a trademark of OpenMRS Inc.
  */
 package org.openmrs.module.authentication;
 
 import org.openmrs.User;
-import org.openmrs.api.context.Authenticated;
-import org.openmrs.api.context.Context;
-import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.api.context.Credentials;
-import org.openmrs.module.authentication.credentials.AuthenticationCredentials;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides access to authentication details
@@ -28,17 +25,9 @@ public class AuthenticationContext implements Serializable {
 
     private User candidateUser;
     private final Map<String, AuthenticationCredentials> credentials = new HashMap<>();
+    private final Set<String> validatedCredentials = new HashSet<>();
 
     public AuthenticationContext() {
-    }
-
-    /**
-     * Authenticates the given credentials with OpenMRS
-     * This mainly exists to encapsulate this functionality and allow for testing and mocking
-     * @see Context#authenticate(Credentials) 
-     */
-    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
-        return Context.authenticate(credentials);
     }
 
     // Accessors
@@ -83,5 +72,20 @@ public class AuthenticationContext implements Serializable {
      */
     public void removeCredentials(AuthenticationCredentials authenticationCredentials) {
         removeCredentials(authenticationCredentials.getAuthenticationScheme());
+    }
+
+    /**
+     * @param schemeId the schemeId to record as validated
+     */
+    public void addValidatedCredential(String schemeId) {
+        validatedCredentials.add(schemeId);
+    }
+
+    /**
+     * @param schemeId the schemeId to check if there are existing validated credentials
+     * @return true if the credentials for the given schemeId have already been validated
+     */
+    public boolean isCredentialValidated(String schemeId) {
+        return validatedCredentials.contains(schemeId);
     }
 }

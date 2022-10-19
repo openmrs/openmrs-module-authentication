@@ -1,14 +1,10 @@
-package org.openmrs.module.authentication.scheme;
+package org.openmrs.module.authentication;
 
 import org.junit.jupiter.api.Test;
+import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.BaseAuthenticationTest;
-import org.openmrs.module.authentication.TestAuthenticationScheme;
-import org.openmrs.module.authentication.TestUsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.credentials.BasicAuthenticationCredentials;
 
 import java.util.Properties;
 
@@ -28,22 +24,9 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 	}
 
 	@Test
-	public void shouldAuthenticateWithUsernamePasswordAuthenticationScheme() {
-		Class<?> customSchemeType = TestUsernamePasswordAuthenticationScheme.class;
-		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, "custom");
-		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME + ".custom.type", customSchemeType.getName());
-		DelegatingAuthenticationScheme scheme = new DelegatingAuthenticationScheme();
-		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
-		assertThat(delegatedScheme, notNullValue());
-		assertThat(delegatedScheme.getClass(), equalTo(customSchemeType));
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials("custom", "admin", "test");
-		Authenticated authenticated = delegatedScheme.authenticate(credentials);
-		assertThat(authenticated.getAuthenticationScheme(), equalTo("custom"));
-		assertThat(authenticated.getUser().getUsername(), equalTo("admin"));
-	}
-
-	@Test
 	public void shouldAuthenticateWithConfigurableAuthenticationScheme() {
+		User u = new User();
+		u.setUsername("admin");
 		Class<?> customSchemeType = TestAuthenticationScheme.class;
 		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, "custom");
 		AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME + ".custom.type", customSchemeType.getName());
@@ -52,7 +35,7 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
 		assertThat(delegatedScheme, notNullValue());
 		assertThat(delegatedScheme.getClass(), equalTo(customSchemeType));
-		BasicAuthenticationCredentials credentials = new BasicAuthenticationCredentials("custom", "admin", "test");
+		TestAuthenticationCredentials credentials = new TestAuthenticationCredentials("custom", u);
 		Authenticated authenticated = delegatedScheme.authenticate(credentials);
 		assertThat(authenticated.getAuthenticationScheme(), equalTo("custom"));
 		assertThat(authenticated.getUser().getUsername(), equalTo("admin"));

@@ -18,16 +18,15 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationLogger;
-import org.openmrs.module.authentication.web.mocks.MockAuthenticationContext;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationFilter;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
-import org.openmrs.module.authentication.web.scheme.WebAuthenticationScheme;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
+import java.util.Map;
 import java.util.Properties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -52,15 +51,14 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void setup() {
 		super.setup();
 		session = new MockHttpSession();
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY, new MockAuthenticationContext());
 		request = new MockHttpServletRequest();
 		request.setRemoteAddr("192.168.1.1");
-		request.setContextPath("/openmrs");
+		request.setContextPath("/");
 		request.setSession(session);
-		authenticationSession = new MockAuthenticationSession(request, newResponse());
+		response = new MockHttpServletResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
 		filter = new MockAuthenticationFilter(newFilterConfig("authenticationFilter"));
 		filter.setAuthenticationSession(authenticationSession);
-		response = new MockHttpServletResponse();
 		chain = new MockFilterChain();
 		user = new User();
 		user.setUserId(1);
@@ -76,7 +74,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		authenticationSession.setAuthenticatedUser(null);
 		request.setMethod("GET");
-		request.setRequestURI("/openmrs/patientDashboard.htm");
+		request.setRequestURI("/patientDashboard.htm");
 	}
 
 	@Test
@@ -84,7 +82,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(response.getRedirectedUrl(), equalTo("/openmrs/login.htm"));
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
 
 	@Test
@@ -135,7 +133,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(response.getRedirectedUrl(), equalTo("/openmrs/login.htm"));
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
 
 	@Test
@@ -145,7 +143,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("password", "adminPassword");
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(response.getRedirectedUrl(), equalTo("/openmrs/patientDashboard.htm"));
+		assertThat(response.getRedirectedUrl(), equalTo("/patientDashboard.htm"));
 	}
 
 	@Test
@@ -157,25 +155,29 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		AuthenticationSession session1 = new AuthenticationSession(request, newResponse());
 		String authenticationSessionId = session1.getAuthenticationSessionId();
 		String httpSessionId = session1.getHttpSessionId();
-		int numAttributes = session1.getHttpSessionAttributes().size();
+		Map<String, Object> initialAttributes = session1.getHttpSessionAttributes();
 		filter.doFilter(request, response, chain);
 		assertThat(session.isInvalid(), equalTo(true));
 		assertThrows(IllegalStateException.class, session1::getAuthenticationSessionId);
 		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
 		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
 		assertThat(session2.getHttpSessionId(), not(httpSessionId));
-		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));
+		for (String key : initialAttributes.keySet()) {
+			Object initialVal = initialAttributes.get(key);
+			Object newVal = session2.getHttpSessionAttributes().get(key);
+			assertThat(newVal, equalTo(initialVal));
+		}
 	}
 
 	@Test
-	public void shouldRedirectToChallengeUrlIfAuthenticationFails() throws Exception {
+	public void shouldRedirectToRequestedPageIfAuthenticationFails() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		request.addParameter("username", "admin");
 		request.addParameter("password", "test");
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
 		assertThat(authenticationSession.getAuthenticationContext().getCredentials("basic"), nullValue());
-		assertThat(response.getRedirectedUrl(), equalTo("/openmrs/login.htm"));
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
 
 	@Test
@@ -238,20 +240,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		AuthenticationScheme scheme = filter.getAuthenticationScheme();
 		assertThat(scheme, notNullValue());
 		assertThat(scheme.getClass(), equalTo(MockBasicWebAuthenticationScheme.class));
-	}
-
-	@Test
-	public void shouldRegenerateSession() {
-		AuthenticationSession session1 = new AuthenticationSession(request, newResponse());
-		String authenticationSessionId = session1.getAuthenticationSessionId();
-		String httpSessionId = session1.getHttpSessionId();
-		int numAttributes = session1.getHttpSessionAttributes().size();
-		filter.regenerateSession(request);
-		assertThrows(IllegalStateException.class, session1::getAuthenticationSessionId);
-		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
-		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
-		assertThat(session2.getHttpSessionId(), not(httpSessionId));
-		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));
 	}
 
 	@Test

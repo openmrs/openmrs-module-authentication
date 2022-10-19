@@ -191,7 +191,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
+		authenticationSession.getAuthenticationContext();
 		Map<String, Object> attributes = authenticationSession.getHttpSessionAttributes();
 		assertThat(attributes.size(), equalTo(5));
 	}
@@ -223,7 +223,7 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
+		authenticationSession.getAuthenticationContext();
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), notNullValue());
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY), notNullValue());
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS), notNullValue());
@@ -251,5 +251,18 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 	public void shouldReturnFalseForUserAuthenticatedIfNoSessionIsOpen() {
 		AuthenticationSession session = new AuthenticationSession(newSession("admin", "test"));
 		assertThat(session.isUserAuthenticated(), is(false));
+	}
+
+	@Test
+	public void shouldRegenerateSession() {
+		AuthenticationSession session = new AuthenticationSession(new MockHttpServletRequest(), newResponse());
+		String authenticationSessionId = session.getAuthenticationSessionId();
+		String httpSessionId = session.getHttpSessionId();
+		int numAttributes = session.getHttpSessionAttributes().size();
+		session.regenerateHttpSession();
+		AuthenticationSession session2 = new AuthenticationSession(new MockHttpServletRequest(), newResponse());
+		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
+		assertThat(session2.getHttpSessionId(), not(httpSessionId));
+		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));
 	}
 }

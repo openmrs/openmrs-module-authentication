@@ -59,7 +59,7 @@ authentication.scheme.{schemeId}.config.{property2}={value2}
 For example, to configure a new instance of the BasicWebAuthenticationScheme that is included in this module:
 
 ```properties
-authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
+authentication.scheme.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticationScheme
 authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 ```
 
@@ -78,7 +78,7 @@ authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 authentication.scheme=basic
 authentication.whiteList=/index.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
-authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
+authentication.scheme.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticationScheme
 authentication.scheme.basic.config.loginPage=/index.htm
 authentication.scheme.basic.config.usernameParam=uname
 authentication.scheme.basic.config.passwordParam=pw
@@ -87,17 +87,17 @@ authentication.scheme.basic.config.passwordParam=pw
 ### Two-factor authentication example
 
 ```properties
-authentication.scheme=mfa
+authentication.scheme=2fa
 authentication.whiteList=/**/authentication/basic.htm,/**/authentication/secret.htm,/csrfguard,/**/*.js,/**/*.css,/**/*.gif,/**/*.jpg,/**/*.png,/**/*.ico
 
-authentication.scheme.mfa.type=org.openmrs.module.authentication.web.scheme.MultiFactorAuthenticationScheme
-authentication.scheme.mfa.config.primaryOptions=basic
-authentication.scheme.mfa.config.secondaryOptions=secret
+authentication.scheme.2fa.type=org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme
+authentication.scheme.2fa.config.primaryOptions=basic
+authentication.scheme.2fa.config.secondaryOptions=secret
 
-authentication.scheme.basic.type=org.openmrs.module.authentication.web.scheme.BasicWebAuthenticationScheme
+authentication.scheme.basic.type=org.openmrs.module.authentication.web.BasicWebAuthenticationScheme
 authentication.scheme.basic.config.loginPage=/module/authentication/basic.htm
 
-authentication.scheme.secret.type=org.openmrs.module.authentication.web.scheme.SecretQuestionAuthenticationScheme
+authentication.scheme.secret.type=org.openmrs.module.authentication.web.SecretQuestionAuthenticationScheme
 authentication.scheme.secret.config.loginPage=/module/authentication/secret.htm
 ```
 
