@@ -130,7 +130,12 @@ public class AuthenticationConfig implements Serializable {
      * @param value the value to update for the given configuration key
      */
     public static void setProperty(String key, String value) {
-        getConfig().setProperty(key, value);
+        if (value == null) {
+            getConfig().remove(key);
+        }
+        else {
+            getConfig().setProperty(key, value);
+        }
     }
 
     /**
