@@ -200,7 +200,7 @@ public class AuthenticationConfig implements Serializable {
                 } catch (Throwable ignored) {
                 }
             }
-            throw new RuntimeException("Unable to load class " + key);
+            throw new RuntimeException("Unable to load class: " + className);
         }
         return null;
     }
