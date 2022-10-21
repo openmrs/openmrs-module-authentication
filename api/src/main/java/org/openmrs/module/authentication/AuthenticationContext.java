@@ -42,6 +42,9 @@ public class AuthenticationContext implements Serializable {
     private final Map<String, AuthenticationCredentials> unvalidatedCredentials = Collections.synchronizedMap(new HashMap<>());
     private final Set<String> validatedCredentials = Collections.synchronizedSet(new HashSet<>());
 
+    /**
+     * Constructs a new Authentication Context with a new contextId
+     */
     public AuthenticationContext() {
         contextId = UUID.randomUUID().toString();
         dateCreated = new Date();
@@ -66,58 +69,104 @@ public class AuthenticationContext implements Serializable {
         return dateCreated;
     }
 
+    /**
+     * @return the login date associated with the context
+     */
     public Date getLoginDate() {
         return loginDate;
     }
 
+    /**
+     * @param loginDate the date that the user successfully logged into the system
+     */
     public synchronized void setLoginDate(Date loginDate) {
         this.loginDate = loginDate;
     }
 
+    /**
+     * @return the login date associated with the context
+     */
     public Date getLogoutDate() {
         return logoutDate;
     }
 
+    /**
+     * @param logoutDate the date that the user logged out of the system
+     */
     public synchronized void setLogoutDate(Date logoutDate) {
         this.logoutDate = logoutDate;
     }
 
+    /**
+     * @return the last activity date associated with this context
+     */
     public Date getLastActivityDate() {
         return lastActivityDate;
     }
 
+    /**
+     * @param lastActivityDate the last activity date associated with this context
+     */
     public synchronized void setLastActivityDate(Date lastActivityDate) {
         this.lastActivityDate = lastActivityDate;
     }
 
+    /**
+     * @return the http session id associated with this context
+     */
     public String getHttpSessionId() {
         return httpSessionId;
     }
 
+    /**
+     * @param httpSessionId the http Session id associated with this context
+     */
     public synchronized void setHttpSessionId(String httpSessionId) {
         this.httpSessionId = httpSessionId;
     }
 
+    /**
+     * @return the ip address associated with this context
+     */
     public String getIpAddress() {
         return ipAddress;
     }
 
+    /**
+     * @param ipAddress the ipAddress associated with this context
+     */
     public synchronized void setIpAddress(String ipAddress) {
         this.ipAddress = ipAddress;
     }
 
+    /**
+     * @return the username associated with this context.  If a user (candidate or otherwise) has been associated
+     * with the request, return the username of this user, or their systemId if they do not have a username,
+     * otherwise, return the username that was set on this context, generally during initial primary authentication
+     */
     public String getUsername() {
         return user != null ? StringUtils.defaultIfBlank(user.getUsername(), user.getSystemId()) : username;
     }
 
+    /**
+     * @param username the username associated with this context, which can be used to associate this context with
+     * a particular user attempting to log in prior to identifying a validated candidate or authenticated user
+     */
     public synchronized void setUsername(String username) {
         this.username = username;
     }
 
+    /**
+     * @return the user associated with this context.  typically this will only be set during the authentication
+     * process, by calling the markCredentialAsValid method
+     */
     public User getUser() {
         return user;
     }
 
+    /**
+     * @param user the user associated with this context.  This is not expected to typically be used directly
+     */
     public synchronized void setUser(User user) {
         this.user = user;
     }

@@ -28,7 +28,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.Serializable;
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -77,7 +76,6 @@ public class AuthenticationSession {
             session.setAttribute(AUTHENTICATION_CONTEXT_KEY, context);
         }
         context.setHttpSessionId(session.getId());
-        AuthenticationEventLog.contextInitialized(context);
     }
 
     /**
@@ -135,21 +133,6 @@ public class AuthenticationSession {
             return request.getParameter(name);
         }
         return null;
-    }
-
-    /**
-     * This removes the current Authentication Context from the session and the log
-     * Typically this would be called when a user is Logged out and the http session has been destroyed
-     */
-    public void destroy() {
-        if (session != null) {
-            session.removeAttribute(AUTHENTICATION_CONTEXT_KEY);
-        }
-        if (context.getLoginDate() != null && context.getLogoutDate() == null) {
-            context.setLogoutDate(new Date());
-            AuthenticationEventLog.logEvent(AuthenticationEvent.LOGIN_EXPIRED);
-        }
-        AuthenticationEventLog.contextDestroyed(context);
     }
 
     /**
@@ -228,7 +211,7 @@ public class AuthenticationSession {
         Locale locale = null;
         CookieLocaleResolver cookieLocaleResolver = new CookieLocaleResolver();
         User user = null;
-        if (context.isUserAuthenticated()) {
+        if (isUserAuthenticated()) {
             user = Context.getAuthenticatedUser();
         }
         else if (getAuthenticationContext().getUser() != null) {

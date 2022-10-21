@@ -18,16 +18,21 @@ public class AuthenticationUserSessionListenerTest extends BaseAuthenticationTes
 		user.setUsername("testing");
 		AuthenticationContext context = new AuthenticationContext();
 		context.setUser(user);
-		AuthenticationEventLog.contextInitialized(context);
-		AuthenticationUserSessionListener listener = new AuthenticationUserSessionListener();
-		listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.SUCCESS);
-		assertLoggedEvent(context, LOGIN_SUCCEEDED);
-		listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.FAIL);
-		assertLoggedEvent(context, LOGIN_FAILED);
-		listener.loggedInOrOut(user, UserSessionListener.Event.LOGOUT, UserSessionListener.Status.SUCCESS);
-		assertLoggedEvent(context, LOGOUT_SUCCEEDED);
-		listener.loggedInOrOut(user, UserSessionListener.Event.LOGOUT, UserSessionListener.Status.FAIL);
-		assertLoggedEvent(context, LOGOUT_FAILED);
+		try {
+			AuthenticationEventLog.contextInitialized(context);
+			AuthenticationUserSessionListener listener = new AuthenticationUserSessionListener();
+			listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.SUCCESS);
+			assertLoggedEvent(context, LOGIN_SUCCEEDED);
+			listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.FAIL);
+			assertLoggedEvent(context, LOGIN_FAILED);
+			listener.loggedInOrOut(user, UserSessionListener.Event.LOGOUT, UserSessionListener.Status.SUCCESS);
+			assertLoggedEvent(context, LOGOUT_SUCCEEDED);
+			listener.loggedInOrOut(user, UserSessionListener.Event.LOGOUT, UserSessionListener.Status.FAIL);
+			assertLoggedEvent(context, LOGOUT_FAILED);
+		}
+		finally {
+			AuthenticationEventLog.contextDestroyed(context);
+		}
 	}
 
 	protected void assertLoggedEvent(AuthenticationContext context, AuthenticationEvent event) {

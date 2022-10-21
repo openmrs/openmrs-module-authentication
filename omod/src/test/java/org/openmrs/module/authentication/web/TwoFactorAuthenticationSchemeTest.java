@@ -1,5 +1,6 @@
 package org.openmrs.module.authentication.web;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
@@ -11,6 +12,7 @@ import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationEvent;
+import org.openmrs.module.authentication.AuthenticationEventLog;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -67,6 +69,14 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(TwoFactorAuthenticationScheme.class));
 		authenticationScheme = (TwoFactorAuthenticationScheme) scheme;
+		AuthenticationEventLog.contextInitialized(context);
+	}
+
+	@AfterEach
+	@Override
+	public void teardown() {
+		AuthenticationEventLog.contextDestroyed(context);
+		super.teardown();
 	}
 
 	protected AuthenticationCredentials primaryAuth(String username, String password) {

@@ -15,16 +15,12 @@ import org.apache.logging.log4j.core.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationEventLog;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 
-import javax.servlet.http.HttpSession;
 import javax.servlet.http.HttpSessionEvent;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
@@ -53,6 +49,7 @@ public class AuthenticationHttpSessionListenerTest extends BaseWebAuthentication
 	public void shouldLogSessionCreationEvent() {
 		MockHttpSession session = newSession();
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
+		AuthenticationEventLog.contextInitialized(authenticationSession.getAuthenticationContext());
 		listener.sessionCreated(new HttpSessionEvent(session));
 		assertLastLogContains("Http Session Created: " + authenticationSession);
 	}
@@ -70,21 +67,5 @@ public class AuthenticationHttpSessionListenerTest extends BaseWebAuthentication
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
 		listener.sessionDestroyed(new HttpSessionEvent(session));
 		assertLastLogContains("Http Session Destroyed: " + authenticationSession);
-	}
-
-	@Test
-	public void shouldDestroySessionIfUserIsNotAuthenticated() {
-		MockHttpServletRequest request = newGetRequest("/", "192.168.1.1");
-		HttpSession session = request.getSession(true);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
-		context.setUsername("testing");
-		assertThat(getAuthenticationContext(session), notNullValue());
-		assertThat(AuthenticationEventLog.getContextForThread(), equalTo(context));
-		assertThat(AuthenticationEventLog.getCurrentContexts().get(context.getContextId()), equalTo(context));
-		listener.sessionDestroyed(new HttpSessionEvent(session));
-		assertThat(getAuthenticationContext(session), nullValue());
-		assertThat(AuthenticationEventLog.getContextForThread(), nullValue());
-		assertThat(AuthenticationEventLog.getCurrentContexts().get(context.getContextId()), nullValue());
 	}
 }

@@ -18,6 +18,7 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
+import org.openmrs.module.authentication.AuthenticationEventLog;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationFilter;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
@@ -58,6 +59,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		response = new MockHttpServletResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
 		context = authenticationSession.getAuthenticationContext();
+		AuthenticationEventLog.contextInitialized(context);
 		filter = new MockAuthenticationFilter(newFilterConfig("authenticationFilter"));
 		filter.setAuthenticationSession(authenticationSession);
 		chain = new MockFilterChain();
@@ -266,5 +268,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void teardown() {
 		super.teardown();
 		filter.destroy();
+		AuthenticationEventLog.contextDestroyed(context);
 	}
 }

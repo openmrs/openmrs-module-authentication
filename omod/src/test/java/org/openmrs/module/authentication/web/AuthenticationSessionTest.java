@@ -140,16 +140,6 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldDestroyAuthenticationSession() {
-		MockHttpSession session = newSession("testing");
-		MockHttpServletRequest request = newGetRequest("/", "request-ip");
-		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		authenticationSession.destroy();
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), nullValue());
-	}
-
-	@Test
 	public void shouldReturnFalseForUserAuthenticatedIfNoSessionIsOpen() {
 		AuthenticationSession session = new AuthenticationSession(newSession("admin"));
 		assertThat(session.isUserAuthenticated(), is(false));
