@@ -176,8 +176,8 @@ public class AuthenticationSession {
             else {
                 authenticated = scheme.authenticate(credentials);
             }
-            AuthenticationEventLog.logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, scheme);
             getAuthenticationContext().markCredentialsAsValid(schemeId, authenticated.getUser());
+            AuthenticationEventLog.logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, scheme);
             scheme.afterAuthenticationSuccess(this);
         }
         catch (Exception e) {

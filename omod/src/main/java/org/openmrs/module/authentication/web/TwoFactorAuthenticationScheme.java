@@ -22,7 +22,6 @@ import org.openmrs.api.context.DaoAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationEvent;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 
@@ -31,8 +30,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-
-import static org.openmrs.module.authentication.AuthenticationEventLog.logEvent;
 
 /**
  * An authentication scheme that supports a primary and secondary authentication factor
@@ -106,9 +103,8 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 			if (primaryCredentials != null) {
 				try {
 					session.authenticate(primaryScheme, primaryCredentials);
-					logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, primaryScheme);
 				} catch (Exception e) {
-					logEvent(AuthenticationEvent.AUTHENTICATION_FAILED, primaryScheme);
+					log.trace("Primary Authentication Failed: " + primaryCredentials.getClientName(), e);
 				}
 			}
 		}
@@ -122,9 +118,8 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 					if (secondaryCredentials != null) {
 						try {
 							session.authenticate(secondaryScheme, secondaryCredentials).getUser();
-							logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, secondaryScheme);
 						} catch (Exception e) {
-							logEvent(AuthenticationEvent.AUTHENTICATION_FAILED, secondaryScheme);
+							log.trace("Secondary Authentication Failed: " + secondaryCredentials.getClientName(), e);
 						}
 					}
 				}
