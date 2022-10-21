@@ -27,15 +27,21 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 		AuthenticationConfig.setProperty("authentication.scheme.test2.type", TestAuthenticationScheme.class.getName());
 	}
 
+	protected User newUser(String username) {
+		User user = new User();
+		user.setUsername(username);
+		return user;
+	}
+
 	@Test
 	public void shouldSerializeAndDeserialize() throws Exception {
 		assertThat(Serializable.class.isAssignableFrom(AuthenticationContext.class), equalTo(true));
 
 		AuthenticationContext ctx = new AuthenticationContext();
-		User u = new User();
-		u.setUsername("admin");
-		ctx.setCandidateUser(u);
-		ctx.addCredentials(new TestAuthenticationCredentials("test", u));
+		User u = newUser("admin");
+		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("test1", u));
+		ctx.markCredentialsAsValid("test1", u);
+		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("test2", u));
 
 		File serializedDataFile = File.createTempFile(getClass().getSimpleName(), "dat");
 		serializedDataFile.deleteOnExit();
@@ -47,12 +53,16 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 		try (ObjectInputStream in = new ObjectInputStream(fileInputStream)) {
 			AuthenticationContext deserialized = (AuthenticationContext) in.readObject();
 			assertThat(deserialized, notNullValue());
-			assertThat(deserialized.getCandidateUser(), equalTo(u));
-			AuthenticationCredentials credentials = deserialized.getCredentials("test");
-			assertThat(credentials, notNullValue());
-			assertThat(credentials.getClass(), equalTo(TestAuthenticationCredentials.class));
-			TestAuthenticationCredentials testCredentials = (TestAuthenticationCredentials) credentials;
-			assertThat(testCredentials.getAuthenticationScheme(), equalTo("test"));
+			assertThat(deserialized.getUser(), equalTo(u));
+			AuthenticationCredentials test1 = deserialized.getUnvalidatedCredentials("test1");
+			assertThat(test1, nullValue());
+			assertThat(deserialized.isCredentialValidated("test1"), equalTo(true));
+			AuthenticationCredentials test2 = deserialized.getUnvalidatedCredentials("test2");
+			assertThat(test2, notNullValue());
+			assertThat(deserialized.isCredentialValidated("test2"), equalTo(false));
+			assertThat(test2.getClass(), equalTo(TestAuthenticationCredentials.class));
+			TestAuthenticationCredentials testCredentials = (TestAuthenticationCredentials) test2;
+			assertThat(testCredentials.getAuthenticationScheme(), equalTo("test2"));
 			assertThat(testCredentials.getClientName(), equalTo("admin"));
 			assertThat(testCredentials.getUser(), equalTo(u));
 		}
@@ -61,23 +71,19 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 	@Test
 	public void shouldAddGetAndRemoveCredentials() {
 		AuthenticationContext ctx = new AuthenticationContext();
-		User user1 = new User();
-		user1.setUsername("user1");
-		ctx.addCredentials(new TestAuthenticationCredentials("scheme1", user1));
-		User user2 = new User();
-		user2.setUsername("user2");
-		ctx.addCredentials(new TestAuthenticationCredentials("scheme2", user2));
-		AuthenticationCredentials c1 = ctx.getCredentials("scheme1");
+		User user1 = newUser("user1");
+		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("scheme1", user1));
+		User user2 = newUser("user2");
+		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("scheme2", user2));
+		AuthenticationCredentials c1 = ctx.getUnvalidatedCredentials("scheme1");
 		assertThat(c1.getAuthenticationScheme(), equalTo("scheme1"));
 		assertThat(c1.getClass(), equalTo(TestAuthenticationCredentials.class));
 		assertThat(c1.getClientName(), equalTo("user1"));
-		AuthenticationCredentials c2 = ctx.getCredentials("scheme2");
+		AuthenticationCredentials c2 = ctx.getUnvalidatedCredentials("scheme2");
 		assertThat(c2.getAuthenticationScheme(), equalTo("scheme2"));
 		assertThat(c2.getClass(), equalTo(TestAuthenticationCredentials.class));
 		assertThat(c2.getClientName(), equalTo("user2"));
-		ctx.removeCredentials(c1);
-		assertThat(ctx.getCredentials("scheme1"), nullValue());
-		ctx.removeCredentials("scheme2");
-		assertThat(ctx.getCredentials("scheme2"), nullValue());
+		ctx.markCredentialsAsInvalid(c1);
+		assertThat(ctx.getUnvalidatedCredentials("scheme1"), nullValue());
 	}
 }

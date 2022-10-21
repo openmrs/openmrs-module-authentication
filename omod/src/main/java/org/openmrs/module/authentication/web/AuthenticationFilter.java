@@ -15,7 +15,6 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.web.WebConstants;
@@ -30,6 +29,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Date;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
@@ -104,58 +104,49 @@ public class AuthenticationFilter implements Filter {
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
 		AuthenticationSession session = getAuthenticationSession(request, response);
+		session.getAuthenticationContext().setLastActivityDate(new Date());
 
-		try {
-			if (!session.isUserAuthenticated()) {
+		if (!session.isUserAuthenticated()) {
 
-				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
-					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
-				}
+			if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
+				AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
+			}
 
-				AuthenticationScheme authenticationScheme = getAuthenticationScheme();
+			AuthenticationScheme authenticationScheme = getAuthenticationScheme();
 
-				if (authenticationScheme instanceof WebAuthenticationScheme) {
+			if (authenticationScheme instanceof WebAuthenticationScheme) {
 
-					WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
+				WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
 
-					if (!isWhiteListed(request)) {
-						log.debug("Authentication required: " + request.getMethod() + " " + request.getRequestURI());
-						session.removeErrorMessage();
+				if (!isWhiteListed(request)) {
+					log.debug("Authentication required: " + request.getMethod() + " " + request.getRequestURI());
+					session.removeErrorMessage();
 
-						// If any credentials were passed in the request or session, update the Context and return them
-						AuthenticationCredentials credentials = webScheme.getCredentials(session);
-						String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
-						if (credentials != null) {
-							try {
-								session.authenticate(webScheme, credentials);
-								session.regenerateHttpSession();  // Guard against session fixation attacks
-								session.refreshDefaultLocale(); // Refresh context locale after authentication
-								String successUrl = determineSuccessRedirectUrl(request);
-								response.sendRedirect(successUrl);
-							}
-							// If authentication fails, remove credentials and redirect back to re-initiate auth
-							catch (Exception e) {
-								session.setErrorMessage(e.getMessage());
-								session.getAuthenticationContext().removeCredentials(credentials);
-								session.sendRedirect(challengeUrl);
-							}
+					// If any credentials were passed in the request or session, update the Context and return them
+					AuthenticationCredentials credentials = webScheme.getCredentials(session);
+					String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
+					if (credentials != null) {
+						try {
+							session.authenticate(webScheme, credentials);
+							session.regenerateHttpSession();  // Guard against session fixation attacks
+							session.refreshDefaultLocale(); // Refresh context locale after authentication
+							String successUrl = determineSuccessRedirectUrl(request);
+							response.sendRedirect(successUrl);
 						}
-						else {
+						// If authentication fails, redirect back to re-initiate auth
+						catch (Exception e) {
 							session.sendRedirect(challengeUrl);
 						}
 					}
+					else {
+						session.sendRedirect(challengeUrl);
+					}
 				}
 			}
-			else {
-				session.removeAuthenticationContext();  // If authenticated, remove authentication details from session
-			}
-
-			if (!response.isCommitted()) {
-				chain.doFilter(servletRequest, servletResponse);
-			}
 		}
-		finally {
-			AuthenticationLogger.clearContext();
+
+		if (!response.isCommitted()) {
+			chain.doFilter(servletRequest, servletResponse);
 		}
 	}
 
@@ -192,10 +183,7 @@ public class AuthenticationFilter implements Filter {
 			return true;
 		}
 		String patternWithContext = contextualizeUrl(request, pattern);
-		if (matcher.match(patternWithContext, request.getRequestURI())) {
-			return true;
-		}
-		return false;
+		return matcher.match(patternWithContext, request.getRequestURI());
 	}
 
 	/**

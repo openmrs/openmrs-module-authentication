@@ -9,14 +9,15 @@
  */
 package org.openmrs.module.authentication;
 
-import org.openmrs.api.context.Credentials;
-
-import java.io.Serializable;
-
 /**
- * Interface for all Credentials supported by Authenticator instances.
- * The primary purpose of this class is to extend Credentials by marking them as Serializable
+ * This class represents the distinct authentication events
  */
-public interface AuthenticationCredentials extends Credentials, Serializable {
-
+public enum AuthenticationEvent {
+    AUTHENTICATION_SUCCEEDED,
+    AUTHENTICATION_FAILED,
+    LOGIN_SUCCEEDED,
+    LOGIN_FAILED,
+    LOGIN_EXPIRED,
+    LOGOUT_SUCCEEDED,
+    LOGOUT_FAILED
 }

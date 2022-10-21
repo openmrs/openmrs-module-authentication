@@ -8,7 +8,9 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
+import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.TestAuthenticationCredentials;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockSecretQuestionAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -29,6 +31,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 	MockHttpServletResponse response;
 	MockSecretQuestionAuthenticationScheme authenticationScheme;
 	User candidateUser;
+	AuthenticationContext context;
 
 	@BeforeEach
 	@Override
@@ -47,7 +50,9 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		candidateUser = new User();
 		candidateUser.setUsername("testing");
 		authenticationSession = new MockAuthenticationSession(request, newResponse());
-		authenticationSession.getAuthenticationContext().setCandidateUser(candidateUser);
+		context = authenticationSession.getAuthenticationContext();
+		context.addUnvalidatedCredentials(new TestAuthenticationCredentials("test", candidateUser));
+		context.markCredentialsAsValid("test", candidateUser);
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockSecretQuestionAuthenticationScheme.class));
 		authenticationScheme = (MockSecretQuestionAuthenticationScheme) scheme;

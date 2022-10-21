@@ -9,7 +9,8 @@
  */
 package org.openmrs.module.authentication.web;
 
-import org.openmrs.module.authentication.AuthenticationLogger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpSessionEvent;
@@ -21,6 +22,8 @@ import javax.servlet.http.HttpSessionListener;
 @Component
 public class AuthenticationHttpSessionListener implements HttpSessionListener {
 
+	private static final Logger log = LogManager.getLogger(AuthenticationHttpSessionListener.class);
+
 	/**
 	 * This ensures a new AuthenticationSession is created and initialized with appropriate values
 	 * @see AuthenticationSession which will initialize with existing values if an authenticated user is found
@@ -28,21 +31,19 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 	 */
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
+		// Instantiating the AuthenticationSession here ensures that the AuthenticationContext is created here
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
-		String sessionId = session.getHttpSessionId();
-		AuthenticationLogger.logEvent(AuthenticationLogger.SESSION_CREATED, "httpSessionId=" + sessionId);
+		log.debug("Http Session Created: " + session);
 	}
 
 	/**
-	 * This ensures a new AuthenticationSession is created and initialized with appropriate values
-	 * If this event coincides with a logged-out user, then ensure all authentication data is destroyed in the session
+	 * If this event coincides with a logged-out user, then ensure the authentication session is destroyed
 	 * @param httpSessionEvent the event passed at session creation
 	 */
 	@Override
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
-		String sessionId = session.getHttpSessionId();
-		AuthenticationLogger.logEvent(AuthenticationLogger.SESSION_DESTROYED, "httpSessionId=" + sessionId);
+		log.debug("Http Session Destroyed: " + session);
 		if (!session.isUserAuthenticated()) {
 			session.destroy();
 		}

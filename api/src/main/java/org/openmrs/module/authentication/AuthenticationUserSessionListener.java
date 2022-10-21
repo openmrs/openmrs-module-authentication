@@ -9,10 +9,16 @@
  */
 package org.openmrs.module.authentication;
 
-import org.apache.logging.log4j.Marker;
 import org.openmrs.User;
 import org.openmrs.UserSessionListener;
 import org.springframework.stereotype.Component;
+
+import java.util.Date;
+
+import static org.openmrs.module.authentication.AuthenticationEvent.LOGIN_FAILED;
+import static org.openmrs.module.authentication.AuthenticationEvent.LOGIN_SUCCEEDED;
+import static org.openmrs.module.authentication.AuthenticationEvent.LOGOUT_FAILED;
+import static org.openmrs.module.authentication.AuthenticationEvent.LOGOUT_SUCCEEDED;
 
 /**
  * Implementation of UserSessionListener which logs message with a marker every time a user is logged in or out
@@ -22,27 +28,33 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
-		if (user != null) {
-			AuthenticationLogger.addUserToContext(user);
+		AuthenticationContext context = AuthenticationEventLog.getContextForThread();
+		if (context != null && (context.getUser() == null || !context.getUser().equals(user))) {
+			throw new IllegalStateException("AuthenticationContext user does not match the event user");
 		}
-		Marker marker = null;
+		AuthenticationEvent authenticationEvent = null;
 		if (event == Event.LOGIN) {
 			if (status == Status.SUCCESS) {
-				marker = AuthenticationLogger.LOGIN_SUCCEEDED;
+				authenticationEvent = LOGIN_SUCCEEDED;
+				if (context != null && context.getLoginDate() == null) {
+					context.setLoginDate(new Date());
+				}
 			}
 			else if (status == Status.FAIL) {
-				marker = AuthenticationLogger.LOGIN_FAILED;
+				authenticationEvent = LOGIN_FAILED;
 			}
 		}
 		else if (event == Event.LOGOUT) {
 			if (status == Status.SUCCESS) {
-				marker = AuthenticationLogger.LOGOUT_SUCCEEDED;
+				if (context != null && context.getLogoutDate() == null) {
+					context.setLogoutDate(new Date());
+				}
+				authenticationEvent = LOGOUT_SUCCEEDED;
 			}
 			else if (status == Status.FAIL) {
-				marker = AuthenticationLogger.LOGOUT_FAILED;
+				authenticationEvent = LOGOUT_FAILED;
 			}
 		}
-		String username = AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME);
-		AuthenticationLogger.logEvent(marker, "user=" + username);
+		AuthenticationEventLog.logEvent(authenticationEvent);
 	}
 }

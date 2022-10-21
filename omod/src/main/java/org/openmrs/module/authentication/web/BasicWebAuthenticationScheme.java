@@ -20,7 +20,7 @@ import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.AuthenticationEventLog;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 
 import java.util.Properties;
@@ -86,7 +86,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
      */
     @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        AuthenticationCredentials credentials = session.getAuthenticationContext().getCredentials(schemeId);
+        AuthenticationCredentials credentials = session.getAuthenticationContext().getUnvalidatedCredentials(schemeId);
         if (credentials != null) {
             return credentials;
         }
@@ -94,7 +94,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
             credentials = new BasicCredentials(username, password);
-            session.getAuthenticationContext().addCredentials(credentials);
+            session.getAuthenticationContext().addUnvalidatedCredentials(credentials);
         }
         return credentials;
     }
@@ -109,7 +109,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
             throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
         BasicCredentials bac = (BasicCredentials) credentials;
-        AuthenticationLogger.addToContext(AuthenticationLogger.USERNAME, bac.username);
+        AuthenticationEventLog.getContextForThread().setUsername(bac.username);
         UsernamePasswordCredentials upc = new UsernamePasswordCredentials(bac.username, bac.password);
         Authenticated authenticated = authenticateWithUsernamePasswordScheme(upc);
         return new BasicAuthenticated(authenticated.getUser(), schemeId);

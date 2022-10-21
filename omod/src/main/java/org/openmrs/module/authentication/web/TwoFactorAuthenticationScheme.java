@@ -12,7 +12,6 @@ package org.openmrs.module.authentication.web;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.logging.log4j.Marker;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
@@ -23,16 +22,17 @@ import org.openmrs.api.context.DaoAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.AuthenticationEvent;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
-import static org.openmrs.module.authentication.AuthenticationLogger.getMarker;
-import static org.openmrs.module.authentication.AuthenticationLogger.logEvent;
+import static org.openmrs.module.authentication.AuthenticationEventLog.logEvent;
 
 /**
  * An authentication scheme that supports a primary and secondary authentication factor
@@ -41,15 +41,9 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 
 	protected final Log log = LogFactory.getLog(getClass());
 
-	public static final Marker PRIMARY_SUCCEEDED = getMarker("PRIMARY_AUTHENTICATION_SUCCEEDED");
-	public static final Marker PRIMARY_FAILED = getMarker("PRIMARY_AUTHENTICATION_FAILED");
-	public static final Marker SECONDARY_SUCCEEDED = getMarker("SECONDARY_AUTHENTICATION_SUCCEEDED");
-	public static final Marker SECONDARY_FAILED = getMarker("SECONDARY_AUTHENTICATION_FAILED");
-
 	// User property components
 	public static final String AUTHENTICATION = "authentication";
 	public static final String SECONDARY_TYPE = "secondaryType";
-	public static final String CONFIG = "config";
 	private static final String DOT = ".";
 
 	protected String schemeId;
@@ -82,7 +76,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 
 	@Override
 	public String getChallengeUrl(AuthenticationSession session) {
-		User candidateUser = session.getAuthenticationContext().getCandidateUser();
+		User candidateUser = session.getAuthenticationContext().getUser();
 		if (candidateUser == null) {
 			return getPrimaryAuthenticationScheme().getChallengeUrl(session);
 		}
@@ -100,7 +94,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	public AuthenticationCredentials getCredentials(AuthenticationSession session) {
 
 		AuthenticationContext context = session.getAuthenticationContext();
-		AuthenticationCredentials existingCredentials = context.getCredentials(schemeId);
+		AuthenticationCredentials existingCredentials = context.getUnvalidatedCredentials(schemeId);
 		if (existingCredentials != null) {
 			return existingCredentials;
 		}
@@ -111,51 +105,35 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 			AuthenticationCredentials primaryCredentials = primaryScheme.getCredentials(session);
 			if (primaryCredentials != null) {
 				try {
-					User candidateUser = session.authenticate(primaryScheme, primaryCredentials).getUser();
-					AuthenticationLogger.addUserToContext(candidateUser);
-					context.setCandidateUser(candidateUser);
-					logEvent(PRIMARY_SUCCEEDED, primaryCredentials.toString());
+					session.authenticate(primaryScheme, primaryCredentials);
+					logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, primaryScheme);
 				} catch (Exception e) {
-					session.setErrorMessage(e.getMessage());
-					logEvent(PRIMARY_FAILED, primaryCredentials.toString());
-					context.removeCredentials(primaryCredentials);
-					context.setCandidateUser(null);
+					logEvent(AuthenticationEvent.AUTHENTICATION_FAILED, primaryScheme);
 				}
 			}
 		}
 
 		// Secondary Authentication
-		if (context.getCandidateUser() != null) {
-			AuthenticationLogger.addUserToContext(context.getCandidateUser());
-			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(context.getCandidateUser());
+		if (context.getUser() != null) {
+			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(context.getUser());
 			if (secondaryScheme != null) {
 				if (!context.isCredentialValidated(secondaryScheme.getSchemeId())) {
 					AuthenticationCredentials secondaryCredentials = secondaryScheme.getCredentials(session);
 					if (secondaryCredentials != null) {
 						try {
-							User secondaryUser = session.authenticate(secondaryScheme, secondaryCredentials).getUser();
-							if (!secondaryUser.equals(context.getCandidateUser())) {
-								throw new IllegalStateException("Secondary credential is not valid for primary");
-							}
-							logEvent(SECONDARY_SUCCEEDED, secondaryCredentials.toString());
+							session.authenticate(secondaryScheme, secondaryCredentials).getUser();
+							logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, secondaryScheme);
 						} catch (Exception e) {
-							session.setErrorMessage(e.getMessage());
-							logEvent(SECONDARY_FAILED, secondaryCredentials.toString());
-							context.removeCredentials(secondaryCredentials);
+							logEvent(AuthenticationEvent.AUTHENTICATION_FAILED, secondaryScheme);
 						}
 					}
 				}
 			}
 			if (secondaryScheme == null || context.isCredentialValidated(secondaryScheme.getSchemeId())) {
-				AuthenticationCredentials primaryCredentials = context.getCredentials(primaryScheme.getSchemeId());
-				AuthenticationCredentials secondaryCredentials = null;
-				if (secondaryScheme != null) {
-					secondaryCredentials = context.getCredentials(secondaryScheme.getSchemeId());
-				}
 				TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials(
-						context.getCandidateUser(), primaryCredentials, secondaryCredentials
+						context.getUser(), context.getValidatedCredentials()
 				);
-				context.addCredentials(credentials);
+				context.addUnvalidatedCredentials(credentials);
 				return credentials;
 			}
 
@@ -173,12 +151,12 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
 		TwoFactorAuthenticationCredentials mfaCreds = (TwoFactorAuthenticationCredentials) credentials;
-		if (mfaCreds.primary == null || mfaCreds.user == null) {
+		if (!mfaCreds.validatedCredentials.contains(getPrimaryAuthenticationScheme().getSchemeId())) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
-		AuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(mfaCreds.user);
+		WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(mfaCreds.user);
 		if (secondaryScheme != null) {
-			if (mfaCreds.secondary == null) {
+			if (!mfaCreds.validatedCredentials.contains(secondaryScheme.getSchemeId())) {
 				throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 			}
 		}
@@ -256,18 +234,18 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	public class TwoFactorAuthenticationCredentials implements AuthenticationCredentials {
 
 		protected final User user;
-		protected final AuthenticationCredentials primary;
-		protected final AuthenticationCredentials secondary;
+		protected final Set<String> validatedCredentials = new HashSet<>();
 
 		@Override
 		public String getAuthenticationScheme() {
 			return schemeId;
 		}
 
-		protected TwoFactorAuthenticationCredentials(User user, AuthenticationCredentials primary, AuthenticationCredentials secondary) {
+		protected TwoFactorAuthenticationCredentials(User user, Set<String> validatedCredentials) {
 			this.user = user;
-			this.primary = primary;
-			this.secondary = secondary;
+			if (validatedCredentials != null) {
+				this.validatedCredentials.addAll(validatedCredentials);
+			}
 		}
 
 		@Override

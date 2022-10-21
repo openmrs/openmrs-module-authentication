@@ -17,7 +17,7 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationFilter;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
@@ -34,7 +34,6 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 
@@ -45,6 +44,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	MockHttpServletRequest request;
 	MockHttpServletResponse response;
 	User user;
+	AuthenticationContext context;
 
 	@BeforeEach
 	@Override
@@ -57,6 +57,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.setSession(session);
 		response = new MockHttpServletResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
+		context = authenticationSession.getAuthenticationContext();
 		filter = new MockAuthenticationFilter(newFilterConfig("authenticationFilter"));
 		filter.setAuthenticationSession(authenticationSession);
 		chain = new MockFilterChain();
@@ -93,7 +94,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(false));
 		assertThat(response.getRedirectedUrl(), equalTo(null));
-		assertThat(getAuthenticationContext(session), nullValue());
 	}
 
 	@Test
@@ -122,13 +122,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldClearLoggingContextAfterFilterExecutes() throws Exception {
-		setupTestThatInvokesAuthenticationCheck();
-		filter.doFilter(request, response, chain);
-		assertThat(AuthenticationLogger.getContextValues().size(), equalTo(0));
-	}
-
-	@Test
 	public void shouldRedirectToChallengeUrlForAuthenticationScheme() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(request, response, chain);
@@ -153,15 +146,16 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("password", "adminPassword");
 		assertThat(session.isInvalid(), equalTo(false));
 		AuthenticationSession session1 = new AuthenticationSession(request, newResponse());
-		String authenticationSessionId = session1.getAuthenticationSessionId();
-		String httpSessionId = session1.getHttpSessionId();
+		AuthenticationContext context1 = session1.getAuthenticationContext();
+		String contextId = context1.getContextId();
+		String httpSessionId = context1.getHttpSessionId();
 		Map<String, Object> initialAttributes = session1.getHttpSessionAttributes();
 		filter.doFilter(request, response, chain);
 		assertThat(session.isInvalid(), equalTo(true));
-		assertThrows(IllegalStateException.class, session1::getAuthenticationSessionId);
 		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
-		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
-		assertThat(session2.getHttpSessionId(), not(httpSessionId));
+		AuthenticationContext context2 = session2.getAuthenticationContext();
+		assertThat(context2.getContextId(), equalTo(contextId));
+		assertThat(context2.getHttpSessionId(), not(httpSessionId));
 		for (String key : initialAttributes.keySet()) {
 			Object initialVal = initialAttributes.get(key);
 			Object newVal = session2.getHttpSessionAttributes().get(key);
@@ -176,7 +170,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("password", "test");
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(authenticationSession.getAuthenticationContext().getCredentials("basic"), nullValue());
+		assertThat(authenticationSession.getAuthenticationContext().getUnvalidatedCredentials("basic"), nullValue());
 		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
 

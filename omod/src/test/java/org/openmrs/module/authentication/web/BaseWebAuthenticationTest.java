@@ -46,10 +46,11 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 		return new MockHttpSession(servletContext);
 	}
 
-	protected MockHttpSession newSession(String username, String userId) {
+	protected MockHttpSession newSession(String username) {
 		MockHttpSession session = newSession();
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_USERNAME, username);
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_USER_ID, userId);
+		AuthenticationContext context = new AuthenticationContext();
+		context.setUsername(username);
+		setAuthenticationContext(session, context);
 		return session;
 	}
 
@@ -57,23 +58,11 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 		return new MockFilterConfig(servletContext, filterName);
 	}
 
-	protected String getAuthenticationSessionId(HttpSession session) {
-		return (String) session.getAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY);
-	}
-
-	protected String getUsername(HttpSession session) {
-		return (String) session.getAttribute(AuthenticationSession.AUTHENTICATION_USERNAME);
-	}
-
-	protected String getUserId(HttpSession session) {
-		return (String) session.getAttribute(AuthenticationSession.AUTHENTICATION_USER_ID);
-	}
-
-	protected String getIpAddress(HttpSession session) {
-		return (String) session.getAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS);
-	}
-
 	protected AuthenticationContext getAuthenticationContext(HttpSession session) {
 		return (AuthenticationContext) session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY);
+	}
+
+	protected void setAuthenticationContext(HttpSession session, AuthenticationContext context) {
+		session.setAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY, context);
 	}
 }

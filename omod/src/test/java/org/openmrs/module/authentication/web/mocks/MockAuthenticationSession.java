@@ -11,6 +11,7 @@ package org.openmrs.module.authentication.web.mocks;
 
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
+import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 import org.openmrs.module.authentication.web.WebAuthenticationScheme;
@@ -36,10 +37,14 @@ public class MockAuthenticationSession extends AuthenticationSession {
 
 	@Override
 	public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
-		Authenticated authenticated = scheme.authenticate(credentials);
-		this.authenticatedUser = authenticated.getUser();
-		getAuthenticationContext().addValidatedCredential(scheme.getSchemeId());
-		return authenticated;
+		String startingScheme = AuthenticationConfig.getProperty(AuthenticationConfig.SCHEME);
+		try {
+			AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, "xxx");
+			return super.authenticate(scheme, credentials);
+		}
+		finally {
+			AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, startingScheme);
+		}
 	}
 
 	public User getAuthenticatedUser() {
