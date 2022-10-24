@@ -19,7 +19,7 @@ public class AuthenticationUserSessionListenerTest extends BaseAuthenticationTes
 		AuthenticationContext context = new AuthenticationContext();
 		context.setUser(user);
 		try {
-			AuthenticationEventLog.contextInitialized(context);
+			AuthenticationEventLog.addContextToThread(context);
 			AuthenticationUserSessionListener listener = new AuthenticationUserSessionListener();
 			listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.SUCCESS);
 			assertLoggedEvent(context, LOGIN_SUCCEEDED);
@@ -31,7 +31,7 @@ public class AuthenticationUserSessionListenerTest extends BaseAuthenticationTes
 			assertLoggedEvent(context, LOGOUT_FAILED);
 		}
 		finally {
-			AuthenticationEventLog.contextDestroyed(context);
+			AuthenticationEventLog.removeContextFromThread();
 		}
 	}
 

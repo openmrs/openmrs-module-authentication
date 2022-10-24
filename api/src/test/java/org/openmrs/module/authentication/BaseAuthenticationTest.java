@@ -95,7 +95,7 @@ public abstract class BaseAuthenticationTest {
 		logger = null;
 		AuthenticationContext threadContext = AuthenticationEventLog.getContextForThread();
 		if (threadContext != null) {
-			AuthenticationEventLog.contextDestroyed(threadContext);
+			AuthenticationEventLog.removeContextFromThread();
 		}
 		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
 			runtimePropertiesFile.delete();

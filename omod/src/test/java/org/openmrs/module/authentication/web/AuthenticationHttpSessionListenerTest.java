@@ -49,7 +49,6 @@ public class AuthenticationHttpSessionListenerTest extends BaseWebAuthentication
 	public void shouldLogSessionCreationEvent() {
 		MockHttpSession session = newSession();
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		AuthenticationEventLog.contextInitialized(authenticationSession.getAuthenticationContext());
 		listener.sessionCreated(new HttpSessionEvent(session));
 		assertLastLogContains("Http Session Created: " + authenticationSession);
 	}

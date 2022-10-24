@@ -47,13 +47,13 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 		assertThat(scheme.getClass(), equalTo(MockBasicWebAuthenticationScheme.class));
 		authenticationScheme = (MockBasicWebAuthenticationScheme) scheme;
 		authenticationSession = new MockAuthenticationSession(session);
-		AuthenticationEventLog.contextInitialized(authenticationSession.getAuthenticationContext());
+		AuthenticationEventLog.addContextToThread(authenticationSession.getAuthenticationContext());
 	}
 
 	@AfterEach
 	@Override
 	public void teardown() {
-		AuthenticationEventLog.contextDestroyed(authenticationSession.getAuthenticationContext());
+		AuthenticationEventLog.removeContextFromThread();
 		super.teardown();
 	}
 

@@ -69,13 +69,13 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(TwoFactorAuthenticationScheme.class));
 		authenticationScheme = (TwoFactorAuthenticationScheme) scheme;
-		AuthenticationEventLog.contextInitialized(context);
+		AuthenticationEventLog.addContextToThread(context);
 	}
 
 	@AfterEach
 	@Override
 	public void teardown() {
-		AuthenticationEventLog.contextDestroyed(context);
+		AuthenticationEventLog.removeContextFromThread();
 		super.teardown();
 	}
 

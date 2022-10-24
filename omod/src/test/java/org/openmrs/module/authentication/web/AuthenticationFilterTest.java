@@ -59,7 +59,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		response = new MockHttpServletResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
 		context = authenticationSession.getAuthenticationContext();
-		AuthenticationEventLog.contextInitialized(context);
+		AuthenticationEventLog.addContextToThread(context);
 		filter = new MockAuthenticationFilter(newFilterConfig("authenticationFilter"));
 		filter.setAuthenticationSession(authenticationSession);
 		chain = new MockFilterChain();
@@ -268,6 +268,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void teardown() {
 		super.teardown();
 		filter.destroy();
-		AuthenticationEventLog.contextDestroyed(context);
+		AuthenticationEventLog.removeContextFromThread();
 	}
 }

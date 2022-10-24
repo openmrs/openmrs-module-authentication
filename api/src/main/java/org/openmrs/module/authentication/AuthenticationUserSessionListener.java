@@ -29,32 +29,45 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
 		AuthenticationContext context = AuthenticationEventLog.getContextForThread();
-		if (context != null && (context.getUser() == null || !context.getUser().equals(user))) {
-			throw new IllegalStateException("AuthenticationContext user does not match the event user");
-		}
-		AuthenticationEvent authenticationEvent = null;
-		if (event == Event.LOGIN) {
-			if (status == Status.SUCCESS) {
-				authenticationEvent = LOGIN_SUCCEEDED;
-				if (context != null && context.getLoginDate() == null) {
-					context.setLoginDate(new Date());
+		boolean addedToThread = false;
+		try {
+			if (context == null) {
+				context = new AuthenticationContext();
+				AuthenticationEventLog.addContextToThread(context);
+				addedToThread = true;
+			}
+			if (context.getUser() == null) {
+				context.setUser(user);
+			}
+			if (!context.getUser().equals(user)) {
+				throw new IllegalStateException("authentication.error.incorrectUser");
+			}
+			AuthenticationEvent authenticationEvent = null;
+			if (event == Event.LOGIN) {
+				if (status == Status.SUCCESS) {
+					authenticationEvent = LOGIN_SUCCEEDED;
+					if (context.getLoginDate() == null) {
+						context.setLoginDate(new Date());
+					}
+				} else if (status == Status.FAIL) {
+					authenticationEvent = LOGIN_FAILED;
+				}
+			} else if (event == Event.LOGOUT) {
+				if (status == Status.SUCCESS) {
+					if (context.getLogoutDate() == null) {
+						context.setLogoutDate(new Date());
+					}
+					authenticationEvent = LOGOUT_SUCCEEDED;
+				} else if (status == Status.FAIL) {
+					authenticationEvent = LOGOUT_FAILED;
 				}
 			}
-			else if (status == Status.FAIL) {
-				authenticationEvent = LOGIN_FAILED;
+			AuthenticationEventLog.logEvent(authenticationEvent, null, context);
+		}
+		finally {
+			if (addedToThread) {
+				AuthenticationEventLog.removeContextFromThread();
 			}
 		}
-		else if (event == Event.LOGOUT) {
-			if (status == Status.SUCCESS) {
-				if (context != null && context.getLogoutDate() == null) {
-					context.setLogoutDate(new Date());
-				}
-				authenticationEvent = LOGOUT_SUCCEEDED;
-			}
-			else if (status == Status.FAIL) {
-				authenticationEvent = LOGOUT_FAILED;
-			}
-		}
-		AuthenticationEventLog.logEvent(authenticationEvent);
 	}
 }

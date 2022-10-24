@@ -37,7 +37,11 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		// Instantiating the AuthenticationSession here ensures that the AuthenticationContext is created here
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
 		log.debug("Http Session Created: " + session);
-		AuthenticationEventLog.contextInitialized(session.getAuthenticationContext());
+		AuthenticationContext context = session.getAuthenticationContext();
+		AuthenticationEventLog.addContextToThread(context);
+		if (session.isUserAuthenticated()) {
+			AuthenticationEventLog.addLoggedInAuthenticationContext(context);
+		}
 	}
 
 	/**
@@ -50,8 +54,9 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		log.debug("Http Session Destroyed: " + session);
 		AuthenticationContext context = session.getAuthenticationContext();
 		if (context.getLoginDate() != null && context.getLogoutDate() == null) {
-			AuthenticationEventLog.logEvent(AuthenticationEvent.LOGIN_EXPIRED);
+			AuthenticationEventLog.logEvent(AuthenticationEvent.LOGIN_EXPIRED, null);
 		}
-		AuthenticationEventLog.contextDestroyed(context);
+		AuthenticationEventLog.removeContextFromThread();
+		AuthenticationEventLog.removeLoggedInAuthenticationContext(context);
 	}
 }

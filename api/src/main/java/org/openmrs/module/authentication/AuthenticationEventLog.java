@@ -35,30 +35,43 @@ public class AuthenticationEventLog {
     // Maintains the AuthenticationContext on a given thread.
     private static final ThreadLocal<AuthenticationContext> threadContext = new ThreadLocal<>();
 
-    // Maintains all AuthenticationContext instances that are active (based on session)
-    private static final Map<String, AuthenticationContext> currentContexts = Collections.synchronizedMap(new LinkedHashMap<>());
+    // Maintains all AuthenticationContext instances that have successfully logged in and not logged out or expired
+    private static final Map<String, AuthenticationContext> loggedInAuthenticationContexts =
+            Collections.synchronizedMap(new LinkedHashMap<>());
 
     /**
-     * This method should be called in order to register the given AuthenticationContext both on the current
-     *  thread and in the list of active AuthenticationContext instances.  Care must be taken when calling this
-     *  method to ensure that any context instances added are eventually removed by calling contextDestroyed
+     * This method should be called in order to register the given AuthenticationContext on the current thread
+     * To guard against memory leaks, this should be paired with removeContextFromThread()
      * @param context the AuthenticationContext to add
      */
-    public static void contextInitialized(AuthenticationContext context) {
+    public static void addContextToThread(AuthenticationContext context) {
         threadContext.set(context);
-        currentContexts.put(context.getContextId(), context);
     }
 
     /**
-     * This method should be called in order to remove the given AuthenticationContext from the current
-     *  thread and from the list of active AuthenticationContext instances.  Typically, this method will be called
-     *  in conjunction with contextInitialized, either in a `finally` block or similar design that would ensure that
-     *  these do not grow to exceed the available memory
+     * This method should be called in order to remove the given AuthenticationContext from the current thread
+     * Typically, this method will be paired with addContextToThread to guard against memory leaks
+     */
+    public static void removeContextFromThread() {
+        threadContext.remove();
+    }
+
+    /**
+     * This method should be called after successful login to track this AuthenticationContext as an active login.
+     * To guard against memory leaks, this should pair with removeLoggedInAuthenticationContext(AuthenticationContext)
+     * @param context the AuthenticationContext to add
+     */
+    public static void addLoggedInAuthenticationContext(AuthenticationContext context) {
+        loggedInAuthenticationContexts.put(context.getContextId(), context);
+    }
+
+    /**
+     * This method should be called in order to remove the given AuthenticationContext from the set of logged-in users
+     * To guard against memory leaks, this should pair with addLoggedInAuthenticationContext(AuthenticationContext)
      * @param context the AuthenticationContext to remove
      */
-    public static void contextDestroyed(AuthenticationContext context) {
-        threadContext.remove();
-        currentContexts.remove(context.getContextId());
+    public static void removeLoggedInAuthenticationContext(AuthenticationContext context) {
+        loggedInAuthenticationContexts.remove(context.getContextId());
     }
 
     /**
@@ -69,18 +82,21 @@ public class AuthenticationEventLog {
     }
 
     /**
-     * @return a Collection of all active AuthenticationContexts, defined as those that are associated with an
-     * active session.  The Map returned is keyed on the contextId of the AuthenticationContext
+     * @return a Collection of logged in AuthenticationContexts, defined as those that are associated with an
+     * The Map returned is keyed on the contextId of the AuthenticationContext
      */
-    public static Map<String, AuthenticationContext> getCurrentContexts() {
-        return Collections.unmodifiableMap(currentContexts);
+    public static Map<String, AuthenticationContext> getLoggedInAuthenticationContexts() {
+        return Collections.unmodifiableMap(loggedInAuthenticationContexts);
     }
 
     /**
-     * @param event the event to log - accessed with %X{event}
+     * Logs an event with the given scheme and the AuthenticationContext on the current thread
+     * @param event the event to log
+     * @param scheme the authentication scheme that the event refers to
+     * @see AuthenticationEventLog#logEvent(AuthenticationEvent, AuthenticationScheme, AuthenticationContext)
      */
-    public static void logEvent(AuthenticationEvent event) {
-        logEvent(event, null);
+    public static void logEvent(AuthenticationEvent event, AuthenticationScheme scheme) {
+        logEvent(event, scheme, threadContext.get());
     }
 
     /**
@@ -100,18 +116,19 @@ public class AuthenticationEventLog {
      * In addition, all events are logged with a Marker named AUTHENTICATION_EVENT
      * The logged message is a toString representation of all context data listed above
      * @param event the event to log
+     * @param scheme the authentication scheme that the event refers to
+     * @param context the authentication context that the event refers to
      */
-    public static void logEvent(AuthenticationEvent event, AuthenticationScheme scheme) {
+    public static void logEvent(AuthenticationEvent event, AuthenticationScheme scheme, AuthenticationContext context) {
         if (log.isInfoEnabled()) {
             try {
-                AuthenticationContext context = threadContext.get();
+                ThreadContext.put("event", event.name());
                 if (context != null) {
                     ThreadContext.put("contextId", context.getContextId());
                     ThreadContext.put("httpSessionId", context.getHttpSessionId());
                     ThreadContext.put("ipAddress", context.getIpAddress());
                     ThreadContext.put("username", context.getUsername());
                     ThreadContext.put("userId", context.getUserId() == null ? null : context.getUserId().toString());
-                    ThreadContext.put("event", event.name());
                     if (scheme != null) {
                         ThreadContext.put("schemeType", scheme.getClass().getName());
                         if (scheme instanceof ConfigurableAuthenticationScheme) {
