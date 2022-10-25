@@ -33,6 +33,11 @@ public class AuthenticationEvent implements Serializable {
         this.eventDate = new Date();
     }
 
+    @Override
+    public String toString() {
+        return event + " - " + AuthenticationUtil.formatIsoDate(eventDate);
+    }
+
     public String getEvent() {
         return event;
     }
