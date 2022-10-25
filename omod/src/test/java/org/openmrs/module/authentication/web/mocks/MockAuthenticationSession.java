@@ -11,12 +11,14 @@ package org.openmrs.module.authentication.web.mocks;
 
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
+import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 import org.openmrs.module.authentication.web.WebAuthenticationScheme;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 /**
  * Mock Authentication Session, primarily useful to mock information about the authenticated user
@@ -24,6 +26,10 @@ import javax.servlet.http.HttpServletResponse;
 public class MockAuthenticationSession extends AuthenticationSession {
 
 	private User authenticatedUser;
+
+	public MockAuthenticationSession(HttpSession session) {
+		super(session);
+	}
 
 	public MockAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
 		super(request, response);
@@ -36,10 +42,14 @@ public class MockAuthenticationSession extends AuthenticationSession {
 
 	@Override
 	public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
-		Authenticated authenticated = scheme.authenticate(credentials);
-		this.authenticatedUser = authenticated.getUser();
-		getAuthenticationContext().addValidatedCredential(scheme.getSchemeId());
-		return authenticated;
+		String startingScheme = AuthenticationConfig.getProperty(AuthenticationConfig.SCHEME);
+		try {
+			AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, "xxx");
+			return super.authenticate(scheme, credentials);
+		}
+		finally {
+			AuthenticationConfig.setProperty(AuthenticationConfig.SCHEME, startingScheme);
+		}
 	}
 
 	public User getAuthenticatedUser() {

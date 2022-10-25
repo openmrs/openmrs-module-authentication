@@ -183,11 +183,11 @@ public class AuthenticationConfig implements Serializable {
 
     /**
      * @param key the configuration property to retrieve
-     * @param type the type of class expected
+     * @param ignoredType the type of class expected
      * @return a class of the given type, with a type identified by the value of the given property
      */
     @SuppressWarnings("unchecked")
-    public static <T> Class<? extends T> getClass(String key, Class<T> type) {
+    public static <T> Class<? extends T> getClass(String key, Class<T> ignoredType) {
         String className = config.getProperty(key);
         if (StringUtils.isNotBlank(className)) {
             List<ClassLoader> loaders = new ArrayList<>();

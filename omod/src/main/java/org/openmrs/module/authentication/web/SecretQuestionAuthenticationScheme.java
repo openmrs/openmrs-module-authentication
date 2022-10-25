@@ -18,8 +18,8 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.UserLogin;
 
 import java.util.Properties;
 
@@ -30,7 +30,7 @@ import java.util.Properties;
  * This includes the ability to configure the `loginPage` that the user should be taken to, as well as the
  * `questionParam` and `answerParam` that should be read from the http request submission to authenticate.
  */
-public class SecretQuestionAuthenticationScheme implements WebAuthenticationScheme {
+public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme {
 
     protected final Log log = LogFactory.getLog(getClass());
 
@@ -41,23 +41,13 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
     public static final String QUESTION = "question";
     public static final String ANSWER = "answer";
 
-    protected String schemeId;
     protected String loginPage;
     protected String questionParam;
     protected String answerParam;
 
-    public SecretQuestionAuthenticationScheme() {
-        this.schemeId = getClass().getName();
-    }
-
-    @Override
-    public String getSchemeId() {
-        return schemeId;
-    }
-
     @Override
     public void configure(String schemeId, Properties config) {
-        this.schemeId = schemeId;
+        super.configure(schemeId, config);
         loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/secretQuestion.htm");
         questionParam = config.getProperty(QUESTION_PARAM, QUESTION);
         answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
@@ -70,23 +60,23 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
 
     @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        AuthenticationCredentials credentials = session.getAuthenticationContext().getCredentials(schemeId);
+        AuthenticationCredentials credentials = session.getUserLogin().getUnvalidatedCredentials(getSchemeId());
         if (credentials != null) {
             return credentials;
         }
         String question = session.getRequestParam(questionParam);
         String answer = session.getRequestParam(answerParam);
         if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
-            User candidateUser = session.getAuthenticationContext().getCandidateUser();
+            User candidateUser = session.getUserLogin().getUser();
             credentials = new SecretQuestionAuthenticationCredentials(candidateUser, question, answer);
-            session.getAuthenticationContext().addCredentials(credentials);
+            session.getUserLogin().addUnvalidatedCredentials(credentials);
             return credentials;
         }
         return null;
     }
 
     @Override
-    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+    public Authenticated authenticate(AuthenticationCredentials credentials, UserLogin userLogin) {
 
         // Ensure the credentials provided are of the expected type
         if (!(credentials instanceof SecretQuestionAuthenticationCredentials)) {
@@ -95,6 +85,9 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
         SecretQuestionAuthenticationCredentials c = (SecretQuestionAuthenticationCredentials) credentials;
 
         if (c.user == null || StringUtils.isBlank(c.question) || StringUtils.isBlank(c.answer)) {
+            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+        }
+        if (userLogin.getUser() != null && !userLogin.getUser().equals(c.user)) {
             throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
         String expectedQuestion = getSecretQuestion(c.user);
@@ -133,7 +126,7 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
 
         @Override
         public String getAuthenticationScheme() {
-            return schemeId;
+            return getSchemeId();
         }
 
         protected SecretQuestionAuthenticationCredentials(User user, String question, String answer) {

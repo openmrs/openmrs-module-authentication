@@ -15,9 +15,10 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationLogger;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -30,6 +31,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Date;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
@@ -104,8 +106,12 @@ public class AuthenticationFilter implements Filter {
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
 		AuthenticationSession session = getAuthenticationSession(request, response);
+		UserLogin userLogin = session.getUserLogin();
 
 		try {
+			UserLoginTracker.setLoginOnThread(userLogin);
+			userLogin.setLastActivityDate(new Date());
+
 			if (!session.isUserAuthenticated()) {
 
 				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
@@ -133,21 +139,15 @@ public class AuthenticationFilter implements Filter {
 								String successUrl = determineSuccessRedirectUrl(request);
 								response.sendRedirect(successUrl);
 							}
-							// If authentication fails, remove credentials and redirect back to re-initiate auth
+							// If authentication fails, redirect back to re-initiate auth
 							catch (Exception e) {
-								session.setErrorMessage(e.getMessage());
-								session.getAuthenticationContext().removeCredentials(credentials);
 								session.sendRedirect(challengeUrl);
 							}
-						}
-						else {
+						} else {
 							session.sendRedirect(challengeUrl);
 						}
 					}
 				}
-			}
-			else {
-				session.removeAuthenticationContext();  // If authenticated, remove authentication details from session
 			}
 
 			if (!response.isCommitted()) {
@@ -155,7 +155,7 @@ public class AuthenticationFilter implements Filter {
 			}
 		}
 		finally {
-			AuthenticationLogger.clearContext();
+			UserLoginTracker.removeLoginFromThread();
 		}
 	}
 
@@ -192,10 +192,7 @@ public class AuthenticationFilter implements Filter {
 			return true;
 		}
 		String patternWithContext = contextualizeUrl(request, pattern);
-		if (matcher.match(patternWithContext, request.getRequestURI())) {
-			return true;
-		}
-		return false;
+		return matcher.match(patternWithContext, request.getRequestURI());
 	}
 
 	/**

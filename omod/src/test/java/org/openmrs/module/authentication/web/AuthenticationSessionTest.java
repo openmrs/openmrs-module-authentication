@@ -13,8 +13,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Logger;
 import org.junit.jupiter.api.Test;
-import org.openmrs.module.authentication.AuthenticationContext;
-import org.openmrs.module.authentication.AuthenticationLogger;
+import org.openmrs.module.authentication.UserLogin;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 
@@ -29,94 +28,69 @@ import static org.hamcrest.Matchers.nullValue;
 
 public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 
-	public void testSetupOfSessionAttributes(AuthenticationSession authenticationSession) {
-		assertThat(authenticationSession.getAuthenticationSessionId(), notNullValue());
-		assertThat(authenticationSession.getHttpSessionId(), notNullValue());
-		assertThat(authenticationSession.getUsername(), equalTo("testing"));
-		assertThat(authenticationSession.getUserId(), equalTo("12345"));
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.HTTP_SESSION_ID), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USER_ID), notNullValue());
+	public void testSetupOfSessionAttributes(UserLogin userLogin) {
+		assertThat(userLogin.getLoginId(), notNullValue());
+		assertThat(userLogin.getHttpSessionId(), notNullValue());
+		assertThat(userLogin.getUsername(), equalTo("testing"));
 	}
 
 	@Test
 	public void shouldSetupWithSessionConstructor() {
-		MockHttpSession session = newSession("testing", "12345");
+		MockHttpSession session = newSession("testing");
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		testSetupOfSessionAttributes(authenticationSession);
+		testSetupOfSessionAttributes(authenticationSession.getUserLogin());
 	}
 
 	@Test
 	public void shouldSetupWithRequestConstructor() {
 		MockHttpServletRequest request = newGetRequest("/", "192.168.1.1");
-		request.setSession(newSession("testing", "12345"));
+		request.setSession(newSession("testing"));
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		testSetupOfSessionAttributes(authenticationSession);
-		assertThat(authenticationSession.getIpAddress(), equalTo("192.168.1.1"));
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS), equalTo("192.168.1.1"));
+		testSetupOfSessionAttributes(authenticationSession.getUserLogin());
+		assertThat(authenticationSession.getUserLogin().getIpAddress(), equalTo("192.168.1.1"));
 	}
 
 	@Test
-	public void shouldGetNewAuthenticationContext() {
+	public void shouldGetNewUserLogin() {
 		MockHttpSession session = newSession();
-		assertThat(getAuthenticationContext(session), nullValue());
+		assertThat(getUserLogin(session), nullValue());
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
-		assertThat(context, notNullValue());
-		assertThat(getAuthenticationContext(session), notNullValue());
+		UserLogin userLogin = authenticationSession.getUserLogin();
+		assertThat(userLogin, notNullValue());
+		assertThat(getUserLogin(session), notNullValue());
 	}
 
 	@Test
-	public void shouldGetExistingAuthenticationContext() {
+	public void shouldGetExistingUserLogin() {
 		MockHttpSession session = newSession();
-		assertThat(getAuthenticationContext(session), nullValue());
-		AuthenticationContext context1 = new AuthenticationSession(session).getAuthenticationContext();
-		AuthenticationContext context2 = new AuthenticationSession(session).getAuthenticationContext();
-		assertThat(context1, equalTo(context2));
-	}
-
-	@Test
-	public void shouldGetNewAuthenticationSessionId() {
-		MockHttpSession session = newSession();
-		assertThat(getAuthenticationSessionId(session), nullValue());
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getAuthenticationSessionId(), notNullValue());
-		assertThat(getAuthenticationSessionId(session), equalTo(authenticationSession.getAuthenticationSessionId()));
-	}
-
-	@Test
-	public void shouldGetAuthenticationSessionIdFromSessionIfExists() {
-		MockHttpSession session = newSession();
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY, "abcde");
-		AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, "12345");
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getAuthenticationSessionId(), equalTo("abcde"));
-	}
-
-	@Test
-	public void shouldGetAuthenticationSessionIdFromThreadIfExistsAndNotOnSession() {
-		MockHttpSession session = newSession();
-		AuthenticationLogger.addToContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID, "12345");
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getAuthenticationSessionId(), equalTo("12345"));
+		assertThat(getUserLogin(session), nullValue());
+		UserLogin ctx = new UserLogin();
+		setUserLogin(session, ctx);
+		UserLogin userLogin1 = new AuthenticationSession(session).getUserLogin();
+		UserLogin userLogin2 = new AuthenticationSession(session).getUserLogin();
+		assertThat(userLogin1, equalTo(ctx));
+		assertThat(userLogin2, equalTo(ctx));
 	}
 
 	@Test
 	public void shouldGetIpAddressFromSessionIfExists() {
-		MockHttpSession session = newSession("testing", "12345");
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS, "session-ip");
+		MockHttpSession session = newSession("testing");
+		UserLogin ctx = new UserLogin();
+		ctx.setIpAddress("session-ip");
+		setUserLogin(session, ctx);
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getIpAddress(), equalTo("session-ip"));
+		assertThat(authenticationSession.getUserLogin().getIpAddress(), equalTo("session-ip"));
 	}
 
 	@Test
 	public void shouldGetIpAddressFromRequestIfExistsAndNotOnSession() {
-		MockHttpSession session = newSession("testing", "12345");
+		MockHttpSession session = newSession("testing");
+		UserLogin ctx = new UserLogin();
+		setUserLogin(session, ctx);
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		assertThat(authenticationSession.getIpAddress(), equalTo("request-ip"));
+		assertThat(authenticationSession.getUserLogin().getIpAddress(), equalTo("request-ip"));
 	}
 
 	@Test
@@ -125,75 +99,34 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 		sessionLogger.setAdditive(false);
 		sessionLogger.setLevel(Level.INFO);
 		sessionLogger.addAppender(memoryAppender);
-		MockHttpSession session = newSession("testing", "12345");
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS, "session-ip");
+		MockHttpSession session = newSession("testing");
+		UserLogin userLogin = new UserLogin();
+		userLogin.setIpAddress("session-ip");
+		setUserLogin(session, userLogin);
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		assertThat(authenticationSession.getIpAddress(), equalTo("request-ip"));
-		assertLastLogContains("IP Address change detected from 'session-ip' to 'request-ip'");
-	}
-
-	@Test
-	public void shouldGetIpAddressFromThreadIfExistsAndNotOnSessionOrRequest() {
-		MockHttpSession session = newSession("testing", "12345");
-		AuthenticationLogger.addToContext(AuthenticationLogger.IP_ADDRESS, "thread-ip");
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getIpAddress(), equalTo("thread-ip"));
+		assertThat(authenticationSession.getUserLogin().getIpAddress(), equalTo("request-ip"));
+		assertLastLogContains("IP Address change detected: 'session-ip' -> 'request-ip'");
 	}
 
 	@Test
 	public void shouldGetUsernameFromSession() {
-		MockHttpSession session = newSession("testing", "12345");
+		MockHttpSession session = newSession("testing");
 		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getUsername(), equalTo("testing"));
-	}
-
-	@Test
-	public void shouldSetUsernameOnSessionAndThread() {
-		MockHttpSession session = newSession();
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getUsername(), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME), nullValue());
-		authenticationSession.setUsername("testing");
-		assertThat(authenticationSession.getUsername(), equalTo("testing"));
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME), equalTo("testing"));
-	}
-
-	@Test
-	public void shouldGetUserIdFromSession() {
-		MockHttpSession session = newSession("testing", "12345");
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getUserId(), equalTo("12345"));
-	}
-
-	@Test
-	public void shouldSetUserIdOnSessionAndThread() {
-		MockHttpSession session = newSession();
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getUserId(), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USER_ID), nullValue());
-		authenticationSession.setUserId("12345");
-		assertThat(authenticationSession.getUserId(), equalTo("12345"));
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USER_ID), equalTo("12345"));
-	}
-
-	@Test
-	public void shouldGetHttpSessionIdFromSession() {
-		MockHttpSession session = newSession("testing", "12345");
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		assertThat(authenticationSession.getHttpSessionId(), equalTo(session.getId()));
+		assertThat(authenticationSession.getUserLogin().getUsername(), equalTo("testing"));
 	}
 
 	@Test
 	public void shouldGetAllAttributesFromSession() {
-		MockHttpSession session = newSession("testing", "12345");
+		MockHttpSession session = newSession("testing");
 		MockHttpServletRequest request = newGetRequest("/", "request-ip");
 		request.setSession(session);
 		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		authenticationSession.getAuthenticationContext();
+		UserLogin userLogin = authenticationSession.getUserLogin();
 		Map<String, Object> attributes = authenticationSession.getHttpSessionAttributes();
-		assertThat(attributes.size(), equalTo(5));
+		assertThat(attributes.size(), equalTo(1));
+		assertThat(attributes.get(AuthenticationSession.AUTHENTICATION_USER_LOGIN), equalTo(userLogin));
 	}
 
 	@Test
@@ -207,62 +140,21 @@ public class AuthenticationSessionTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldRemoveAuthenticationContext() {
-		MockHttpSession session = newSession();
-		AuthenticationSession authenticationSession = new AuthenticationSession(session);
-		AuthenticationContext context = authenticationSession.getAuthenticationContext();
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), notNullValue());
-		authenticationSession.removeAuthenticationContext();
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), nullValue());
-		assertThat(authenticationSession.getAuthenticationContext(), not(context));
-	}
-
-	@Test
-	public void shouldDestroyAuthenticationSession() {
-		MockHttpSession session = newSession("testing", "12345");
-		MockHttpServletRequest request = newGetRequest("/", "request-ip");
-		request.setSession(session);
-		AuthenticationSession authenticationSession = new AuthenticationSession(request, newResponse());
-		authenticationSession.getAuthenticationContext();
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), notNullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY), notNullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS), notNullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_USERNAME), notNullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_USER_ID), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USER_ID), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.HTTP_SESSION_ID), notNullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS), notNullValue());
-		authenticationSession.destroy();
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY), nullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_SESSION_ID_KEY), nullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_IP_ADDRESS), nullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_USERNAME), nullValue());
-		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_USER_ID), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.AUTHENTICATION_SESSION_ID), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USER_ID), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.USERNAME), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.HTTP_SESSION_ID), nullValue());
-		assertThat(AuthenticationLogger.getFromContext(AuthenticationLogger.IP_ADDRESS), nullValue());
-	}
-
-	@Test
 	public void shouldReturnFalseForUserAuthenticatedIfNoSessionIsOpen() {
-		AuthenticationSession session = new AuthenticationSession(newSession("admin", "test"));
+		AuthenticationSession session = new AuthenticationSession(newSession("admin"));
 		assertThat(session.isUserAuthenticated(), is(false));
 	}
 
 	@Test
 	public void shouldRegenerateSession() {
 		AuthenticationSession session = new AuthenticationSession(new MockHttpServletRequest(), newResponse());
-		String authenticationSessionId = session.getAuthenticationSessionId();
-		String httpSessionId = session.getHttpSessionId();
-		int numAttributes = session.getHttpSessionAttributes().size();
+		UserLogin userLogin = session.getUserLogin();
+		String loginId = userLogin.getLoginId();
+		String httpSessionId = userLogin.getHttpSessionId();
 		session.regenerateHttpSession();
-		AuthenticationSession session2 = new AuthenticationSession(new MockHttpServletRequest(), newResponse());
-		assertThat(session2.getAuthenticationSessionId(), equalTo(authenticationSessionId));
-		assertThat(session2.getHttpSessionId(), not(httpSessionId));
-		assertThat(session2.getHttpSessionAttributes().size(), equalTo(numAttributes));
+		UserLogin login2 = session.getUserLogin();
+		assertThat(login2, equalTo(userLogin));
+		assertThat(login2.getLoginId(), equalTo(loginId));
+		assertThat(login2.getHttpSessionId(), not(httpSessionId));
 	}
 }

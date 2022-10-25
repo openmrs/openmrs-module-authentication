@@ -1,5 +1,6 @@
 package org.openmrs.module.authentication.web;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.api.context.Authenticated;
@@ -8,6 +9,7 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -44,6 +46,15 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockBasicWebAuthenticationScheme.class));
 		authenticationScheme = (MockBasicWebAuthenticationScheme) scheme;
+		authenticationSession = new MockAuthenticationSession(session);
+		UserLoginTracker.setLoginOnThread(authenticationSession.getUserLogin());
+	}
+
+	@AfterEach
+	@Override
+	public void teardown() {
+		UserLoginTracker.removeLoginFromThread();
+		super.teardown();
 	}
 
 	protected AuthenticationCredentials getCredentials(String username, String password) {

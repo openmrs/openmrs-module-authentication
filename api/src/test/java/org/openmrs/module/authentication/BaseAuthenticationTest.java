@@ -29,7 +29,6 @@ import static org.hamcrest.Matchers.notNullValue;
  */
 public abstract class BaseAuthenticationTest {
 
-	protected Logger logger;
 	protected MemoryAppender memoryAppender;
 	protected File appDataDir;
 	protected File runtimePropertiesFile;
@@ -39,15 +38,13 @@ public abstract class BaseAuthenticationTest {
 		appDataDir = createAppDataDir();
 		runtimePropertiesFile = new File(appDataDir, "openmrs-runtime.properties");
 		runtimePropertiesFile.deleteOnExit();
-		String pattern = "userId=%X{userId},username=%X{username},marker=%markerSimpleName,message=%m";
-		PatternLayout layout = PatternLayout.newBuilder().withPattern(pattern).build();
+		PatternLayout layout = PatternLayout.newBuilder().withPattern("%m").build();
 		memoryAppender = MemoryAppender.newBuilder().setLayout(layout).build();
 		memoryAppender.start();
-		logger = (Logger) LogManager.getLogger(AuthenticationLogger.class);
+		Logger logger = (Logger) LogManager.getLogger(UserLogin.class);
 		logger.setAdditive(false);
 		logger.setLevel(Level.INFO);
 		logger.addAppender(memoryAppender);
-		AuthenticationLogger.clearContext();
 		setRuntimeProperties(new Properties());
 	}
 
@@ -90,12 +87,13 @@ public abstract class BaseAuthenticationTest {
 
 	@AfterEach
 	public void teardown() {
+		Logger logger = (Logger) LogManager.getLogger(UserLogin.class);
 		logger.removeAppender(memoryAppender);
 		memoryAppender.stop();
 		((Logger) LogManager.getRootLogger()).getContext().updateLoggers();
 		memoryAppender = null;
 		logger = null;
-		AuthenticationLogger.clearContext();
+		UserLoginTracker.removeLoginFromThread();
 		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
 			runtimePropertiesFile.delete();
 		}

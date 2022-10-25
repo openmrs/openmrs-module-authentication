@@ -1,14 +1,19 @@
 package org.openmrs.module.authentication.web;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
+import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.TestAuthenticationCredentials;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockSecretQuestionAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -29,6 +34,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 	MockHttpServletResponse response;
 	MockSecretQuestionAuthenticationScheme authenticationScheme;
 	User candidateUser;
+	UserLogin userLogin;
 
 	@BeforeEach
 	@Override
@@ -47,10 +53,19 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		candidateUser = new User();
 		candidateUser.setUsername("testing");
 		authenticationSession = new MockAuthenticationSession(request, newResponse());
-		authenticationSession.getAuthenticationContext().setCandidateUser(candidateUser);
+		userLogin = authenticationSession.getUserLogin();
+		userLogin.addUnvalidatedCredentials(new TestAuthenticationCredentials("test", candidateUser));
+		userLogin.authenticationSuccessful("test", new BasicAuthenticated(candidateUser, "test"));
+		UserLoginTracker.setLoginOnThread(userLogin);
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockSecretQuestionAuthenticationScheme.class));
 		authenticationScheme = (MockSecretQuestionAuthenticationScheme) scheme;
+	}
+
+	@AfterEach
+	@Override
+	public void teardown() {
+		UserLoginTracker.removeLoginFromThread();
 	}
 
 	protected AuthenticationCredentials getCredentials(String question, String answer) {

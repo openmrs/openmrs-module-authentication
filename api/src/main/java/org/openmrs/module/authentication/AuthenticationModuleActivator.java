@@ -9,20 +9,24 @@
  */
 package org.openmrs.module.authentication;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.openmrs.module.BaseModuleActivator;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
  */
 public class AuthenticationModuleActivator extends BaseModuleActivator {
+
+	private static final Logger log = LogManager.getLogger(AuthenticationModuleActivator.class);
 	
 	@Override
 	public void started() {
-		AuthenticationLogger.logEvent(AuthenticationLogger.MODULE_STARTED);
+		log.info("Authentication Module Started");
 	}
 	
 	@Override
 	public void stopped() {
-		AuthenticationLogger.logEvent(AuthenticationLogger.MODULE_STOPPED);
+		log.info("Authentication Module Stopped");
 	}
 }
