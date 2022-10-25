@@ -260,6 +260,7 @@ public class UserLogin implements Serializable {
      *     <li>%X{schemeId}</li>
      *     <li>%X{username}</li>
      *     <li>%X{userId}</li>
+     *     <li>%X{lastActivityDate}</li>
      * </ul>
      * In addition, all events are logged with a Marker named AUTHENTICATION_EVENT
      * The logged message is a toString representation of all context data listed above
