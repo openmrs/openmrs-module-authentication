@@ -9,10 +9,9 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationEvent;
-import org.openmrs.module.authentication.AuthenticationEventLog;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -35,7 +34,7 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 	MockHttpServletRequest request;
 	MockHttpServletResponse response;
 	TwoFactorAuthenticationScheme authenticationScheme;
-	AuthenticationContext context;
+	UserLogin userLogin;
 
 	@BeforeEach
 	@Override
@@ -65,17 +64,17 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 		request.setSession(session);
 		response = newResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
-		context = authenticationSession.getAuthenticationContext();
+		userLogin = authenticationSession.getUserLogin();
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(TwoFactorAuthenticationScheme.class));
 		authenticationScheme = (TwoFactorAuthenticationScheme) scheme;
-		AuthenticationEventLog.addContextToThread(context);
+		UserLoginTracker.setLoginOnThread(userLogin);
 	}
 
 	@AfterEach
 	@Override
 	public void teardown() {
-		AuthenticationEventLog.removeContextFromThread();
+		UserLoginTracker.removeLoginFromThread();
 		super.teardown();
 	}
 
@@ -120,16 +119,16 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 	public void getCredentialsShouldReturnNullIfNoPrimaryAuthentication() {
 		AuthenticationCredentials credentials = primaryAuth(null, null);
 		assertThat(credentials, nullValue());
-		assertThat(context.getUnvalidatedCredentials(), empty());
-		assertThat(context.getValidatedCredentials(), empty());
+		assertThat(userLogin.getUnvalidatedCredentials(), empty());
+		assertThat(userLogin.getValidatedCredentials(), empty());
 	}
 
 	@Test
 	public void getCredentialsShouldReturnCredentialsIfNoSecondaryAuthenticationRequired() {
 		AuthenticationCredentials credentials = primaryAuth("admin", "adminPassword");
 		assertThat(credentials, notNullValue());
-		assertThat(context.getUnvalidatedCredentials(), containsInAnyOrder("2fa"));
-		assertThat(context.getValidatedCredentials(), containsInAnyOrder("primary"));
+		assertThat(userLogin.getUnvalidatedCredentials(), containsInAnyOrder("2fa"));
+		assertThat(userLogin.getValidatedCredentials(), containsInAnyOrder("primary"));
 		assertThat(response.isCommitted(), equalTo(false));
 		assertThat(response.getRedirectedUrl(), nullValue());
 	}
@@ -138,25 +137,25 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 	public void getCredentialsShouldNullifyPrimaryCredentialsIfInvalid() {
 		AuthenticationCredentials credentials = primaryAuth("admin", "test");
 		assertThat(credentials, nullValue());
-		assertThat(context.getUnvalidatedCredentials(), empty());
-		assertThat(context.getValidatedCredentials(), empty());
+		assertThat(userLogin.getUnvalidatedCredentials(), empty());
+		assertThat(userLogin.getValidatedCredentials(), empty());
 	}
 
 	@Test
 	public void getCredentialsShouldLogEventIfPrimaryAuthenticationFails() {
 		primaryAuth("admin", "test");
-		assertLoggedEvent(context, AUTHENTICATION_FAILED, "primary");
+		assertLoggedEvent(userLogin, AUTHENTICATION_FAILED, "primary");
 	}
 
 	@Test
 	public void getCredentialsShouldGetSecondaryCredentialsIfPrimaryCredentialsAreValid() {
 		AuthenticationCredentials credentials = primaryAuth("tester", "primaryPw");
 		assertThat(credentials, nullValue());
-		assertThat(context.getUnvalidatedCredentials(), empty());
-		assertThat(context.getValidatedCredentials(), containsInAnyOrder("primary"));
+		assertThat(userLogin.getUnvalidatedCredentials(), empty());
+		assertThat(userLogin.getValidatedCredentials(), containsInAnyOrder("primary"));
 		credentials = secondaryAuth("tester", "secondaryPw");
 		assertThat(credentials, notNullValue());
-		assertThat(context.getUnvalidatedCredentials(), containsInAnyOrder("2fa"));
+		assertThat(userLogin.getUnvalidatedCredentials(), containsInAnyOrder("2fa"));
 		assertValidatedCredentials("primary", "secondary");
 	}
 
@@ -164,7 +163,7 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 	public void getCredentialsShouldReturnNullIfSecondaryCredentialsMissing() {
 		AuthenticationCredentials credentials = primaryAuth("tester", "primaryPw");
 		assertThat(credentials, nullValue());
-		assertThat(context.getUnvalidatedCredentials(), empty());
+		assertThat(userLogin.getUnvalidatedCredentials(), empty());
 		assertValidatedCredentials("primary");
 	}
 
@@ -185,8 +184,8 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 		primaryAuth("tester", "test");
 		AuthenticationCredentials credentials = secondaryAuth("tester", "secondaryPw");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
-		assertThat(context.getUnvalidatedCredentials(), empty());
-		assertThat(context.getValidatedCredentials(), empty());
+		assertThat(userLogin.getUnvalidatedCredentials(), empty());
+		assertThat(userLogin.getValidatedCredentials(), empty());
 	}
 
 	@Test
@@ -214,7 +213,7 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 		primaryAuth("tester", "primaryPw");
 		AuthenticationCredentials credentials = secondaryAuth("tester", "test");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
-		assertThat(context.getUnvalidatedCredentials(), empty());
+		assertThat(userLogin.getUnvalidatedCredentials(), empty());
 		assertValidatedCredentials("primary");
 	}
 
@@ -253,23 +252,24 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 	@Test
 	public void shouldGetSecondaryAuthenticationScheme() {
 		primaryAuth("tester", "primaryPw");
-		User u = authenticationSession.getAuthenticationContext().getUser();
+		User u = authenticationSession.getUserLogin().getUser();
 		WebAuthenticationScheme secondaryScheme = authenticationScheme.getSecondaryAuthenticationScheme(u);
 		assertThat(secondaryScheme.getSchemeId(), equalTo("secondary"));
 	}
 
 	protected void assertValidatedCredentials(String... schemeIds) {
-		assertThat(context.getValidatedCredentials().size(), equalTo(schemeIds.length));
+		assertThat(userLogin.getValidatedCredentials().size(), equalTo(schemeIds.length));
 		for (String credential : schemeIds) {
-			assertThat(context.isCredentialValidated(credential), equalTo(true));
+			assertThat(userLogin.isCredentialValidated(credential), equalTo(true));
 		}
 	}
 
-	protected void assertLoggedEvent(AuthenticationContext context, AuthenticationEvent event, String schemeId) {
-		assertLastLogContains("event=" + event.name());
-		assertLastLogContains("contextId=" + context.getContextId());
-		assertLastLogContains("userId=" + context.getUserId());
-		assertLastLogContains("username=" + context.getUsername());
+	protected void assertLoggedEvent(UserLogin userLogin, String event, String schemeId) {
+		assertThat(userLogin.containsEvent(event), equalTo(true));
+		assertLastLogContains("event=" + event);
+		assertLastLogContains("loginId=" + this.userLogin.getLoginId());
+		assertLastLogContains("userId=" + this.userLogin.getUserId());
+		assertLastLogContains("username=" + this.userLogin.getUsername());
 		assertLastLogContains("schemeId=" + schemeId);
 	}
 }

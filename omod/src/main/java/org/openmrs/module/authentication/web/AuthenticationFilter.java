@@ -15,10 +15,10 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationEventLog;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -106,11 +106,11 @@ public class AuthenticationFilter implements Filter {
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
 		AuthenticationSession session = getAuthenticationSession(request, response);
-		AuthenticationContext context = session.getAuthenticationContext();
+		UserLogin userLogin = session.getUserLogin();
 
 		try {
-			AuthenticationEventLog.addContextToThread(context);
-			context.setLastActivityDate(new Date());
+			UserLoginTracker.setLoginOnThread(userLogin);
+			userLogin.setLastActivityDate(new Date());
 
 			if (!session.isUserAuthenticated()) {
 
@@ -155,7 +155,7 @@ public class AuthenticationFilter implements Filter {
 			}
 		}
 		finally {
-			AuthenticationEventLog.removeContextFromThread();
+			UserLoginTracker.removeLoginFromThread();
 		}
 	}
 

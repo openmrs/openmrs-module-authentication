@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.UserSessionListener;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.openmrs.module.authentication.AuthenticationEvent.LOGIN_FAILED;
 import static org.openmrs.module.authentication.AuthenticationEvent.LOGIN_SUCCEEDED;
 import static org.openmrs.module.authentication.AuthenticationEvent.LOGOUT_FAILED;
@@ -16,29 +18,30 @@ public class AuthenticationUserSessionListenerTest extends BaseAuthenticationTes
 		User user = new User();
 		user.setUserId(12345);
 		user.setUsername("testing");
-		AuthenticationContext context = new AuthenticationContext();
-		context.setUser(user);
+		UserLogin login = new UserLogin();
+		login.setUser(user);
 		try {
-			AuthenticationEventLog.addContextToThread(context);
+			UserLoginTracker.setLoginOnThread(login);
 			AuthenticationUserSessionListener listener = new AuthenticationUserSessionListener();
 			listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.SUCCESS);
-			assertLoggedEvent(context, LOGIN_SUCCEEDED);
+			assertLoggedEvent(login, LOGIN_SUCCEEDED);
 			listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.FAIL);
-			assertLoggedEvent(context, LOGIN_FAILED);
+			assertLoggedEvent(login, LOGIN_FAILED);
 			listener.loggedInOrOut(user, UserSessionListener.Event.LOGOUT, UserSessionListener.Status.SUCCESS);
-			assertLoggedEvent(context, LOGOUT_SUCCEEDED);
+			assertLoggedEvent(login, LOGOUT_SUCCEEDED);
 			listener.loggedInOrOut(user, UserSessionListener.Event.LOGOUT, UserSessionListener.Status.FAIL);
-			assertLoggedEvent(context, LOGOUT_FAILED);
+			assertLoggedEvent(login, LOGOUT_FAILED);
 		}
 		finally {
-			AuthenticationEventLog.removeContextFromThread();
+			UserLoginTracker.removeLoginFromThread();
 		}
 	}
 
-	protected void assertLoggedEvent(AuthenticationContext context, AuthenticationEvent event) {
-		assertLastLogContains("event=" + event.name());
-		assertLastLogContains("contextId=" + context.getContextId());
-		assertLastLogContains("userId=" + context.getUserId());
-		assertLastLogContains("username=" + context.getUsername());
+	protected void assertLoggedEvent(UserLogin userLogin, String event) {
+		assertThat(userLogin.containsEvent(event), equalTo(true));
+		assertLastLogContains("event=" + event);
+		assertLastLogContains("loginId=" + userLogin.getLoginId());
+		assertLastLogContains("userId=" + userLogin.getUserId());
+		assertLastLogContains("username=" + userLogin.getUsername());
 	}
 }

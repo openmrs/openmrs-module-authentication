@@ -20,8 +20,8 @@ import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationEventLog;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
+import org.openmrs.module.authentication.UserLoginTracker;
 
 import java.util.Properties;
 
@@ -86,7 +86,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
      */
     @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        AuthenticationCredentials credentials = session.getAuthenticationContext().getUnvalidatedCredentials(schemeId);
+        AuthenticationCredentials credentials = session.getUserLogin().getUnvalidatedCredentials(schemeId);
         if (credentials != null) {
             return credentials;
         }
@@ -94,7 +94,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
             credentials = new BasicCredentials(username, password);
-            session.getAuthenticationContext().addUnvalidatedCredentials(credentials);
+            session.getUserLogin().addUnvalidatedCredentials(credentials);
         }
         return credentials;
     }
@@ -109,7 +109,7 @@ public class BasicWebAuthenticationScheme implements WebAuthenticationScheme {
             throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
         BasicCredentials bac = (BasicCredentials) credentials;
-        AuthenticationEventLog.getContextForThread().setUsername(bac.username);
+        UserLoginTracker.getLoginOnThread().setUsername(bac.username);
         UsernamePasswordCredentials upc = new UsernamePasswordCredentials(bac.username, bac.password);
         Authenticated authenticated = authenticateWithUsernamePasswordScheme(upc);
         return new BasicAuthenticated(authenticated.getUser(), schemeId);

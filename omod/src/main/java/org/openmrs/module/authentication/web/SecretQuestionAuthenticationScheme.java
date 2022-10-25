@@ -70,16 +70,16 @@ public class SecretQuestionAuthenticationScheme implements WebAuthenticationSche
 
     @Override
     public AuthenticationCredentials getCredentials(AuthenticationSession session) {
-        AuthenticationCredentials credentials = session.getAuthenticationContext().getUnvalidatedCredentials(schemeId);
+        AuthenticationCredentials credentials = session.getUserLogin().getUnvalidatedCredentials(schemeId);
         if (credentials != null) {
             return credentials;
         }
         String question = session.getRequestParam(questionParam);
         String answer = session.getRequestParam(answerParam);
         if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
-            User candidateUser = session.getAuthenticationContext().getUser();
+            User candidateUser = session.getUserLogin().getUser();
             credentials = new SecretQuestionAuthenticationCredentials(candidateUser, question, answer);
-            session.getAuthenticationContext().addUnvalidatedCredentials(credentials);
+            session.getUserLogin().addUnvalidatedCredentials(credentials);
             return credentials;
         }
         return null;

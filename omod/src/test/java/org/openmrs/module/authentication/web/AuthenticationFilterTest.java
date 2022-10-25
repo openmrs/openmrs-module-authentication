@@ -17,8 +17,8 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
-import org.openmrs.module.authentication.AuthenticationEventLog;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationFilter;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
@@ -45,7 +45,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	MockHttpServletRequest request;
 	MockHttpServletResponse response;
 	User user;
-	AuthenticationContext context;
+	UserLogin userLogin;
 
 	@BeforeEach
 	@Override
@@ -58,8 +58,8 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.setSession(session);
 		response = new MockHttpServletResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
-		context = authenticationSession.getAuthenticationContext();
-		AuthenticationEventLog.addContextToThread(context);
+		userLogin = authenticationSession.getUserLogin();
+		UserLoginTracker.setLoginOnThread(userLogin);
 		filter = new MockAuthenticationFilter(newFilterConfig("authenticationFilter"));
 		filter.setAuthenticationSession(authenticationSession);
 		chain = new MockFilterChain();
@@ -148,16 +148,16 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("password", "adminPassword");
 		assertThat(session.isInvalid(), equalTo(false));
 		AuthenticationSession session1 = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context1 = session1.getAuthenticationContext();
-		String contextId = context1.getContextId();
-		String httpSessionId = context1.getHttpSessionId();
+		UserLogin login1 = session1.getUserLogin();
+		String loginId = login1.getLoginId();
+		String httpSessionId = login1.getHttpSessionId();
 		Map<String, Object> initialAttributes = session1.getHttpSessionAttributes();
 		filter.doFilter(request, response, chain);
 		assertThat(session.isInvalid(), equalTo(true));
 		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
-		AuthenticationContext context2 = session2.getAuthenticationContext();
-		assertThat(context2.getContextId(), equalTo(contextId));
-		assertThat(context2.getHttpSessionId(), not(httpSessionId));
+		UserLogin login2 = session2.getUserLogin();
+		assertThat(login2.getLoginId(), equalTo(loginId));
+		assertThat(login2.getHttpSessionId(), not(httpSessionId));
 		for (String key : initialAttributes.keySet()) {
 			Object initialVal = initialAttributes.get(key);
 			Object newVal = session2.getHttpSessionAttributes().get(key);
@@ -172,7 +172,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.addParameter("password", "test");
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
-		assertThat(authenticationSession.getAuthenticationContext().getUnvalidatedCredentials("basic"), nullValue());
+		assertThat(authenticationSession.getUserLogin().getUnvalidatedCredentials("basic"), nullValue());
 		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
 
@@ -268,6 +268,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void teardown() {
 		super.teardown();
 		filter.destroy();
-		AuthenticationEventLog.removeContextFromThread();
+		UserLoginTracker.removeLoginFromThread();
 	}
 }

@@ -3,6 +3,7 @@ package org.openmrs.module.authentication;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
+import org.openmrs.api.context.BasicAuthenticated;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,7 +18,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-public class AuthenticationContextTest extends BaseAuthenticationTest {
+public class UserLoginTest extends BaseAuthenticationTest {
 
 	@BeforeEach
 	public void setup() {
@@ -35,12 +36,12 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldSerializeAndDeserialize() throws Exception {
-		assertThat(Serializable.class.isAssignableFrom(AuthenticationContext.class), equalTo(true));
+		assertThat(Serializable.class.isAssignableFrom(UserLogin.class), equalTo(true));
 
-		AuthenticationContext ctx = new AuthenticationContext();
+		UserLogin ctx = new UserLogin();
 		User u = newUser("admin");
 		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("test1", u));
-		ctx.markCredentialsAsValid("test1", u);
+		ctx.authenticationSuccessful("test1", new BasicAuthenticated(u, "test1"));
 		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("test2", u));
 
 		File serializedDataFile = File.createTempFile(getClass().getSimpleName(), "dat");
@@ -51,7 +52,7 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 		}
 		FileInputStream fileInputStream = new FileInputStream(serializedDataFile);
 		try (ObjectInputStream in = new ObjectInputStream(fileInputStream)) {
-			AuthenticationContext deserialized = (AuthenticationContext) in.readObject();
+			UserLogin deserialized = (UserLogin) in.readObject();
 			assertThat(deserialized, notNullValue());
 			assertThat(deserialized.getUser(), equalTo(u));
 			AuthenticationCredentials test1 = deserialized.getUnvalidatedCredentials("test1");
@@ -70,7 +71,7 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldAddGetAndRemoveCredentials() {
-		AuthenticationContext ctx = new AuthenticationContext();
+		UserLogin ctx = new UserLogin();
 		User user1 = newUser("user1");
 		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("scheme1", user1));
 		User user2 = newUser("user2");
@@ -83,7 +84,7 @@ public class AuthenticationContextTest extends BaseAuthenticationTest {
 		assertThat(c2.getAuthenticationScheme(), equalTo("scheme2"));
 		assertThat(c2.getClass(), equalTo(TestAuthenticationCredentials.class));
 		assertThat(c2.getClientName(), equalTo("user2"));
-		ctx.markCredentialsAsInvalid(c1);
+		ctx.authenticationFailed(c1.getAuthenticationScheme());
 		assertThat(ctx.getUnvalidatedCredentials("scheme1"), nullValue());
 	}
 }

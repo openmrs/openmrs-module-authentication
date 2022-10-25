@@ -15,7 +15,6 @@ import org.apache.logging.log4j.core.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openmrs.module.authentication.AuthenticationEventLog;
 import org.springframework.mock.web.MockHttpSession;
 
 import javax.servlet.http.HttpSessionEvent;
@@ -55,9 +54,9 @@ public class AuthenticationHttpSessionListenerTest extends BaseWebAuthentication
 	@Test
 	public void shouldCreateNewAuthenticationSession() {
 		MockHttpSession session = newSession();
-		assertThat(getAuthenticationContext(session), nullValue());
+		assertThat(getUserLogin(session), nullValue());
 		listener.sessionCreated(new HttpSessionEvent(session));
-		assertThat(getAuthenticationContext(session), notNullValue());
+		assertThat(getUserLogin(session), notNullValue());
 	}
 
 	@Test

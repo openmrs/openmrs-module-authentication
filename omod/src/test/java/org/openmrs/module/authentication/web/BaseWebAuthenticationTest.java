@@ -1,7 +1,7 @@
 package org.openmrs.module.authentication.web;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.openmrs.module.authentication.AuthenticationContext;
+import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.BaseAuthenticationTest;
 import org.springframework.mock.web.MockFilterConfig;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -48,9 +48,9 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 
 	protected MockHttpSession newSession(String username) {
 		MockHttpSession session = newSession();
-		AuthenticationContext context = new AuthenticationContext();
-		context.setUsername(username);
-		setAuthenticationContext(session, context);
+		UserLogin userLogin = new UserLogin();
+		userLogin.setUsername(username);
+		setUserLogin(session, userLogin);
 		return session;
 	}
 
@@ -58,11 +58,11 @@ public abstract class BaseWebAuthenticationTest extends BaseAuthenticationTest {
 		return new MockFilterConfig(servletContext, filterName);
 	}
 
-	protected AuthenticationContext getAuthenticationContext(HttpSession session) {
-		return (AuthenticationContext) session.getAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY);
+	protected UserLogin getUserLogin(HttpSession session) {
+		return (UserLogin) session.getAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
 	}
 
-	protected void setAuthenticationContext(HttpSession session, AuthenticationContext context) {
-		session.setAttribute(AuthenticationSession.AUTHENTICATION_CONTEXT_KEY, context);
+	protected void setUserLogin(HttpSession session, UserLogin userLogin) {
+		session.setAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN, userLogin);
 	}
 }

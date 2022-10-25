@@ -5,12 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
+import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.TestAuthenticationCredentials;
+import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockSecretQuestionAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -31,7 +32,7 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 	MockHttpServletResponse response;
 	MockSecretQuestionAuthenticationScheme authenticationScheme;
 	User candidateUser;
-	AuthenticationContext context;
+	UserLogin userLogin;
 
 	@BeforeEach
 	@Override
@@ -50,9 +51,9 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		candidateUser = new User();
 		candidateUser.setUsername("testing");
 		authenticationSession = new MockAuthenticationSession(request, newResponse());
-		context = authenticationSession.getAuthenticationContext();
-		context.addUnvalidatedCredentials(new TestAuthenticationCredentials("test", candidateUser));
-		context.markCredentialsAsValid("test", candidateUser);
+		userLogin = authenticationSession.getUserLogin();
+		userLogin.addUnvalidatedCredentials(new TestAuthenticationCredentials("test", candidateUser));
+		userLogin.authenticationSuccessful("test", new BasicAuthenticated(candidateUser, "test"));
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockSecretQuestionAuthenticationScheme.class));
 		authenticationScheme = (MockSecretQuestionAuthenticationScheme) scheme;

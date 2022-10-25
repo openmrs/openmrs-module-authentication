@@ -9,7 +9,7 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationEventLog;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -47,13 +47,13 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 		assertThat(scheme.getClass(), equalTo(MockBasicWebAuthenticationScheme.class));
 		authenticationScheme = (MockBasicWebAuthenticationScheme) scheme;
 		authenticationSession = new MockAuthenticationSession(session);
-		AuthenticationEventLog.addContextToThread(authenticationSession.getAuthenticationContext());
+		UserLoginTracker.setLoginOnThread(authenticationSession.getUserLogin());
 	}
 
 	@AfterEach
 	@Override
 	public void teardown() {
-		AuthenticationEventLog.removeContextFromThread();
+		UserLoginTracker.removeLoginFromThread();
 		super.teardown();
 	}
 

@@ -17,10 +17,8 @@ import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.AuthenticationEvent;
-import org.openmrs.module.authentication.AuthenticationEventLog;
+import org.openmrs.module.authentication.UserLogin;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import javax.servlet.http.Cookie;
@@ -41,9 +39,9 @@ import java.util.Properties;
  * The AuthenticationSession is essentially a wrapper around the HttpSession and the HttpServletRequest (if present),
  * and supports two primary objectives:
  * <p>
- * 1. Manages the lifecycle and provides access to the AuthenticationContext in the HttpSession during the
+ * 1. Manages the lifecycle and provides access to the UserLogin in the HttpSession during the
  * authentication process, to enable workflows to span multiple requests (i.e. two-factor authentication, etc.)
- * 2. Ensures relevant Authentication data is added to (and removed from) the Logging context
+ * 2. Ensures relevant data is added to (and removed from) the UserLogin
  * so that implementations can choose to log information about system authentication as needs evolve.  This
  * information includes the IP Address, Username, UserId, HttpSession ID, and a unique ID that encompasses
  * the user's entire Authentication Session from pre-login HTTP Session creation to post-logout HTTP session destroy
@@ -52,30 +50,29 @@ public class AuthenticationSession {
 
     protected final Log log = LogFactory.getLog(getClass());
 
-    public static final String AUTHENTICATION_CONTEXT_KEY = "__authentication_context";
+    public static final String AUTHENTICATION_USER_LOGIN = "__authentication_user_login";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
+    public static final String AUTHENTICATION_SESSION_REGENERATING = "__authentication_session_regenerating";
 
     private HttpSession session;
     private HttpServletRequest request;
     private HttpServletResponse response;
-    private AuthenticationContext context;
+    private UserLogin userLogin;
 
     /**
      * This constructor should be used in cases where there is an HttpSession available but not an
      * HttpServletRequest.  Examples of this are in HttpSessionListeners.
      * This constructor sets up data in the HTTP session for tracking authentication details
-     * If a new AuthenticationSession is constructed and a user is already authenticated or there is existing
-     * data in the LoggingContext on the current thread, ensure this is initialized
      * @param session the HttpSession to use to construct this AuthenticationSession
      */
     public AuthenticationSession(HttpSession session) {
         this.session = session;
-        context = (AuthenticationContext) session.getAttribute(AUTHENTICATION_CONTEXT_KEY);
-        if (context == null) {
-            context = new AuthenticationContext();
-            session.setAttribute(AUTHENTICATION_CONTEXT_KEY, context);
+        userLogin = (UserLogin) session.getAttribute(AUTHENTICATION_USER_LOGIN);
+        if (userLogin == null) {
+            userLogin = new UserLogin();
+            session.setAttribute(AUTHENTICATION_USER_LOGIN, userLogin);
         }
-        context.setHttpSessionId(session.getId());
+        userLogin.setHttpSessionId(session.getId());
     }
 
     /**
@@ -91,24 +88,24 @@ public class AuthenticationSession {
         this.request = request;
         this.response = response;
 
-        if (context.getIpAddress() != null) {
-            if (!context.getIpAddress().equals(request.getRemoteAddr())) {
-                log.warn("IP Address change detected: '" + context.getIpAddress() + "' -> '" + request.getRemoteAddr() + "'");
+        if (userLogin.getIpAddress() != null) {
+            if (!userLogin.getIpAddress().equals(request.getRemoteAddr())) {
+                log.warn("IP Address change detected: '" + userLogin.getIpAddress() + "' -> '" + request.getRemoteAddr() + "'");
             }
         }
-        context.setIpAddress(request.getRemoteAddr());
+        userLogin.setIpAddress(request.getRemoteAddr());
     }
 
     /**
-     * @return the AuthenticationContext associated with this session
+     * @return the UserLogin associated with this session
      */
-    public AuthenticationContext getAuthenticationContext() {
-        return context;
+    public UserLogin getUserLogin() {
+        return userLogin;
     }
 
     @Override
     public String toString() {
-        return "sessionId="+session.getId()+",contextId="+context.getContextId();
+        return "sessionId="+session.getId()+",loginId="+ userLogin.getLoginId();
     }
 
     /**
@@ -139,7 +136,7 @@ public class AuthenticationSession {
      * @return true if there is an open session with an authenticated user
      */
     public boolean isUserAuthenticated() {
-        return context.isUserAuthenticated();
+        return userLogin.isUserAuthenticated();
     }
 
     /**
@@ -159,13 +156,11 @@ public class AuthenticationSession {
             else {
                 authenticated = scheme.authenticate(credentials);
             }
-            getAuthenticationContext().markCredentialsAsValid(schemeId, authenticated.getUser());
-            AuthenticationEventLog.logEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, scheme);
+            getUserLogin().authenticationSuccessful(scheme.getSchemeId(), authenticated);
             scheme.afterAuthenticationSuccess(this);
         }
         catch (Exception e) {
-            AuthenticationEventLog.logEvent(AuthenticationEvent.AUTHENTICATION_FAILED, scheme);
-            getAuthenticationContext().markCredentialsAsInvalid(credentials);
+            getUserLogin().authenticationFailed(scheme.getSchemeId());
             setErrorMessage(e.getMessage());
             scheme.afterAuthenticationFailure(this);
             throw new ContextAuthenticationException(e.getMessage(), e);
@@ -182,6 +177,7 @@ public class AuthenticationSession {
     public void regenerateHttpSession() {
         Properties sessionAttributes = new Properties();
         if (session != null) {
+            session.setAttribute(AUTHENTICATION_SESSION_REGENERATING, true);
             Enumeration<?> attrNames = session.getAttributeNames();
             if (attrNames != null) {
                 while (attrNames.hasMoreElements()) {
@@ -199,7 +195,15 @@ public class AuthenticationSession {
                 session.setAttribute(attribute, sessionAttributes.get(attribute));
             }
         }
-        getAuthenticationContext().setHttpSessionId(session.getId());
+        session.removeAttribute(AUTHENTICATION_SESSION_REGENERATING);
+        getUserLogin().setHttpSessionId(session.getId());
+    }
+
+    /**
+     * @return true if the underlying HTTP Session is currently being regenerated
+     */
+    public boolean isSessionRegenerating() {
+        return session.getAttribute(AUTHENTICATION_SESSION_REGENERATING) == Boolean.TRUE;
     }
 
     /**
@@ -214,8 +218,8 @@ public class AuthenticationSession {
         if (isUserAuthenticated()) {
             user = Context.getAuthenticatedUser();
         }
-        else if (getAuthenticationContext().getUser() != null) {
-            user = getAuthenticationContext().getUser();
+        else if (getUserLogin().getUser() != null) {
+            user = getUserLogin().getUser();
         }
         if (user != null && Context.isSessionOpen()) {
             locale = Context.getUserService().getDefaultLocaleForUser(user);

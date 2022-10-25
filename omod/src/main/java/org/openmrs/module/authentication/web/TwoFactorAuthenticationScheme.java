@@ -20,7 +20,7 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.DaoAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.AuthenticationContext;
+import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
@@ -73,7 +73,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 
 	@Override
 	public String getChallengeUrl(AuthenticationSession session) {
-		User candidateUser = session.getAuthenticationContext().getUser();
+		User candidateUser = session.getUserLogin().getUser();
 		if (candidateUser == null) {
 			return getPrimaryAuthenticationScheme().getChallengeUrl(session);
 		}
@@ -90,15 +90,15 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	@Override
 	public AuthenticationCredentials getCredentials(AuthenticationSession session) {
 
-		AuthenticationContext context = session.getAuthenticationContext();
-		AuthenticationCredentials existingCredentials = context.getUnvalidatedCredentials(schemeId);
+		UserLogin userLogin = session.getUserLogin();
+		AuthenticationCredentials existingCredentials = userLogin.getUnvalidatedCredentials(schemeId);
 		if (existingCredentials != null) {
 			return existingCredentials;
 		}
 
 		// Primary Authentication
 		WebAuthenticationScheme primaryScheme = getPrimaryAuthenticationScheme();
-		if (!context.isCredentialValidated(primaryScheme.getSchemeId())) {
+		if (!userLogin.isCredentialValidated(primaryScheme.getSchemeId())) {
 			AuthenticationCredentials primaryCredentials = primaryScheme.getCredentials(session);
 			if (primaryCredentials != null) {
 				try {
@@ -110,10 +110,10 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 		}
 
 		// Secondary Authentication
-		if (context.getUser() != null) {
-			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(context.getUser());
+		if (userLogin.getUser() != null) {
+			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(userLogin.getUser());
 			if (secondaryScheme != null) {
-				if (!context.isCredentialValidated(secondaryScheme.getSchemeId())) {
+				if (!userLogin.isCredentialValidated(secondaryScheme.getSchemeId())) {
 					AuthenticationCredentials secondaryCredentials = secondaryScheme.getCredentials(session);
 					if (secondaryCredentials != null) {
 						try {
@@ -124,11 +124,11 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 					}
 				}
 			}
-			if (secondaryScheme == null || context.isCredentialValidated(secondaryScheme.getSchemeId())) {
+			if (secondaryScheme == null || userLogin.isCredentialValidated(secondaryScheme.getSchemeId())) {
 				TwoFactorAuthenticationCredentials credentials = new TwoFactorAuthenticationCredentials(
-						context.getUser(), context.getValidatedCredentials()
+						userLogin.getUser(), userLogin.getValidatedCredentials()
 				);
-				context.addUnvalidatedCredentials(credentials);
+				userLogin.addUnvalidatedCredentials(credentials);
 				return credentials;
 			}
 

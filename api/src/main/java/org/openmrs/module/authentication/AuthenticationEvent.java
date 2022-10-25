@@ -9,15 +9,35 @@
  */
 package org.openmrs.module.authentication;
 
+import java.io.Serializable;
+import java.util.Date;
+
 /**
- * This class represents the distinct authentication events
+ * Represents a particular event during the authentication process
  */
-public enum AuthenticationEvent {
-    AUTHENTICATION_SUCCEEDED,
-    AUTHENTICATION_FAILED,
-    LOGIN_SUCCEEDED,
-    LOGIN_FAILED,
-    LOGIN_EXPIRED,
-    LOGOUT_SUCCEEDED,
-    LOGOUT_FAILED
+public class AuthenticationEvent implements Serializable {
+
+    public static final String AUTHENTICATION_SUCCEEDED = "AUTHENTICATION_SUCCEEDED";
+    public static final String AUTHENTICATION_FAILED = "AUTHENTICATION_FAILED";
+    public static final String LOGIN_SUCCEEDED = "LOGIN_SUCCEEDED";
+    public static final String LOGIN_FAILED = "LOGIN_FAILED";
+    public static final String LOGIN_EXPIRED = "LOGIN_EXPIRED";
+    public static final String LOGOUT_SUCCEEDED = "LOGOUT_SUCCEEDED";
+    public static final String LOGOUT_FAILED = "LOGOUT_FAILED";
+
+    private final String event;
+    private final Date eventDate;
+
+    public AuthenticationEvent(String event) {
+        this.event = event;
+        this.eventDate = new Date();
+    }
+
+    public String getEvent() {
+        return event;
+    }
+
+    public Date getEventDate() {
+        return eventDate;
+    }
 }

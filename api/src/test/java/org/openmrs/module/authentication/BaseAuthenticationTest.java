@@ -41,7 +41,7 @@ public abstract class BaseAuthenticationTest {
 		PatternLayout layout = PatternLayout.newBuilder().withPattern("%m").build();
 		memoryAppender = MemoryAppender.newBuilder().setLayout(layout).build();
 		memoryAppender.start();
-		Logger logger = (Logger) LogManager.getLogger(AuthenticationEventLog.class);
+		Logger logger = (Logger) LogManager.getLogger(UserLogin.class);
 		logger.setAdditive(false);
 		logger.setLevel(Level.INFO);
 		logger.addAppender(memoryAppender);
@@ -87,16 +87,13 @@ public abstract class BaseAuthenticationTest {
 
 	@AfterEach
 	public void teardown() {
-		Logger logger = (Logger) LogManager.getLogger(AuthenticationEventLog.class);
+		Logger logger = (Logger) LogManager.getLogger(UserLogin.class);
 		logger.removeAppender(memoryAppender);
 		memoryAppender.stop();
 		((Logger) LogManager.getRootLogger()).getContext().updateLoggers();
 		memoryAppender = null;
 		logger = null;
-		AuthenticationContext threadContext = AuthenticationEventLog.getContextForThread();
-		if (threadContext != null) {
-			AuthenticationEventLog.removeContextFromThread();
-		}
+		UserLoginTracker.removeLoginFromThread();
 		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
 			runtimePropertiesFile.delete();
 		}

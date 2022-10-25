@@ -11,9 +11,8 @@ package org.openmrs.module.authentication.web;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.openmrs.module.authentication.AuthenticationContext;
-import org.openmrs.module.authentication.AuthenticationEvent;
-import org.openmrs.module.authentication.AuthenticationEventLog;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpSessionEvent;
@@ -34,13 +33,13 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 	 */
 	@Override
 	public void sessionCreated(HttpSessionEvent httpSessionEvent) {
-		// Instantiating the AuthenticationSession here ensures that the AuthenticationContext is created here
+		// Instantiating the AuthenticationSession here ensures that the UserLogin is created here
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
 		log.debug("Http Session Created: " + session);
-		AuthenticationContext context = session.getAuthenticationContext();
-		AuthenticationEventLog.addContextToThread(context);
+		UserLogin login = session.getUserLogin();
+		UserLoginTracker.setLoginOnThread(login);
 		if (session.isUserAuthenticated()) {
-			AuthenticationEventLog.addLoggedInAuthenticationContext(context);
+			UserLoginTracker.addActiveLogin(login);
 		}
 	}
 
@@ -52,11 +51,11 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 	public void sessionDestroyed(HttpSessionEvent httpSessionEvent) {
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
 		log.debug("Http Session Destroyed: " + session);
-		AuthenticationContext context = session.getAuthenticationContext();
-		if (context.getLoginDate() != null && context.getLogoutDate() == null) {
-			AuthenticationEventLog.logEvent(AuthenticationEvent.LOGIN_EXPIRED, null);
+		UserLogin login = session.getUserLogin();
+		if (!session.isSessionRegenerating() && login.getLoginDate() != null && login.getLogoutDate() == null) {
+			login.loginExpired();
 		}
-		AuthenticationEventLog.removeContextFromThread();
-		AuthenticationEventLog.removeLoggedInAuthenticationContext(context);
+		UserLoginTracker.removeLoginFromThread();
+		UserLoginTracker.removeActiveLogin(login);
 	}
 }

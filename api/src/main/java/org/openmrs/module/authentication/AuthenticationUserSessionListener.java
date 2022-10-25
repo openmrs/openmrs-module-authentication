@@ -15,58 +15,46 @@ import org.springframework.stereotype.Component;
 
 import java.util.Date;
 
-import static org.openmrs.module.authentication.AuthenticationEvent.LOGIN_FAILED;
-import static org.openmrs.module.authentication.AuthenticationEvent.LOGIN_SUCCEEDED;
-import static org.openmrs.module.authentication.AuthenticationEvent.LOGOUT_FAILED;
-import static org.openmrs.module.authentication.AuthenticationEvent.LOGOUT_SUCCEEDED;
-
 /**
- * Implementation of UserSessionListener which logs message with a marker every time a user is logged in or out
+ * Implementation of UserSessionListener which creates or updates a UserLogin instance
  */
 @Component
 public class AuthenticationUserSessionListener implements UserSessionListener {
 
 	@Override
 	public void loggedInOrOut(User user, Event event, Status status) {
-		AuthenticationContext context = AuthenticationEventLog.getContextForThread();
+		UserLogin login = UserLoginTracker.getLoginOnThread();
 		boolean addedToThread = false;
 		try {
-			if (context == null) {
-				context = new AuthenticationContext();
-				AuthenticationEventLog.addContextToThread(context);
+			if (login == null) {
+				login = new UserLogin();
+				UserLoginTracker.setLoginOnThread(login);
 				addedToThread = true;
 			}
-			if (context.getUser() == null) {
-				context.setUser(user);
+			login.setLastActivityDate(new Date());
+			if (login.getUser() == null) {
+				login.setUser(user);
 			}
-			if (!context.getUser().equals(user)) {
+			if (!login.getUser().equals(user)) {
 				throw new IllegalStateException("authentication.error.incorrectUser");
 			}
-			AuthenticationEvent authenticationEvent = null;
 			if (event == Event.LOGIN) {
 				if (status == Status.SUCCESS) {
-					authenticationEvent = LOGIN_SUCCEEDED;
-					if (context.getLoginDate() == null) {
-						context.setLoginDate(new Date());
-					}
+					login.loginSuccessful();
 				} else if (status == Status.FAIL) {
-					authenticationEvent = LOGIN_FAILED;
+					login.loginFailed();
 				}
 			} else if (event == Event.LOGOUT) {
 				if (status == Status.SUCCESS) {
-					if (context.getLogoutDate() == null) {
-						context.setLogoutDate(new Date());
-					}
-					authenticationEvent = LOGOUT_SUCCEEDED;
+					login.logoutSucceeded();
 				} else if (status == Status.FAIL) {
-					authenticationEvent = LOGOUT_FAILED;
+					login.logoutFailed();
 				}
 			}
-			AuthenticationEventLog.logEvent(authenticationEvent, null, context);
 		}
 		finally {
 			if (addedToThread) {
-				AuthenticationEventLog.removeContextFromThread();
+				UserLoginTracker.removeLoginFromThread();
 			}
 		}
 	}
