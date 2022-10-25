@@ -18,12 +18,11 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
-import org.openmrs.api.context.DaoAuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
+import org.openmrs.module.authentication.UserLogin;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -34,7 +33,7 @@ import java.util.Set;
 /**
  * An authentication scheme that supports a primary and secondary authentication factor
  */
-public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme implements WebAuthenticationScheme {
+public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 
 	protected final Log log = LogFactory.getLog(getClass());
 
@@ -43,21 +42,8 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	public static final String SECONDARY_TYPE = "secondaryType";
 	private static final String DOT = ".";
 
-	protected String schemeId;
 	protected List<String> primaryOptions = new ArrayList<>();
 	protected List<String> secondaryOptions = new ArrayList<>();
-
-	public TwoFactorAuthenticationScheme() {
-		this.schemeId = getClass().getName();
-	}
-
-	/**
-	 * @return the configured schemeId
-	 */
-	@Override
-	public String getSchemeId() {
-		return schemeId;
-	}
 
 	/**
 	 * This supports configuring the `primaryOptions` and `secondaryOptions` that are supported factors
@@ -66,7 +52,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	 */
 	@Override
 	public void configure(String schemeId, Properties config) {
-		this.schemeId = schemeId;
+		super.configure(schemeId, config);
 		primaryOptions = AuthenticationUtil.getStringList(config.getProperty("primaryOptions"), ",");
 		secondaryOptions = AuthenticationUtil.getStringList(config.getProperty("secondaryOptions"), ",");
 	}
@@ -91,7 +77,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	public AuthenticationCredentials getCredentials(AuthenticationSession session) {
 
 		UserLogin userLogin = session.getUserLogin();
-		AuthenticationCredentials existingCredentials = userLogin.getUnvalidatedCredentials(schemeId);
+		AuthenticationCredentials existingCredentials = userLogin.getUnvalidatedCredentials(getSchemeId());
 		if (existingCredentials != null) {
 			return existingCredentials;
 		}
@@ -140,12 +126,15 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 	 * @see AuthenticationScheme#authenticate(Credentials)
 	 */
 	@Override
-	public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+	public Authenticated authenticate(AuthenticationCredentials credentials, UserLogin userLogin) {
 		// Ensure the credentials provided are of the expected type
 		if (!(credentials instanceof TwoFactorAuthenticationCredentials)) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
 		TwoFactorAuthenticationCredentials mfaCreds = (TwoFactorAuthenticationCredentials) credentials;
+		if (userLogin.getUser() != null && !userLogin.getUser().equals(mfaCreds.user)) {
+			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+		}
 		if (!mfaCreds.validatedCredentials.contains(getPrimaryAuthenticationScheme().getSchemeId())) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
@@ -233,7 +222,7 @@ public class TwoFactorAuthenticationScheme extends DaoAuthenticationScheme imple
 
 		@Override
 		public String getAuthenticationScheme() {
-			return schemeId;
+			return getSchemeId();
 		}
 
 		protected TwoFactorAuthenticationCredentials(User user, Set<String> validatedCredentials) {

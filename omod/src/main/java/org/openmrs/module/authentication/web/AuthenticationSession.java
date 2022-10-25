@@ -156,11 +156,9 @@ public class AuthenticationSession {
             else {
                 authenticated = scheme.authenticate(credentials);
             }
-            getUserLogin().authenticationSuccessful(scheme.getSchemeId(), authenticated);
             scheme.afterAuthenticationSuccess(this);
         }
         catch (Exception e) {
-            getUserLogin().authenticationFailed(scheme.getSchemeId());
             setErrorMessage(e.getMessage());
             scheme.afterAuthenticationFailure(this);
             throw new ContextAuthenticationException(e.getMessage(), e);
