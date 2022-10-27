@@ -133,6 +133,17 @@ public class AuthenticationSession {
     }
 
     /**
+     * @param name the name of the header to return
+     * @return the value of the header, or null if the request is null
+     */
+    public String getRequestHeader(String name) {
+        if (request != null) {
+            return request.getHeader(name);
+        }
+        return null;
+    }
+
+    /**
      * @return true if there is an open session with an authenticated user
      */
     public boolean isUserAuthenticated() {

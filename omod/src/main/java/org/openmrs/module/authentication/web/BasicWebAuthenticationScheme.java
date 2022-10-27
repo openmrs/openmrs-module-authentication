@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -21,6 +22,7 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -41,6 +43,8 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
     public static final String DEFAULT_LOGIN_PAGE = "/login.htm";
     public static final String DEFAULT_USERNAME_PARAM = "username";
     public static final String DEFAULT_PASSWORD_PARAM = "password";
+
+    public static final String AUTHORIZATION_HEADER = "Authorization";
 
     protected String loginPage;
     protected String usernameParam;
@@ -78,6 +82,25 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
         String password = session.getRequestParam(passwordParam);
         if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
             credentials = new BasicCredentials(username, password);
+        }
+        else {
+            String authHeader = session.getRequestHeader(AUTHORIZATION_HEADER);
+            if (StringUtils.isNotBlank(authHeader)) {
+                // Expected format:  "Basic ${base64encode(username + ":" + password)}"
+                try {
+                    authHeader = authHeader.substring(6); // remove the leading "Basic "
+                    String decodedAuthHeader = new String(Base64.decodeBase64(authHeader), StandardCharsets.UTF_8);
+                    String[] userAndPass = decodedAuthHeader.split(":");
+                    credentials = new BasicCredentials(userAndPass[0], userAndPass[1]);
+                }
+                catch (Exception e) {
+                    session.setErrorMessage("authentication.error.invalidCredentials");
+                    log.warn("Error parsing authentication header", e);
+                }
+            }
+        }
+
+        if (credentials != null) {
             session.getUserLogin().addUnvalidatedCredentials(credentials);
         }
         return credentials;
