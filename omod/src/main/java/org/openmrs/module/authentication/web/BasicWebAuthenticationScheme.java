@@ -16,6 +16,7 @@ import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationCredentials;
@@ -104,6 +105,20 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
             session.getUserLogin().addUnvalidatedCredentials(credentials);
         }
         return credentials;
+    }
+
+    /**
+     * Extends the authentication scheme to support authentication with UsernamePasswordCredentials, mainly for
+     * compatibility with existing clients and modules that pass credentials of this type into the scheme
+     * @see BasicWebAuthenticationScheme#authenticate(Credentials)
+     */
+    @Override
+    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+        if (credentials instanceof UsernamePasswordCredentials) {
+            UsernamePasswordCredentials upc = (UsernamePasswordCredentials) credentials;
+            credentials = new BasicCredentials(upc.getUsername(), upc.getPassword());
+        }
+        return super.authenticate(credentials);
     }
 
     /**

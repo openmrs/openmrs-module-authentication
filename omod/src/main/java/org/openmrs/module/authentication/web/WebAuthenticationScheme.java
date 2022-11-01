@@ -54,10 +54,12 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
     }
 
     /**
-     * Final implementation of authenticate method that notifies UserLogin of successful or failed attempts
+     * Implementation of authenticate method that notifies UserLogin of successful or failed attempts
+     * This method is not intended to be re-implemented
+     * Subclasses should instead implement authenticate(AuthenticationCredentials, UserLogin)
      */
     @Override
-    public final Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
+    public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
         if (!(credentials instanceof AuthenticationCredentials)) {
             throw new ContextAuthenticationException("authentication.error.invalidCredentials");
         }
