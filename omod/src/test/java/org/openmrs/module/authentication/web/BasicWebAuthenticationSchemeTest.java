@@ -3,12 +3,14 @@ package org.openmrs.module.authentication.web;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.TestAuthenticationCredentials;
 import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationScheme;
@@ -93,6 +95,15 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 	}
 
 	@Test
+	public void shouldAuthenticateWithUsernamePasswordCredentials() {
+		UsernamePasswordCredentials credentials = new UsernamePasswordCredentials("admin", "adminPassword");
+		Authenticated authenticated = authenticationScheme.authenticate(credentials);
+		assertThat(authenticated, notNullValue());
+		assertThat(authenticated.getAuthenticationScheme(), equalTo("basic"));
+		assertThat(authenticated.getUser().getUsername(), equalTo("admin"));
+	}
+
+	@Test
 	public void shouldAuthenticateWithValidCredentials() {
 		AuthenticationCredentials credentials = getCredentials("admin", "adminPassword");
 		Authenticated authenticated = authenticationScheme.authenticate(credentials);
@@ -109,7 +120,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldFailToAuthenticateIfCredentialsAreIncorrectType() {
-		UsernamePasswordCredentials creds = new UsernamePasswordCredentials("admin", "adminPassword");
+		TestAuthenticationCredentials creds = new TestAuthenticationCredentials("test", new User());
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(creds));
 	}
 }
