@@ -128,11 +128,11 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
     public Authenticated authenticate(AuthenticationCredentials credentials, UserLogin userLogin) {
         // Ensure the credentials provided are of the expected type
         if (!(credentials instanceof BasicCredentials)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.incorrectCredentialsForScheme");
         }
         BasicCredentials bac = (BasicCredentials) credentials;
         if (userLogin.getUsername() != null && !userLogin.getUsername().equals(bac.username)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.userDiffersFromCandidateUser");
         }
         userLogin.setUsername(bac.username);
         UsernamePasswordCredentials upc = new UsernamePasswordCredentials(bac.username, bac.password);

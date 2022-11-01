@@ -186,7 +186,7 @@ public class UserLogin implements Serializable {
      */
     public synchronized void authenticationSuccessful(String schemeId, Authenticated authenticated) {
         if (authenticated.getUser() == null || (user != null && !user.equals(authenticated.getUser()))) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.userDiffersFromCandidateUser");
         }
         setUser(authenticated.getUser());
         validatedCredentials.add(schemeId);

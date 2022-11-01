@@ -80,22 +80,25 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
 
         // Ensure the credentials provided are of the expected type
         if (!(credentials instanceof SecretQuestionAuthenticationCredentials)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.incorrectCredentialsForScheme");
         }
         SecretQuestionAuthenticationCredentials c = (SecretQuestionAuthenticationCredentials) credentials;
 
-        if (c.user == null || StringUtils.isBlank(c.question) || StringUtils.isBlank(c.answer)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+        if (c.user == null) {
+            throw new ContextAuthenticationException("authentication.error.candidateUserRequired");
+        }
+        if (StringUtils.isBlank(c.question) || StringUtils.isBlank(c.answer)) {
+            throw new ContextAuthenticationException("authentication.error.noSecretQuestionConfigured");
         }
         if (userLogin.getUser() != null && !userLogin.getUser().equals(c.user)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.userDiffersFromCandidateUser");
         }
         String expectedQuestion = getSecretQuestion(c.user);
         if (StringUtils.isBlank(expectedQuestion) || !expectedQuestion.equalsIgnoreCase(c.question)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.incorrectQuestion");
         }
         if (!isSecretAnswer(c.user, c.answer)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.incorrectAnswer");
         }
 
         return new BasicAuthenticated(c.user, credentials.getAuthenticationScheme());

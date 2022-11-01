@@ -61,7 +61,7 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
     @Override
     public Authenticated authenticate(Credentials credentials) throws ContextAuthenticationException {
         if (!(credentials instanceof AuthenticationCredentials)) {
-            throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+            throw new ContextAuthenticationException("authentication.error.incorrectCredentialsForScheme");
         }
         AuthenticationCredentials authenticationCredentials = (AuthenticationCredentials) credentials;
         String schemeId = authenticationCredentials.getAuthenticationScheme();

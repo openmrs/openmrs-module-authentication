@@ -129,19 +129,19 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	public Authenticated authenticate(AuthenticationCredentials credentials, UserLogin userLogin) {
 		// Ensure the credentials provided are of the expected type
 		if (!(credentials instanceof TwoFactorAuthenticationCredentials)) {
-			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+			throw new ContextAuthenticationException("authentication.error.incorrectCredentialsForScheme");
 		}
 		TwoFactorAuthenticationCredentials mfaCreds = (TwoFactorAuthenticationCredentials) credentials;
 		if (userLogin.getUser() != null && !userLogin.getUser().equals(mfaCreds.user)) {
-			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+			throw new ContextAuthenticationException("authentication.error.userDiffersFromCandidateUser");
 		}
 		if (!mfaCreds.validatedCredentials.contains(getPrimaryAuthenticationScheme().getSchemeId())) {
-			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+			throw new ContextAuthenticationException("authentication.error.primaryAuthenticationRequired");
 		}
 		WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(mfaCreds.user);
 		if (secondaryScheme != null) {
 			if (!mfaCreds.validatedCredentials.contains(secondaryScheme.getSchemeId())) {
-				throw new ContextAuthenticationException("authentication.error.invalidCredentials");
+				throw new ContextAuthenticationException("authentication.error.secondaryAuthenticationRequired");
 			}
 		}
 		return new BasicAuthenticated(mfaCreds.user, credentials.getAuthenticationScheme());
@@ -159,7 +159,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			authScheme = primaryOptions.get(0);
 		}
 		if (authScheme == null) {
-			throw new ContextAuthenticationException("No primary authentication scheme has been configured");
+			throw new ContextAuthenticationException("authentication.error.primarySchemeNotConfigured");
 		}
 		try {
 			AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(authScheme);
@@ -167,11 +167,11 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 				return (WebAuthenticationScheme) scheme;
 			}
 			else {
-				throw new ContextAuthenticationException("Primary scheme must be a WebAuthenticationScheme");
+				throw new ContextAuthenticationException("authentication.error.primarySchemeInvalidType");
 			}
 		}
 		catch (Exception e) {
-			throw new ContextAuthenticationException("Error loading primary authentication scheme", e);
+			throw new ContextAuthenticationException("authentication.error.primarySchemeInvalidConfiguration", e);
 		}
 	}
 
@@ -191,7 +191,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 					return (WebAuthenticationScheme) scheme;
 				}
 				else {
-					throw new ContextAuthenticationException("Secondary scheme must be a WebAuthenticationScheme");
+					throw new ContextAuthenticationException("authentication.error.secondarySchemeInvalidType");
 				}
 			}
 		}
