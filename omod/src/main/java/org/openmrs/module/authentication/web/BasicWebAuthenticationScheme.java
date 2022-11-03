@@ -131,7 +131,7 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
             throw new ContextAuthenticationException("authentication.error.incorrectCredentialsForScheme");
         }
         BasicCredentials bac = (BasicCredentials) credentials;
-        if (userLogin.getUsername() != null && !userLogin.getUsername().equals(bac.username)) {
+        if (userLogin.getUser() != null && !userLogin.getUser().getUsername().equals(bac.username)) {
             throw new ContextAuthenticationException("authentication.error.userDiffersFromCandidateUser");
         }
         userLogin.setUsername(bac.username);
