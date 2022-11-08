@@ -13,6 +13,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
@@ -60,6 +61,14 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
         loginPage = config.getProperty(LOGIN_PAGE, DEFAULT_LOGIN_PAGE);
         usernameParam = config.getProperty(USERNAME_PARAM, DEFAULT_USERNAME_PARAM);
         passwordParam = config.getProperty(PASSWORD_PARAM, DEFAULT_PASSWORD_PARAM);
+    }
+
+    /**
+     * @see WebAuthenticationScheme#isUserConfigurationRequired(User) 
+     */
+    @Override
+    public boolean isUserConfigurationRequired(User user) {
+        return false;
     }
 
     /**

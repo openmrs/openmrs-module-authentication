@@ -53,6 +53,14 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
         answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
     }
 
+    /**
+     * @see WebAuthenticationScheme#isUserConfigurationRequired(User)
+     */
+    @Override
+    public boolean isUserConfigurationRequired(User user) {
+        return StringUtils.isBlank(Context.getUserService().getSecretQuestion(user));
+    }
+
     @Override
     public String getChallengeUrl(AuthenticationSession session) {
         return loginPage;

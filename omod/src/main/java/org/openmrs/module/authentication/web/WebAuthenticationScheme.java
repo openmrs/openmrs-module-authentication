@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
@@ -24,6 +25,8 @@ import java.util.Properties;
  * Represents a particular method of authentication.
  */
 public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme implements ConfigurableAuthenticationScheme {
+
+    public static final String CONFIGURATION_PAGE = "configurationPage";
 
     private String schemeId;
     private Properties config;
@@ -51,6 +54,21 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
             config = new Properties();
         }
         return config;
+    }
+
+    /**
+     * If this AuthenticationScheme requires certain User properties or attributes to be configured, this
+     * returns false if the user does not yet have these configured.  Otherwise, returns true
+     * @param user the user to check
+     * @return false if the user requires additional configuration to use this AuthenticationScheme, false otherwise
+     */
+    public abstract boolean isUserConfigurationRequired(User user);
+
+    /**
+     * @return the page that can be used to configure this AuthenticationScheme for a particular user
+     */
+    public String getUserConfigurationPage() {
+        return config.getProperty(CONFIGURATION_PAGE);
     }
 
     /**

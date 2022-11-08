@@ -37,10 +37,8 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 
 	protected final Log log = LogFactory.getLog(getClass());
 
-	// User property components
-	public static final String AUTHENTICATION = "authentication";
-	public static final String SECONDARY_TYPE = "secondaryType";
-	private static final String DOT = ".";
+	// User configuration
+	public static final String USER_PROPERTY_SECONDARY_TYPE = "authentication.secondaryType";
 
 	protected List<String> primaryOptions = new ArrayList<>();
 	protected List<String> secondaryOptions = new ArrayList<>();
@@ -55,6 +53,14 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		super.configure(schemeId, config);
 		primaryOptions = AuthenticationUtil.getStringList(config.getProperty("primaryOptions"), ",");
 		secondaryOptions = AuthenticationUtil.getStringList(config.getProperty("secondaryOptions"), ",");
+	}
+
+	/**
+	 * @see WebAuthenticationScheme#isUserConfigurationRequired(User)
+	 */
+	@Override
+	public boolean isUserConfigurationRequired(User user) {
+		return false;
 	}
 
 	@Override
@@ -184,7 +190,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 */
 	protected WebAuthenticationScheme getSecondaryAuthenticationScheme(User user) {
 		if (user != null) {
-			String secondaryName = user.getUserProperty(AUTHENTICATION + DOT + SECONDARY_TYPE);
+			String secondaryName = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
 			if (StringUtils.isNotBlank(secondaryName)) {
 				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(secondaryName);
 				if (scheme instanceof WebAuthenticationScheme) {
