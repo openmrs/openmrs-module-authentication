@@ -36,6 +36,18 @@ public class AuthenticationUtil {
     }
 
     /**
+     * @param val the value to parse
+     * @param defaultValue the value to return if the value to parse is null or blank
+     * @return the passed value, parsed to a boolean, or the default value if null
+     */
+    public static Integer getInteger(String val, Integer defaultValue) {
+        if (StringUtils.isBlank(val)) {
+            return defaultValue;
+        }
+        return Integer.parseInt(val);
+    }
+
+    /**
      * @param val the string value to parse into a List of strings
      * @param delimiter the regex delimiter value
      * @return a List of strings resulting from splitting the passed val by the passed delimiter
