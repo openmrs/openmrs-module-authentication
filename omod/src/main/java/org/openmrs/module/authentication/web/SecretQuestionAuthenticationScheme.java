@@ -48,7 +48,7 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
     @Override
     public void configure(String schemeId, Properties config) {
         super.configure(schemeId, config);
-        loginPage = config.getProperty(LOGIN_PAGE, "/module/authentication/secretQuestion.htm");
+        loginPage = config.getProperty(LOGIN_PAGE, "/loginWithSecret.htm");
         questionParam = config.getProperty(QUESTION_PARAM, QUESTION);
         answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
     }
