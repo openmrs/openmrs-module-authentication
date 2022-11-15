@@ -19,6 +19,7 @@ import org.openmrs.api.context.Credentials;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 
 import javax.servlet.http.Cookie;
@@ -206,6 +207,7 @@ public class AuthenticationSession {
         }
         session.removeAttribute(AUTHENTICATION_SESSION_REGENERATING);
         getUserLogin().setHttpSessionId(session.getId());
+        UserLoginTracker.setLoginOnThread(getUserLogin());
     }
 
     /**

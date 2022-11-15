@@ -38,9 +38,7 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		log.debug("Http Session Created: " + session);
 		UserLogin login = session.getUserLogin();
 		UserLoginTracker.setLoginOnThread(login);
-		if (session.isUserAuthenticated()) {
-			UserLoginTracker.addActiveLogin(login);
-		}
+		// At this point this is a totally new session, so we cannot use attributes as it may be regenerating
 	}
 
 	/**
@@ -56,6 +54,5 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 			login.loginExpired();
 		}
 		UserLoginTracker.removeLoginFromThread();
-		UserLoginTracker.removeActiveLogin(login);
 	}
 }
