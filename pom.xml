@@ -24,6 +24,7 @@
 	<properties>
 		<!-- 2.5.4 is set due to log4j2 dependency and changes to core logging classes -->
 		<openmrsVersion>2.5.4</openmrsVersion>
+		<totpVersion>1.7.1</totpVersion>
 		<!-- Other configuration -->
 		<MODULE_ID>${project.artifactId}</MODULE_ID>
 		<MODULE_NAME>${project.name}</MODULE_NAME>
@@ -58,6 +59,11 @@
 			<version>${openmrsVersion}</version>
 			<type>pom</type>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>dev.samstevens.totp</groupId>
+			<artifactId>totp</artifactId>
+			<version>${totpVersion}</version>
 		</dependency>
 	</dependencies>
 
