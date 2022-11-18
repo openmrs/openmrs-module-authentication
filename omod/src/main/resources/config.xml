@@ -12,6 +12,18 @@
 
 	<require_version>${openmrsVersion}</require_version>
 
+	<!--
+		In OpenMRS 2.6+, module filter execution is based on module loading order
+		By making this module aware of fhir2 and webservices.rest, we ensure that it's authenticationFilter
+		will run _before_ the corresponding filters in those modules, which ensures that authentication using
+		custom authentication schemes can happen appropriately before a request is handled by these modules
+		See:  <a href="https://issues.openmrs.org/browse/TRUNK-6054">TRUNK-6054</a>
+	-->
+	<aware_of_modules>
+		<aware_of_module>org.openmrs.module.fhir2</aware_of_module>
+		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
+	</aware_of_modules>
+
 	<filter>
 		<filter-name>authenticationFilter</filter-name>
 		<filter-class>org.openmrs.module.authentication.web.AuthenticationFilter</filter-class>
