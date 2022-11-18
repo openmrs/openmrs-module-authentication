@@ -85,13 +85,24 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
         String schemeId = authenticationCredentials.getAuthenticationScheme();
         UserLogin userLogin = UserLoginTracker.getLoginOnThread();
         Authenticated authenticated;
+        boolean addedToThread = false;
         try {
+            if (userLogin == null) {
+                userLogin = new UserLogin();
+                UserLoginTracker.setLoginOnThread(userLogin);
+                addedToThread = true;
+            }
             authenticated = authenticate(authenticationCredentials, userLogin);
             userLogin.authenticationSuccessful(schemeId, authenticated);
         }
         catch (Exception e) {
             userLogin.authenticationFailed(schemeId);
             throw new ContextAuthenticationException(e.getMessage(), e);
+        }
+        finally {
+            if (addedToThread) {
+                UserLoginTracker.removeLoginFromThread();
+            }
         }
         return authenticated;
     }
