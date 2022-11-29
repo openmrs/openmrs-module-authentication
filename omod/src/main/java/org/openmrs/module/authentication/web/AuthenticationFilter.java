@@ -222,7 +222,7 @@ public class AuthenticationFilter implements Filter {
 			redirect = request.getParameter("refererURL");
 		}
 		if (StringUtils.isBlank(redirect) && "GET".equals(request.getMethod())) {
-			redirect = request.getRequestURI();
+			redirect = request.getRequestURI() + (request.getQueryString() != null ? "?" + request.getQueryString() : "");
 		}
 		if (StringUtils.isBlank(redirect)) {
 			redirect = "/";
