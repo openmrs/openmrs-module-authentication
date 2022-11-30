@@ -137,7 +137,9 @@ public class AuthenticationFilter implements Filter {
 								session.regenerateHttpSession();  // Guard against session fixation attacks
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
 								String successUrl = determineSuccessRedirectUrl(request);
-								response.sendRedirect(successUrl);
+								if (successUrl != null) {
+									response.sendRedirect(successUrl);
+								}
 							}
 							// If authentication fails, redirect back to re-initiate auth
 							catch (Exception e) {
@@ -210,9 +212,8 @@ public class AuthenticationFilter implements Filter {
 
 	/**
 	 * This returns an appropriate redirect URL following successful authentication
-	 * This first checks for a parameter named `redirect`, followed by a parameter named `refererURL`, and then
-	 * for the original request URI if this was a GET request.  If nothing found, sets to "/".
-	 * This then ensures the url is within the OpenMRS context path.
+	 * This first checks for a parameter named `redirect`, followed by a parameter named `refererURL`
+	 * If either of these are found, then it returns the appropriate url, otherwise returns null
 	 * @param request the request to use to determine url redirection
 	 */
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
@@ -221,13 +222,10 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isBlank(redirect)) {
 			redirect = request.getParameter("refererURL");
 		}
-		if (StringUtils.isBlank(redirect) && "GET".equals(request.getMethod())) {
-			redirect = request.getRequestURI() + (request.getQueryString() != null ? "?" + request.getQueryString() : "");
+		if (StringUtils.isNotBlank(redirect)) {
+			return contextualizeUrl(request, redirect);
 		}
-		if (StringUtils.isBlank(redirect)) {
-			redirect = "/";
-		}
-		return contextualizeUrl(request, redirect);
+		return null;
 	}
 
 	/**
