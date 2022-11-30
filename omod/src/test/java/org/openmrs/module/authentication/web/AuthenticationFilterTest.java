@@ -134,6 +134,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	@Test
 	public void shouldRedirectToSuccessUrlIfAuthenticationSucceeds() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
+		request.addParameter("redirect", "/patientDashboard.htm");
 		request.addParameter("username", "admin");
 		request.addParameter("password", "adminPassword");
 		filter.doFilter(request, response, chain);
@@ -242,11 +243,11 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void shouldDetermineSuccessUrl() {
 		request.setMethod("POST");
 		request.setContextPath("/openmrs");
-		assertThat(filter.determineSuccessRedirectUrl(request), equalTo("/openmrs/"));
+		assertThat(filter.determineSuccessRedirectUrl(request), nullValue());
 		request.setRequestURI("/home.htm");
-		assertThat(filter.determineSuccessRedirectUrl(request), equalTo("/openmrs/"));
+		assertThat(filter.determineSuccessRedirectUrl(request), nullValue());
 		request.setMethod("GET");
-		assertThat(filter.determineSuccessRedirectUrl(request), equalTo("/openmrs/home.htm"));
+		assertThat(filter.determineSuccessRedirectUrl(request), nullValue());
 		request.setParameter("refererURL", "/refererPage.htm");
 		assertThat(filter.determineSuccessRedirectUrl(request), equalTo("/openmrs/refererPage.htm"));
 		request.setParameter("redirect", "/redirectPage.htm");
