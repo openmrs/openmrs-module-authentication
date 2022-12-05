@@ -113,11 +113,6 @@ public class AuthenticationFilter implements Filter {
 			userLogin.setLastActivityDate(new Date());
 
 			if (!session.isUserAuthenticated()) {
-
-				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
-					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
-				}
-
 				AuthenticationScheme authenticationScheme = getAuthenticationScheme();
 
 				if (authenticationScheme instanceof WebAuthenticationScheme) {
@@ -134,7 +129,9 @@ public class AuthenticationFilter implements Filter {
 						if (credentials != null) {
 							try {
 								session.authenticate(webScheme, credentials);
-								session.regenerateHttpSession();  // Guard against session fixation attacks
+								if (!session.getHttpSession().isNew()) {  // Only regenerate the session for a client-provided session
+									session.regenerateHttpSession();  // Guard against session fixation attacks
+								}
 								session.refreshDefaultLocale(); // Refresh context locale after authentication
 								String successUrl = determineSuccessRedirectUrl(request);
 								response.sendRedirect(successUrl);
@@ -150,9 +147,7 @@ public class AuthenticationFilter implements Filter {
 				}
 			}
 
-			if (!response.isCommitted()) {
-				chain.doFilter(servletRequest, servletResponse);
-			}
+			chain.doFilter(servletRequest, servletResponse);
 		}
 		finally {
 			UserLoginTracker.removeLoginFromThread();

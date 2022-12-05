@@ -24,6 +24,17 @@
 		<aware_of_module>org.openmrs.module.webservices.rest</aware_of_module>
 	</aware_of_modules>
 
+	<!-- Order of filters is important and the cookie clearing filter should come before the authentication filter -->
+	<filter>
+		<filter-name>cookieClearingFilter</filter-name>
+		<filter-class>org.openmrs.module.authentication.web.CookieClearingFilter</filter-class>
+	</filter>
+
+	<filter-mapping>
+		<filter-name>authenticationFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
 	<filter>
 		<filter-name>authenticationFilter</filter-name>
 		<filter-class>org.openmrs.module.authentication.web.AuthenticationFilter</filter-class>
