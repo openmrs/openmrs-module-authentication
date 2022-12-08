@@ -124,28 +124,30 @@ public class AuthenticationFilter implements Filter {
 
 					WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
 
-					if (!isWhiteListed(request)) {
-						log.debug("Authentication required: " + request.getMethod() + " " + request.getRequestURI());
-						session.removeErrorMessage();
-
-						// If any credentials were passed in the request or session, update the Context and return them
-						AuthenticationCredentials credentials = webScheme.getCredentials(session);
-						String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
-						if (credentials != null) {
-							try {
-								session.authenticate(webScheme, credentials);
-								session.regenerateHttpSession();  // Guard against session fixation attacks
-								session.refreshDefaultLocale(); // Refresh context locale after authentication
-								String successUrl = determineSuccessRedirectUrl(request);
-								if (successUrl != null) {
-									response.sendRedirect(successUrl);
-								}
+					// If any credentials were passed in the request or session attempt to authentication with them
+					AuthenticationCredentials credentials = webScheme.getCredentials(session);
+					String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
+					if (credentials != null) {
+						try {
+							session.removeErrorMessage();
+							session.authenticate(webScheme, credentials);
+							session.regenerateHttpSession();  // Guard against session fixation attacks
+							session.refreshDefaultLocale(); // Refresh context locale after authentication
+							String successUrl = determineSuccessRedirectUrl(request);
+							if (successUrl != null) {
+								response.sendRedirect(successUrl);
 							}
-							// If authentication fails, redirect back to re-initiate auth
-							catch (Exception e) {
-								session.sendRedirect(challengeUrl);
-							}
-						} else {
+						}
+						// If authentication fails, redirect back to re-initiate auth
+						catch (Exception e) {
+							log.info("Authentication failed: " + request.getRequestURI());
+							session.sendRedirect(challengeUrl);
+						}
+					}
+					// If no credentials were found, redirect to challenge url unless whitelisted
+					else {
+						if (!isWhiteListed(request)) {
+							log.info("Authentication required: " + request.getRequestURI());
 							session.sendRedirect(challengeUrl);
 						}
 					}
@@ -167,11 +169,9 @@ public class AuthenticationFilter implements Filter {
 	 * @see AuthenticationFilter#matchesPath(HttpServletRequest, String)
 	 */
 	protected boolean isWhiteListed(HttpServletRequest request) {
-		if (request.getMethod().equalsIgnoreCase("GET")) {
-			for (String pattern : AuthenticationConfig.getWhiteList()) {
-				if (matchesPath(request, pattern)) {
-					return true;
-				}
+		for (String pattern : AuthenticationConfig.getWhiteList()) {
+			if (matchesPath(request, pattern)) {
+				return true;
 			}
 		}
 		return false;

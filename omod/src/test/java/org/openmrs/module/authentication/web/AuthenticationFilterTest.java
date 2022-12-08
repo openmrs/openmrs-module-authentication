@@ -178,13 +178,9 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldWhiteListIfAnyPatternsMatchAndGetRequest() {
+	public void shouldWhiteListIfAnyPatternsMatchRequest() {
 		AuthenticationConfig.setProperty(AuthenticationConfig.WHITE_LIST, "/login.htm,*.jpg,/**/*.gif");
-		request.setMethod("POST");
-		request.setRequestURI("/login.htm");
 		request.setContextPath("/");
-		assertThat(filter.isWhiteListed(request), equalTo(false));
-		request.setMethod("GET");
 		request.setRequestURI("/login.htm");
 		assertThat(filter.isWhiteListed(request), equalTo(true));
 		request.setRequestURI("login.htm");
