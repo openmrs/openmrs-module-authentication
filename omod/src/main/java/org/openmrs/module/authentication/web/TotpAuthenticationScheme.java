@@ -93,14 +93,14 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			throw new ContextAuthenticationException("authentication.error.candidateUserRequired");
 		}
 		if (StringUtils.isBlank(c.code)) {
-			throw new ContextAuthenticationException("authentication.totp.code.required");
+			throw new ContextAuthenticationException("authentication.error.codeRequired");
 		}
 		if (userLogin.getUser() != null && !userLogin.getUser().equals(c.user)) {
 			throw new ContextAuthenticationException("authentication.error.userDiffersFromCandidateUser");
 		}
 		String userSecret = c.user.getUserProperty(getSecretUserPropertyName());
 		if (StringUtils.isBlank(userSecret)) {
-			throw new ContextAuthenticationException("authentication.totp.noSecretConfiguredForUser");
+			throw new ContextAuthenticationException("authentication.error.noSecretConfiguredForUser");
 		}
 		String decodedSecret = Security.decrypt(userSecret);
 		if (!verifyCode(decodedSecret, c.code)) {

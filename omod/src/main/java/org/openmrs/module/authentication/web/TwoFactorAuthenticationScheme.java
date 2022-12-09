@@ -95,6 +95,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			if (primaryCredentials != null) {
 				try {
 					session.authenticate(primaryScheme, primaryCredentials);
+					session.refreshDefaultLocale();
 				} catch (Exception e) {
 					log.trace("Primary Authentication Failed: " + primaryCredentials.getClientName(), e);
 				}
