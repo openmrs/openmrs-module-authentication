@@ -140,14 +140,14 @@ public class AuthenticationFilter implements Filter {
 						}
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
-							log.info("Authentication failed: " + request.getRequestURI());
+							log.debug("Authentication failed: " + request.getRequestURI());
 							session.sendRedirect(challengeUrl);
 						}
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
 						if (!isWhiteListed(request)) {
-							log.info("Authentication required: " + request.getRequestURI());
+							log.trace("Authentication required: " + request.getRequestURI());
 							session.sendRedirect(challengeUrl);
 						}
 					}
