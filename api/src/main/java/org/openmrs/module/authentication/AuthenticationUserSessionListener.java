@@ -35,9 +35,6 @@ public class AuthenticationUserSessionListener implements UserSessionListener {
 			if (login.getUser() == null) {
 				login.setUser(user);
 			}
-			if (!login.getUser().equals(user)) {
-				throw new IllegalStateException("authentication.error.incorrectUser");
-			}
 			if (event == Event.LOGIN) {
 				if (status == Status.SUCCESS) {
 					login.loginSuccessful();
