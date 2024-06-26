@@ -74,6 +74,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.loginPage", "/login.htm");
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users", "admin");
 		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users.admin.password", "adminPassword");
+		AuthenticationConfig.setProperty("authentication.passwordChangeUrl", "/passwordChange.htm");
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		authenticationSession.setAuthenticatedUser(null);
 		request.setMethod("GET");
@@ -258,6 +259,26 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(filter.contextualizeUrl(request, "login.htm"), equalTo(expected));
 		assertThat(filter.contextualizeUrl(request, "/openmrs/login.htm"), equalTo(expected));
 		assertThat(filter.contextualizeUrl(request, "/login.html"), not(expected));
+	}
+
+	@Test
+	public void shouldRedirectToPasswordChangeOnFirstLogin() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		Properties p = Context.getRuntimeProperties();
+
+		p.setProperty("authentication.requirePasswordChangeProperties", "true");
+		setRuntimeProperties(p);
+		authenticationSession.setAuthenticatedUser(null);
+		request.setMethod("GET");
+
+		request.addParameter("redirect", "/passwordChange.htm");
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		// Run the filter
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		// Verify redirection to password change URL
+		assertThat(response.getRedirectedUrl(), equalTo("/passwordChange.htm"));
 	}
 
 	@AfterEach

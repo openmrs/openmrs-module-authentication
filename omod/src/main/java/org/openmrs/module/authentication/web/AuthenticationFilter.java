@@ -19,6 +19,7 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
+import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -224,6 +225,11 @@ public class AuthenticationFilter implements Filter {
 		}
 		if (StringUtils.isNotBlank(redirect)) {
 			return contextualizeUrl(request, redirect);
+		}
+		// Check if password change on first login is required
+		if (AuthenticationConfig.getBoolean(AuthenticationConfig.REQUIRE_PASSWORD_CHANGE_ON_FIRST_LOGIN, false) &&
+				"true".equals(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD)) {
+			return contextualizeUrl(request, AuthenticationConfig.PASSWORD_CHANGE_URL);
 		}
 		return null;
 	}

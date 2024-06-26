@@ -38,6 +38,10 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String SCHEME_ID = "{schemeId}";
 
+    public static final String REQUIRE_PASSWORD_CHANGE_ON_FIRST_LOGIN = "authentication.requirePasswordChangeOnFirstLogin";
+
+    public static final String PASSWORD_CHANGE_URL = "authentication.passwordChangeUrl";
+
     /**
      * This property determines which authentication scheme is used
      * This enables implementations to configure the preferred authentication scheme at runtime
