@@ -38,7 +38,7 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String SCHEME_ID = "{schemeId}";
 
-    public static final String REQUIRE_PASSWORD_CHANGE_ON_FIRST_LOGIN = "authentication.requirePasswordChangeOnFirstLogin";
+    public static final String SUPPORT_FORCED_PASSWORD_CHANGE = "authentication.supportForcedPasswordChange ";
 
     public static final String PASSWORD_CHANGE_URL = "authentication.passwordChangeUrl";
 
