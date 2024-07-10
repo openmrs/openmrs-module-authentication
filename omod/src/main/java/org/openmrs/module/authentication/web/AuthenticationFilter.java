@@ -127,7 +127,7 @@ public class AuthenticationFilter implements Filter {
 
 					// If any credentials were passed in the request or session attempt to authentication with them
 					AuthenticationCredentials credentials = webScheme.getCredentials(session);
-					String challengeUrl = contextualizeUrl(request, webScheme.getChallengeUrl(session));
+					String challengeUrl = WebUtil.contextualizeUrl(request, webScheme.getChallengeUrl(session));
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
@@ -147,7 +147,7 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (!isWhiteListed(request)) {
+						if (!WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
 							session.sendRedirect(challengeUrl);
 						}
@@ -163,41 +163,7 @@ public class AuthenticationFilter implements Filter {
 			UserLoginTracker.removeLoginFromThread();
 		}
 	}
-
-	/**
-	 * @param request the HttpServletRequest to check
-	 * @return true if the request is for a URL that matches a configured `authentication.whiteList` pattern
-	 * @see AuthenticationFilter#matchesPath(HttpServletRequest, String)
-	 */
-	protected boolean isWhiteListed(HttpServletRequest request) {
-		for (String pattern : AuthenticationConfig.getWhiteList()) {
-			if (matchesPath(request, pattern)) {
-				return true;
-			}
-		}
-		return false;
-	}
 	
-	/**
-	 * This checks the request servlet path, and the request requestURI against the given pattern
-	 * The requestURI that is checked should be relative to the context path.
-	 * So, if OpenMRS is deployed as a web application named "openmrs" at protocol://server:port/openmrs, a pattern
-	 * of `/index.htm` would match a path at protocol://server:port/openmrs/index.htm
-	 * This uses the ANT pattern matching syntax, with an additional feature that if a pattern starts with a "*",
-	 * then it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
-	 * indicated pattern.  So, instead of passing in `/**\/*.jpg`, one can instead pass in simply `*.jpg`
-	 */
-	protected boolean matchesPath(HttpServletRequest request, String pattern) {
-		if (pattern.startsWith("*")) {
-			pattern = "/**/" + pattern;
-		}
-		if (matcher.match(pattern, request.getServletPath())) {
-			return true;
-		}
-		String patternWithContext = contextualizeUrl(request, pattern);
-		return matcher.match(patternWithContext, request.getRequestURI());
-	}
-
 	/**
 	 * Returns the configured authentication scheme.
 	 * If this is a DelegatingAuthenticationScheme, returns the AuthenticationScheme that this delegates to
@@ -220,8 +186,8 @@ public class AuthenticationFilter implements Filter {
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
 		// Check if password change on first login is required
 		if (AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false) &&
-				"true".equals(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD)) {
-			return contextualizeUrl(request, AuthenticationConfig.PASSWORD_CHANGE_URL);
+		    AuthenticationConfig.getBoolean(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, false)) {
+			return WebUtil.contextualizeUrl(request, AuthenticationConfig.PASSWORD_CHANGE_URL);
 		}
 		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
 		String redirect = request.getParameter("redirect");
@@ -229,26 +195,10 @@ public class AuthenticationFilter implements Filter {
 			redirect = request.getParameter("refererURL");
 		}
 		if (StringUtils.isNotBlank(redirect)) {
-			return contextualizeUrl(request, redirect);
+			return WebUtil.contextualizeUrl(request, redirect);
 		}
 		
 		return null;
-	}
-
-	/**
-	 * Appends the OpenMRS context path to the given URL if necessary
-	 * @param request the request containing the context path
-	 * @param url the url to contextualize
-	 * @return the url, prepended with the context path if necessary
-	 */
-	protected String contextualizeUrl(HttpServletRequest request, String url) {
-		if (url == null) {
-			url = request.getContextPath();
-		}
-		if (!url.startsWith(request.getContextPath())) {
-			url = request.getContextPath() + (url.startsWith("/") ? "" : "/") + url;
-		}
-		return url;
 	}
 
 	/**

@@ -183,42 +183,42 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		AuthenticationConfig.setProperty(AuthenticationConfig.WHITE_LIST, "/login.htm,*.jpg,/**/*.gif");
 		request.setContextPath("/");
 		request.setRequestURI("/login.htm");
-		assertThat(filter.isWhiteListed(request), equalTo(true));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setRequestURI("login.htm");
-		assertThat(filter.isWhiteListed(request), equalTo(false));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 		request.setRequestURI("/loginForm.htm");
-		assertThat(filter.isWhiteListed(request), equalTo(false));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 		request.setRequestURI("/logo.jpg");
-		assertThat(filter.isWhiteListed(request), equalTo(true));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setRequestURI("/resources/module/folder/logo.jpg");
-		assertThat(filter.isWhiteListed(request), equalTo(true));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setRequestURI(null);
 		request.setServletPath("/logo.gif");
-		assertThat(filter.isWhiteListed(request), equalTo(true));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setServletPath("/resources/module/folder/logo.gif");
-		assertThat(filter.isWhiteListed(request), equalTo(true));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setServletPath("/logo.png");
-		assertThat(filter.isWhiteListed(request), equalTo(false));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 		request.setServletPath("/resources/module/folder/logo.png");
-		assertThat(filter.isWhiteListed(request), equalTo(false));
+		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 	}
 
 	@Test
 	public void shouldReturnTrueIfServletPathMatchesPattern() {
 		request.setContextPath("/");
 		request.setServletPath("/login.htm");
-		assertThat(filter.matchesPath(request, "/login.htm"), equalTo(true));
-		assertThat(filter.matchesPath(request, "/login.html"), equalTo(false));
+		assertThat(WebUtil.matchesPath(request, "/login.htm"), equalTo(true));
+		assertThat(WebUtil.matchesPath(request, "/login.html"), equalTo(false));
 	}
 
 	@Test
 	public void shouldReturnTrueIfRequestURIMatchesPattern() {
 		request.setContextPath("/openmrs");
 		request.setRequestURI("/openmrs/login.htm");
-		assertThat(filter.matchesPath(request, "/login.htm"), equalTo(true));
-		assertThat(filter.matchesPath(request, "login.htm"), equalTo(true));
-		assertThat(filter.matchesPath(request, "/openmrs/login.htm"), equalTo(true));
-		assertThat(filter.matchesPath(request, "/login.html"), equalTo(false));
+		assertThat(WebUtil.matchesPath(request, "/login.htm"), equalTo(true));
+		assertThat(WebUtil.matchesPath(request, "login.htm"), equalTo(true));
+		assertThat(WebUtil.matchesPath(request, "/openmrs/login.htm"), equalTo(true));
+		assertThat(WebUtil.matchesPath(request, "/login.html"), equalTo(false));
 	}
 
 	@Test
@@ -255,10 +255,10 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void shouldContextualizeUrl() {
 		String expected = "/openmrs/login.htm";
 		request.setContextPath("/openmrs");
-		assertThat(filter.contextualizeUrl(request, "/login.htm"), equalTo(expected));
-		assertThat(filter.contextualizeUrl(request, "login.htm"), equalTo(expected));
-		assertThat(filter.contextualizeUrl(request, "/openmrs/login.htm"), equalTo(expected));
-		assertThat(filter.contextualizeUrl(request, "/login.html"), not(expected));
+		assertThat(WebUtil.contextualizeUrl(request, "/login.htm"), equalTo(expected));
+		assertThat(WebUtil.contextualizeUrl(request, "login.htm"), equalTo(expected));
+		assertThat(WebUtil.contextualizeUrl(request, "/openmrs/login.htm"), equalTo(expected));
+		assertThat(WebUtil.contextualizeUrl(request, "/login.html"), not(expected));
 	}
 
 	@Test

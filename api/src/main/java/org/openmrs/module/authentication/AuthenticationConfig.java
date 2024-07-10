@@ -33,6 +33,8 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String PREFIX = "authentication";
 
+    private static Properties config;
+
     /**
      * All configured authentication schemes are identified by a unique {schemeId} in the configuration
      */
@@ -71,6 +73,11 @@ public class AuthenticationConfig implements Serializable {
     public static final String WHITE_LIST = "authentication.whiteList";
 
     /**
+     * URLs that might need to be made accessible without go through the password change authentication.
+     */
+    public static final String PASS_WORD_CHANGE_WHITE_LIST = "authentication.passWordChangeWhiteList";
+
+    /**
      * All AuthenticationScheme instances must be configured with, at minimum, a property that maps a particular
      * {schemeId} to a particular AuthenticationScheme class fully-specified name
      * Eg `authentication.scheme.basic.type = org.openmrs.module.authentication.web.BasicWebAuthenticationScheme`
@@ -84,7 +91,6 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String SCHEME_CONFIG_PREFIX_TEMPLATE = "authentication.scheme.{schemeId}.config.";
 
-    private static Properties config;
 
     private static final List<ClassLoader> classLoaders = new ArrayList<>();
 
@@ -232,6 +238,19 @@ public class AuthenticationConfig implements Serializable {
      */
     public static List<String> getWhiteList() {
         return getStringList(WHITE_LIST);
+    }
+
+     /**
+     * @return the List of url patterns to allow without force password authentication redirection
+     */
+    public static List<String> getPasswordChangeWhiteList() {
+        List<String> whiteList = getStringList(PASS_WORD_CHANGE_WHITE_LIST);
+        whiteList.add(getChangePasswordUrl());  // Add the change password URL to the whitelist
+        return whiteList;
+    }
+
+    public static String getChangePasswordUrl() {
+        return getConfig().getProperty(PASSWORD_CHANGE_URL, "/changePassword");
     }
 
 
