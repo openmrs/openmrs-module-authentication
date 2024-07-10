@@ -75,7 +75,7 @@ public class AuthenticationConfig implements Serializable {
     /**
      * URLs that might need to be made accessible without go through the password change authentication.
      */
-    public static final String PASS_WORD_CHANGE_WHITE_LIST = "authentication.passWordChangeWhiteList";
+    public static final String PASSWORD_CHANGE_WHITE_LIST = "authentication.passwordChangeWhiteList";
 
     /**
      * All AuthenticationScheme instances must be configured with, at minimum, a property that maps a particular
@@ -244,13 +244,13 @@ public class AuthenticationConfig implements Serializable {
      * @return the List of url patterns to allow without force password authentication redirection
      */
     public static List<String> getPasswordChangeWhiteList() {
-        List<String> whiteList = getStringList(PASS_WORD_CHANGE_WHITE_LIST);
+        List<String> whiteList = getStringList(PASSWORD_CHANGE_WHITE_LIST);
         whiteList.add(getChangePasswordUrl());  // Add the change password URL to the whitelist
         return whiteList;
     }
 
     public static String getChangePasswordUrl() {
-        return getConfig().getProperty(PASSWORD_CHANGE_URL, "/changePassword");
+        return getConfig().getProperty(PASSWORD_CHANGE_URL);
     }
 
 
