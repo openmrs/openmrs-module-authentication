@@ -33,8 +33,6 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String PREFIX = "authentication";
 
-    private static Properties config;
-
     /**
      * All configured authentication schemes are identified by a unique {schemeId} in the configuration
      */
@@ -90,6 +88,8 @@ public class AuthenticationConfig implements Serializable {
      * Eg `authentication.scheme.basic.config.loginPage = /module/authentication/basic.htm`
      */
     public static final String SCHEME_CONFIG_PREFIX_TEMPLATE = "authentication.scheme.{schemeId}.config.";
+
+    private static Properties config;
 
 
     private static final List<ClassLoader> classLoaders = new ArrayList<>();

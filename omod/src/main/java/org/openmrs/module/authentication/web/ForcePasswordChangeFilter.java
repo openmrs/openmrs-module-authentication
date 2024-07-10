@@ -12,6 +12,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.util.OpenmrsConstants;
@@ -21,17 +23,17 @@ import org.openmrs.util.OpenmrsConstants;
  * change his password on first/subsequent login.
  */
 public class ForcePasswordChangeFilter implements Filter {
+	
 	private FilterConfig config;
 
-	/**
-	 * @see javax.servlet.Filter#destroy()
-	 */
+	protected final Log log = LogFactory.getLog(getClass());
+
+
+	@Override
 	public void destroy() {
 	}
 
-	/**
-	 * @see javax.servlet.Filter#doFilter(ServletRequest, ServletResponse, FilterChain)
-	 */
+	@Override
 	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
 			throws IOException, ServletException {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
@@ -46,19 +48,20 @@ public class ForcePasswordChangeFilter implements Filter {
 		String changePasswordProperty = userLogin.getUser().getUserProperties()
 				.get(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
 		Boolean changePasswordFlag = AuthenticationConfig.getBoolean(changePasswordProperty, false);
-
-		if (userLogin.isUserAuthenticated() &&
-				BooleanUtils.isTrue(changePasswordFlag)) {
-			config.getServletContext().getRequestDispatcher(AuthenticationConfig.getChangePasswordUrl())
-					.forward(request, response);
+		if (userLogin.isUserAuthenticated() && BooleanUtils.isTrue(changePasswordFlag)) {
+			String changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
+			if (changePasswordUrl != null) {
+				request.getRequestDispatcher(changePasswordUrl).forward(request, response);
+			} else {
+				log.error("Change password URL is not set. Continuing with the request chain.");
+				chain.doFilter(request, response);
+			}
 		} else {
 			chain.doFilter(request, response);
 		}
 	}
 
-	/**
-	 * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
-	 */
+	@Override
 	public void init(FilterConfig config) throws ServletException {
 		this.config = config;
 	}
