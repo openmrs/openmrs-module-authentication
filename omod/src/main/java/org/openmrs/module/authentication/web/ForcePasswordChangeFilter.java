@@ -26,7 +26,19 @@ public class ForcePasswordChangeFilter implements Filter {
 	
 	private FilterConfig config;
 
+	private boolean supportForcedPasswordChange;
+
+	String changePasswordUrl;
+
+
 	protected final Log log = LogFactory.getLog(getClass());
+
+	@Override
+	public void init(FilterConfig config) throws ServletException {
+		this.config = config;
+		this.changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
+		this.supportForcedPasswordChange = BooleanUtils.isTrue(AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false));
+	}
 
 
 	@Override
@@ -39,17 +51,16 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList())) {
+		if (WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList()) || !supportForcedPasswordChange) {
 			chain.doFilter(request, response);
 			return;
 		}
+		
 		AuthenticationSession session = getAuthenticationSession(request, response);
 		UserLogin userLogin = session.getUserLogin();
-		String changePasswordProperty = userLogin.getUser().getUserProperties()
-				.get(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
-		Boolean changePasswordFlag = AuthenticationConfig.getBoolean(changePasswordProperty, false);
+		String changePasswordProperty = userLogin.getUser().getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
+		Boolean changePasswordFlag = BooleanUtils.isTrue(Boolean.valueOf(changePasswordProperty));
 		if (userLogin.isUserAuthenticated() && BooleanUtils.isTrue(changePasswordFlag)) {
-			String changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
 			if (changePasswordUrl != null) {
 				request.getRequestDispatcher(changePasswordUrl).forward(request, response);
 			} else {
@@ -61,10 +72,6 @@ public class ForcePasswordChangeFilter implements Filter {
 		}
 	}
 
-	@Override
-	public void init(FilterConfig config) throws ServletException {
-		this.config = config;
-	}
 
 	/**
 	 * Return a valid AuthenticationSession for the given request

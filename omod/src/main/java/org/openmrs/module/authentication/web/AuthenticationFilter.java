@@ -184,11 +184,6 @@ public class AuthenticationFilter implements Filter {
 	 * @param request the request to use to determine url redirection
 	 */
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
-		// Check if password change on first login is required
-		if (AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false) &&
-		    AuthenticationConfig.getBoolean(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, false)) {
-			return WebUtil.contextualizeUrl(request, AuthenticationConfig.PASSWORD_CHANGE_URL);
-		}
 		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
 		String redirect = request.getParameter("redirect");
 		if (StringUtils.isBlank(redirect)) {
