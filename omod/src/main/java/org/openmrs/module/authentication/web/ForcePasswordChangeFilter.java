@@ -37,7 +37,8 @@ public class ForcePasswordChangeFilter implements Filter {
 	public void init(FilterConfig config) throws ServletException {
 		this.config = config;
 		this.changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
-		this.supportForcedPasswordChange = BooleanUtils.isTrue(AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false));
+		this.supportForcedPasswordChange = BooleanUtils.isTrue(AuthenticationConfig.getBoolean
+		     (AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false));
 	}
 
 
@@ -51,14 +52,16 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList()) || !supportForcedPasswordChange) {
+		if (WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList()) 
+		    || !supportForcedPasswordChange) {
 			chain.doFilter(request, response);
 			return;
 		}
-		
+
 		AuthenticationSession session = getAuthenticationSession(request, response);
 		UserLogin userLogin = session.getUserLogin();
-		String changePasswordProperty = userLogin.getUser().getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
+		String changePasswordProperty = userLogin.getUser().
+		  getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
 		Boolean changePasswordFlag = BooleanUtils.isTrue(Boolean.valueOf(changePasswordProperty));
 		if (userLogin.isUserAuthenticated() && BooleanUtils.isTrue(changePasswordFlag)) {
 			if (changePasswordUrl != null) {
@@ -80,7 +83,8 @@ public class ForcePasswordChangeFilter implements Filter {
 	 *                AuthenticationSession
 	 * @return the AuthenticationSession associated with this HttpServletRequest
 	 */
-	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
+	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, 
+	  HttpServletResponse response) {
 		return new AuthenticationSession(request, response);
 	}
 
