@@ -91,7 +91,6 @@ public class AuthenticationConfig implements Serializable {
 
     private static Properties config;
 
-
     private static final List<ClassLoader> classLoaders = new ArrayList<>();
 
     /**

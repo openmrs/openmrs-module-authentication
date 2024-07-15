@@ -37,8 +37,7 @@ public class ForcePasswordChangeFilter implements Filter {
 	public void init(FilterConfig config) throws ServletException {
 		this.config = config;
 		this.changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
-		this.supportForcedPasswordChange = BooleanUtils.isTrue(AuthenticationConfig.getBoolean
-		     (AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false));
+		this.supportForcedPasswordChange = AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false);
 	}
 
 
@@ -52,8 +51,7 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList()) 
-		    || !supportForcedPasswordChange) {
+		if (!supportForcedPasswordChange || WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList())) {
 			chain.doFilter(request, response);
 			return;
 		}
@@ -83,8 +81,7 @@ public class ForcePasswordChangeFilter implements Filter {
 	 *                AuthenticationSession
 	 * @return the AuthenticationSession associated with this HttpServletRequest
 	 */
-	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, 
-	  HttpServletResponse response) {
+	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
 		return new AuthenticationSession(request, response);
 	}
 
