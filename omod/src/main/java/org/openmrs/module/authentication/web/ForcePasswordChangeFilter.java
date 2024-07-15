@@ -68,7 +68,7 @@ public class ForcePasswordChangeFilter implements Filter {
 		String changePasswordProperty = userLogin.getUser().
 		  getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
 		boolean changePasswordFlag = Boolean.parseBoolean(changePasswordProperty);
-		if (userLogin.isUserAuthenticated() && BooleanUtils.isTrue(changePasswordFlag)) {
+		if (userLogin.isUserAuthenticated() && changePasswordFlag) {
 			request.getRequestDispatcher(changePasswordUrl).forward(request, response);
 		} else {
 			chain.doFilter(request, response);
