@@ -55,7 +55,10 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (!supportForcedPasswordChange || WebUtil.isWhiteListed(request, whiteList)) {
+		if (!supportForcedPasswordChange || changePasswordUrl == null || WebUtil.isWhiteListed(request, whiteList)) {
+			if (changePasswordUrl == null) {
+				log.error("Change password URL is not set. Continuing with the request chain.");
+			}
 			chain.doFilter(request, response);
 			return;
 		}
@@ -64,14 +67,9 @@ public class ForcePasswordChangeFilter implements Filter {
 		UserLogin userLogin = session.getUserLogin();
 		String changePasswordProperty = userLogin.getUser().
 		  getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
-		Boolean changePasswordFlag = BooleanUtils.isTrue(Boolean.valueOf(changePasswordProperty));
+		boolean changePasswordFlag = Boolean.parseBoolean(changePasswordProperty);
 		if (userLogin.isUserAuthenticated() && BooleanUtils.isTrue(changePasswordFlag)) {
-			if (changePasswordUrl != null) {
-				request.getRequestDispatcher(changePasswordUrl).forward(request, response);
-			} else {
-				log.error("Change password URL is not set. Continuing with the request chain.");
-				chain.doFilter(request, response);
-			}
+			request.getRequestDispatcher(changePasswordUrl).forward(request, response);
 		} else {
 			chain.doFilter(request, response);
 		}
