@@ -1,6 +1,7 @@
 package org.openmrs.module.authentication.web;
 
 import java.io.IOException;
+import java.util.List;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -28,6 +29,8 @@ public class ForcePasswordChangeFilter implements Filter {
 
 	private boolean supportForcedPasswordChange;
 
+	private List<String> whiteList;
+
 	String changePasswordUrl;
 
 
@@ -37,6 +40,7 @@ public class ForcePasswordChangeFilter implements Filter {
 	public void init(FilterConfig config) throws ServletException {
 		this.config = config;
 		this.changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
+		this.whiteList = AuthenticationConfig.getPasswordChangeWhiteList();
 		this.supportForcedPasswordChange = AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false);
 	}
 
@@ -51,7 +55,7 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (!supportForcedPasswordChange || WebUtil.isWhiteListed(request, AuthenticationConfig.getPasswordChangeWhiteList())) {
+		if (!supportForcedPasswordChange || WebUtil.isWhiteListed(request, whiteList)) {
 			chain.doFilter(request, response);
 			return;
 		}
