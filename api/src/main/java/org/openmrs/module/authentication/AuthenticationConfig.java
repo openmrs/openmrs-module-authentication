@@ -38,6 +38,10 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String SCHEME_ID = "{schemeId}";
 
+    public static final String SUPPORT_FORCED_PASSWORD_CHANGE = "authentication.supportForcedPasswordChange ";
+
+    public static final String PASSWORD_CHANGE_URL = "authentication.passwordChangeUrl";
+
     /**
      * This property determines which authentication scheme is used
      * This enables implementations to configure the preferred authentication scheme at runtime
@@ -65,6 +69,11 @@ public class AuthenticationConfig implements Serializable {
      * URLs that might need to be made accessible without authentication.
      */
     public static final String WHITE_LIST = "authentication.whiteList";
+
+    /**
+     * URLs that might need to be made accessible without go through the password change authentication.
+     */
+    public static final String PASSWORD_CHANGE_WHITE_LIST = "authentication.passwordChangeWhiteList";
 
     /**
      * All AuthenticationScheme instances must be configured with, at minimum, a property that maps a particular
@@ -228,6 +237,19 @@ public class AuthenticationConfig implements Serializable {
      */
     public static List<String> getWhiteList() {
         return getStringList(WHITE_LIST);
+    }
+
+     /**
+     * @return the List of url patterns to allow without force password authentication redirection
+     */
+    public static List<String> getPasswordChangeWhiteList() {
+        List<String> whiteList = getStringList(PASSWORD_CHANGE_WHITE_LIST);
+        whiteList.add(getChangePasswordUrl());  // Add the change password URL to the whitelist
+        return whiteList;
+    }
+
+    public static String getChangePasswordUrl() {
+        return getConfig().getProperty(PASSWORD_CHANGE_URL);
     }
 
 
