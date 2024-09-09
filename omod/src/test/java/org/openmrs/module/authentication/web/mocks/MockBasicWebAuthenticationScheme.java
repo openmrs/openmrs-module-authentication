@@ -35,13 +35,13 @@ public class MockBasicWebAuthenticationScheme extends BasicWebAuthenticationSche
     }
 
     @Override
-    public void configure(String schemeId, Properties config) {
+    public void configure(String schemeId, Map<String, String> config) {
         super.configure(schemeId, config);
-        String userConfig = config.getProperty("users");
+        String userConfig = config.get("users");
         if (userConfig != null) {
             for (String username : userConfig.split(",")) {
-                String password = config.getProperty("users." + username + ".password");
-                String secondaryType = config.getProperty("users." + username + ".secondaryType");
+                String password = config.get("users." + username + ".password");
+                String secondaryType = config.get("users." + username + ".secondaryType");
                 User user = users.get(username);
                 if (user == null) {
                     user = new User();

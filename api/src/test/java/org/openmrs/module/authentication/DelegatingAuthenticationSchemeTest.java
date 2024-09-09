@@ -6,6 +6,7 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 
+import java.util.HashMap;
 import java.util.Properties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -16,7 +17,7 @@ public class DelegatingAuthenticationSchemeTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldDefaultToUsernameAndPasswordAuthenticationScheme() {
-		setRuntimeProperties(new Properties());
+		setRuntimeProperties(new HashMap<>());
 		DelegatingAuthenticationScheme scheme = new DelegatingAuthenticationScheme();
 		AuthenticationScheme delegatedScheme = scheme.getDelegatedAuthenticationScheme();
 		assertThat(delegatedScheme, notNullValue());

@@ -21,11 +21,12 @@ import org.openmrs.api.context.Credentials;
 import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 import org.openmrs.api.context.UsernamePasswordCredentials;
 import org.openmrs.module.authentication.AuthenticationCredentials;
-import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * This is an implementation of a WebAuthenticationScheme that delegates to a UsernamePasswordAuthenticationScheme,
@@ -36,7 +37,7 @@ import java.util.Properties;
  */
 public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
 
-    protected final Log log = LogFactory.getLog(getClass());
+    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     public static final String LOGIN_PAGE = "loginPage";
     public static final String USERNAME_PARAM = "usernameParam";
@@ -52,15 +53,12 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
     protected String usernameParam;
     protected String passwordParam;
 
-    /**
-     * @see ConfigurableAuthenticationScheme#configure(String, Properties)
-     */
     @Override
-    public void configure(String schemeId, Properties config) {
+    public void configure(String schemeId, Map<String, String> config) {
         super.configure(schemeId, config);
-        loginPage = config.getProperty(LOGIN_PAGE, DEFAULT_LOGIN_PAGE);
-        usernameParam = config.getProperty(USERNAME_PARAM, DEFAULT_USERNAME_PARAM);
-        passwordParam = config.getProperty(PASSWORD_PARAM, DEFAULT_PASSWORD_PARAM);
+        loginPage = config.getOrDefault(LOGIN_PAGE, DEFAULT_LOGIN_PAGE);
+        usernameParam = config.getOrDefault(USERNAME_PARAM, DEFAULT_USERNAME_PARAM);
+        passwordParam = config.getOrDefault(PASSWORD_PARAM, DEFAULT_PASSWORD_PARAM);
     }
 
     /**

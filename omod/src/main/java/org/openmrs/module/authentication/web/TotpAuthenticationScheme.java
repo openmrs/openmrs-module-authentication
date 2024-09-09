@@ -34,7 +34,7 @@ import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.util.Security;
 
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * This supports configuring and validating against a TOTP provider using something like Google Authenticator
@@ -64,16 +64,16 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	private String codeParam;
 
 	@Override
-	public void configure(String schemeId, Properties config) {
+	public void configure(String schemeId, Map<String, String> config) {
 		super.configure(schemeId, config);
-		secretLength = AuthenticationUtil.getInteger(config.getProperty(SECRET_LENGTH), 32);
-		hashingAlgorithm = HashingAlgorithm.valueOf(config.getProperty(HASHING_ALGORITHM, "SHA1"));
-		qrCodeIssuer = config.getProperty(QR_CODE_ISSUER, "OpenMRS");
-		codeLength = AuthenticationUtil.getInteger(config.getProperty(CODE_LENGTH), 6);
-		codeValidityPeriod = AuthenticationUtil.getInteger(config.getProperty(CODE_VALIDITY_PERIOD), 30);
-		allowedDiscrepancy = AuthenticationUtil.getInteger(config.getProperty(ALLOWED_DISCREPANCY), 2);
-		loginPage = config.getProperty(LOGIN_PAGE, "/loginTotp.page");
-		codeParam = config.getProperty(CODE_PARAM, "code");
+		secretLength = AuthenticationUtil.getInteger(config.get(SECRET_LENGTH), 32);
+		hashingAlgorithm = HashingAlgorithm.valueOf(config.getOrDefault(HASHING_ALGORITHM, "SHA1"));
+		qrCodeIssuer = config.getOrDefault(QR_CODE_ISSUER, "OpenMRS");
+		codeLength = AuthenticationUtil.getInteger(config.get(CODE_LENGTH), 6);
+		codeValidityPeriod = AuthenticationUtil.getInteger(config.get(CODE_VALIDITY_PERIOD), 30);
+		allowedDiscrepancy = AuthenticationUtil.getInteger(config.get(ALLOWED_DISCREPANCY), 2);
+		loginPage = config.getOrDefault(LOGIN_PAGE, "/loginTotp.page");
+		codeParam = config.getOrDefault(CODE_PARAM, "code");
 	}
 
 	@Override

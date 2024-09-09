@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication;
 
+import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.apache.commons.lang.StringUtils;
 
 import java.text.SimpleDateFormat;
@@ -16,7 +17,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * This class provides utility methods for the authentication module
@@ -28,10 +29,11 @@ public class AuthenticationUtil {
      * @param defaultValue the value to return if the value to parse is null or blank
      * @return the passed value, parsed to a boolean, or the default value if null
      */
-    public static Boolean getBoolean(String val, boolean defaultValue) {
+    public static boolean getBoolean(String val, boolean defaultValue) {
         if (StringUtils.isBlank(val)) {
             return defaultValue;
         }
+
         return Boolean.parseBoolean(val);
     }
 
@@ -40,7 +42,7 @@ public class AuthenticationUtil {
      * @param defaultValue the value to return if the value to parse is null or blank
      * @return the passed value, parsed to a boolean, or the default value if null
      */
-    public static Integer getInteger(String val, Integer defaultValue) {
+    public static int getInteger(String val, Integer defaultValue) {
         if (StringUtils.isBlank(val)) {
             return defaultValue;
         }
@@ -65,17 +67,24 @@ public class AuthenticationUtil {
      * @param stripPrefix if true, this will remove the prefix in the resulting Properties
      * @return the Properties whose keys start with the given prefix, without the prefix if stripPrefix is true
      */
-    public static Properties getPropertiesWithPrefix(Properties properties, String prefix, boolean stripPrefix) {
-        Properties ret = new Properties();
-        for (String key : properties.stringPropertyNames()) {
-            if (key.startsWith(prefix)) {
-                String value = properties.getProperty(key);
-                if (stripPrefix) {
-                    key = key.substring(prefix.length());
+    public static Map<String, String> getPropertiesWithPrefix(Map<?, ?> properties, String prefix, boolean stripPrefix) {
+        @SuppressWarnings("unchecked")
+        Map<String, String> ret = new CaseInsensitiveMap();
+        for (Object keyObj : properties.keySet()) {
+            if (keyObj instanceof String) {
+                String key = (String) keyObj;
+                if (key.startsWith(prefix)) {
+                    Object value = properties.get(key);
+                    if (value instanceof String) {
+                        if (stripPrefix) {
+                            key = key.substring(prefix.length());
+                        }
+                        ret.put(key, (String) value);
+                    }
                 }
-                ret.put(key, value);
             }
         }
+
         return ret;
     }
 
