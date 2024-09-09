@@ -11,6 +11,7 @@ package org.openmrs.module.authentication;
 
 import org.openmrs.api.context.AuthenticationScheme;
 
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -27,5 +28,5 @@ public interface ConfigurableAuthenticationScheme extends AuthenticationScheme {
      * @param schemeId - the unique schemeId that this AuthenticationScheme instance is registered under
      * @param config - the configuration to use when constructing a new instance of this AuthenticationScheme
      */
-    void configure(String schemeId, Properties config);
+    void configure(String schemeId, Map<String, String> config);
 }

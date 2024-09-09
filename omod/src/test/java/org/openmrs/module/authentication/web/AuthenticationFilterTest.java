@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -104,7 +105,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setupTestThatInvokesAuthenticationCheck();
 		Properties p = Context.getRuntimeProperties();
 		p.remove("authentication.scheme");
-		setRuntimeProperties(p);
+		setRuntimeProperties(propsToMap(p));
 		assertThat(authenticationSession.isUserAuthenticated(), equalTo(false));
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(false));
@@ -116,7 +117,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setupTestThatInvokesAuthenticationCheck();
 		Properties p = Context.getRuntimeProperties();
 		p.setProperty("authentication.whiteList", "/patientDashboard.htm,*.jpg");
-		setRuntimeProperties(p);
+		setRuntimeProperties(propsToMap(p));
 		assertThat(authenticationSession.isUserAuthenticated(), equalTo(false));
 		assertThat(Context.getAuthenticationScheme() instanceof WebAuthenticationScheme, equalTo(true));
 		filter.doFilter(request, response, chain);
@@ -267,7 +268,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		Properties p = Context.getRuntimeProperties();
 
 		p.setProperty("authentication.requirePasswordChangeProperties", "true");
-		setRuntimeProperties(p);
+		setRuntimeProperties(propsToMap(p));
 		authenticationSession.setAuthenticatedUser(null);
 		request.setMethod("GET");
 
@@ -287,5 +288,30 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		super.teardown();
 		filter.destroy();
 		UserLoginTracker.removeLoginFromThread();
+	}
+
+	private Map<String, String> propsToMap(Properties p) {
+		@SuppressWarnings("unchecked")
+		Map<String, String> props = new CaseInsensitiveMap(p.size());
+		p.entrySet().stream().map(e -> {
+			return new Map.Entry<String, String>() {
+				@Override
+				public String getKey() {
+					return (String) e.getKey();
+				}
+
+				@Override
+				public String getValue() {
+					return (String) e.getValue();
+				}
+
+				@Override
+				public String setValue(String value) {
+					throw new UnsupportedOperationException();
+				}
+			};
+		}).forEach(entry -> props.put(entry.getKey(), entry.getValue()));
+
+		return props;
 	}
 }

@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.web;
 
+import org.apache.commons.collections.map.CaseInsensitiveMap;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
@@ -19,7 +20,7 @@ import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
 
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * Represents a particular method of authentication.
@@ -29,7 +30,7 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
     public static final String CONFIGURATION_PAGE = "configurationPage";
 
     private String schemeId;
-    private Properties config;
+    private Map<String, String> config;
 
     /**
      * @return the schemeId that this AuthenticationScheme was configured with
@@ -39,9 +40,9 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
     }
 
     /**
-     * @see ConfigurableAuthenticationScheme#configure(String, Properties)
+     * @see ConfigurableAuthenticationScheme#configure(String, Map)
      */
-    public void configure(String schemeId, Properties config) {
+    public void configure(String schemeId, Map<String, String> config) {
         this.schemeId = schemeId;
         this.config = config;
     }
@@ -49,9 +50,10 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
     /**
      * @return the properties configured on this instance, or an empty Properties if none configured
      */
-    public Properties getConfig() {
+    @SuppressWarnings("unchecked")
+    public Map<String, String> getConfig() {
         if (config == null) {
-            config = new Properties();
+            config = new CaseInsensitiveMap();
         }
         return config;
     }
@@ -68,7 +70,7 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
      * @return the page that can be used to configure this AuthenticationScheme for a particular user
      */
     public String getUserConfigurationPage() {
-        return config.getProperty(CONFIGURATION_PAGE);
+        return config.get(CONFIGURATION_PAGE);
     }
 
     /**
@@ -96,7 +98,9 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
             userLogin.authenticationSuccessful(schemeId, authenticated);
         }
         catch (Exception e) {
-            userLogin.authenticationFailed(schemeId);
+            if (userLogin != null) {
+                userLogin.authenticationFailed(schemeId);
+            }
             throw new ContextAuthenticationException(e.getMessage(), e);
         }
         finally {

@@ -15,6 +15,8 @@ import org.openmrs.util.OpenmrsUtil;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -45,7 +47,7 @@ public abstract class BaseAuthenticationTest {
 		logger.setAdditive(false);
 		logger.setLevel(Level.INFO);
 		logger.addAppender(memoryAppender);
-		setRuntimeProperties(new Properties());
+		setRuntimeProperties(new HashMap<>());
 	}
 
 	protected File createAppDataDir() {
@@ -61,13 +63,16 @@ public abstract class BaseAuthenticationTest {
 		}
 	}
 
-	protected void setRuntimeProperties(Properties p) {
+	protected void setRuntimeProperties(Map<String, String> p) {
+		Properties props = new Properties();
+		props.putAll(p);
+
 		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
 			runtimePropertiesFile.delete();
 		}
-		p.setProperty(OpenmrsConstants.APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY, appDataDir.getAbsolutePath());
-		OpenmrsUtil.storeProperties(p, runtimePropertiesFile, "test");
-		Context.setRuntimeProperties(p);
+		props.setProperty(OpenmrsConstants.APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY, appDataDir.getAbsolutePath());
+		OpenmrsUtil.storeProperties(props, runtimePropertiesFile, "test");
+		Context.setRuntimeProperties(props);
 		AuthenticationConfig.reloadConfigFromRuntimeProperties("openmrs");
 		setAuthenticationSchemeOnContext();
 	}
@@ -92,7 +97,7 @@ public abstract class BaseAuthenticationTest {
 		memoryAppender.stop();
 		((Logger) LogManager.getRootLogger()).getContext().updateLoggers();
 		memoryAppender = null;
-		logger = null;
+
 		UserLoginTracker.removeLoginFromThread();
 		if (runtimePropertiesFile != null && runtimePropertiesFile.exists()) {
 			runtimePropertiesFile.delete();

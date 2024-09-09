@@ -7,6 +7,7 @@ import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -77,24 +78,24 @@ public class AuthenticationConfigTest extends BaseAuthenticationTest {
 		AuthenticationConfig.setProperty("prefs.timeOfDay", "morning");
 		AuthenticationConfig.setProperty("preferences.prefs.timeOfDay", "evening");
 		{
-			Properties p = AuthenticationConfig.getSubsetWithPrefix("prefs.", true);
+			Map<String, String> p = AuthenticationConfig.getSubsetWithPrefix("prefs.", true);
 			assertThat(p.size(), equalTo(3));
-			assertThat(p.getProperty("prefs.color"), nullValue());
-			assertThat(p.getProperty("prefs.season"), nullValue());
-			assertThat(p.getProperty("prefs.timeOfDay"), nullValue());
-			assertThat(p.getProperty("color"), equalTo("red"));
-			assertThat(p.getProperty("season"), equalTo("fall"));
-			assertThat(p.getProperty("timeOfDay"), equalTo("morning"));
+			assertThat(p.get("prefs.color"), nullValue());
+			assertThat(p.get("prefs.season"), nullValue());
+			assertThat(p.get("prefs.timeOfDay"), nullValue());
+			assertThat(p.get("color"), equalTo("red"));
+			assertThat(p.get("season"), equalTo("fall"));
+			assertThat(p.get("timeOfDay"), equalTo("morning"));
 		}
 		{
-			Properties p = AuthenticationConfig.getSubsetWithPrefix("prefs.", false);
+			Map<String, String> p = AuthenticationConfig.getSubsetWithPrefix("prefs.", false);
 			assertThat(p.size(), equalTo(3));
-			assertThat(p.getProperty("prefs.color"), equalTo("red"));
-			assertThat(p.getProperty("prefs.season"), equalTo("fall"));
-			assertThat(p.getProperty("prefs.timeOfDay"), equalTo("morning"));
-			assertThat(p.getProperty("color"), nullValue());
-			assertThat(p.getProperty("season"), nullValue());
-			assertThat(p.getProperty("timeOfDay"), nullValue());
+			assertThat(p.get("prefs.color"), equalTo("red"));
+			assertThat(p.get("prefs.season"), equalTo("fall"));
+			assertThat(p.get("prefs.timeOfDay"), equalTo("morning"));
+			assertThat(p.get("color"), nullValue());
+			assertThat(p.get("season"), nullValue());
+			assertThat(p.get("timeOfDay"), nullValue());
 		}
 	}
 

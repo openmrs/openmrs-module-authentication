@@ -15,14 +15,11 @@ package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Location;
-import org.openmrs.LocationTag;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Properties;
+import java.util.Map;
 
 import static org.openmrs.module.authentication.AuthenticationUtil.getBoolean;
 
@@ -44,13 +41,13 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 	private String lastLocationCookieName = "emr.lastSessionLocation";
 
 	@Override
-	public void configure(String schemeId, Properties config) {
+	public void configure(String schemeId, Map<String, String> config) {
 		super.configure(schemeId, config);
-		locationParamName = config.getProperty(LOCATION_PARAM_NAME, "sessionLocation");
-		onlyLocationsWithTag = config.getProperty(ONLY_LOCATIONS_WITH_TAG);
-		locationRequired = getBoolean(config.getProperty(LOCATION_REQUIRED), false);
-		locationSessionAttributeName = config.getProperty(LOCATION_SESSION_ATTRIBUTE_NAME, "emrContext.sessionLocationId");
-		lastLocationCookieName = config.getProperty(LAST_LOCATION_COOKIE_NAME, "emr.lastSessionLocation");
+		locationParamName = config.getOrDefault(LOCATION_PARAM_NAME, "sessionLocation");
+		onlyLocationsWithTag = config.get(ONLY_LOCATIONS_WITH_TAG);
+		locationRequired = getBoolean(config.get(LOCATION_REQUIRED), false);
+		locationSessionAttributeName = config.getOrDefault(LOCATION_SESSION_ATTRIBUTE_NAME, "emrContext.sessionLocationId");
+		lastLocationCookieName = config.getOrDefault(LAST_LOCATION_COOKIE_NAME, "emr.lastSessionLocation");
 	}
 
 	@Override
@@ -94,12 +91,6 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 				throw new IllegalArgumentException("authentication.error.invalidLocation");
 			}
 		}
-		if (loginLocation == null) {
-			List<Location> validLocations = getValidLocations();
-			if (validLocations.size() == 1) {
-				loginLocation = validLocations.get(0);
-			}
-		}
 		return loginLocation;
 	}
 
@@ -116,37 +107,6 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 			}
 		}
 		return l;
-	}
-
-	/**
-	 * @return a LocationTag for the given lookup, first trying to name, then trying uuid
-	 */
-	protected LocationTag getLocationTag(String lookup) {
-		LocationTag tag = null;
-		if (StringUtils.isNotBlank(lookup)) {
-			tag = Context.getLocationService().getLocationTagByName(lookup);
-			if (tag == null) {
-				tag = Context.getLocationService().getLocationTagByUuid(lookup);
-			}
-		}
-		return tag;
-	}
-
-	/**
-	 * @return a list of all valid locations that could be selected
-	 */
-	protected List<Location> getValidLocations() {
-		List<Location> ret = new ArrayList<>();
-		if (StringUtils.isBlank(onlyLocationsWithTag)) {
-			ret = Context.getLocationService().getAllLocations();
-		}
-		else {
-			LocationTag locationTag = getLocationTag(onlyLocationsWithTag);
-			if (locationTag != null) {
-				ret = Context.getLocationService().getLocationsByTag(locationTag);
-			}
-		}
-		return ret;
 	}
 
 	/**
