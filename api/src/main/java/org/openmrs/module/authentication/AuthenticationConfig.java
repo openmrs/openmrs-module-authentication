@@ -100,6 +100,11 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String PASSWORD_CHANGE_URL = "authentication.passwordChange.url";
 
+
+    public static final String AUTH_SCHEME_COMPONENT = "oauth2login.userInfoAuthenticationScheme";
+
+    public static final String OAUTH_PROP_BEAN_NAME = "oauth2.properties";
+
     /**
      * By default, when the forced password change feature is enabled and the user hits an API endpoint, instead of
      * being redirected to a login page, they will get a 403 response with a Location header indicating the page
