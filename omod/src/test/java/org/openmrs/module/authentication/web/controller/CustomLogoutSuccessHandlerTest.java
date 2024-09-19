@@ -2,9 +2,12 @@ package org.openmrs.module.authentication.web.controller;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.mockito.internal.verification.api.VerificationData;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.authentication.web.HttpUtils;
 import org.powermock.api.mockito.PowerMockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -21,18 +24,19 @@ import java.io.IOException;
 import static org.mockito.Mockito.*;
 
 @RunWith(PowerMockRunner.class)
+@PowerMockIgnore("javax.management.*")
 @PrepareForTest(Context.class)
 public class CustomLogoutSuccessHandlerTest {
 	
 	public CustomLogoutSuccessHandlerTest() {
 		OAuth2IntegrationTest.initPathInSystemProperties("Keycloak");
 	}
-	
+
 	@Test
 	public void onLogoutSuccess_redirectToLogoutURL() throws IOException, ServletException {
 		//setup
 		PowerMockito.mockStatic(Context.class);
-		
+
 		CustomLogoutSuccessHandler customLogoutSuccessHandler = new CustomLogoutSuccessHandler();
 		RedirectStrategy redirectStrategy = mock(RedirectStrategy.class);
 		customLogoutSuccessHandler.setRedirectStrategy(redirectStrategy);
@@ -45,14 +49,11 @@ public class CustomLogoutSuccessHandlerTest {
 		customLogoutSuccessHandler.onLogoutSuccess(request, response, null);
 
 		//verify
-		try (MockedStatic<CustomLogoutSuccessHandlerTest> mockedStatic = mockStatic(CustomLogoutSuccessHandlerTest.class)) {
-			mockedStatic.verify((MockedStatic.Verification) times(1));
-		}
+		PowerMockito.verifyStatic(HttpUtils.class,times(1));
 		Context.logout();
-		
-		verify(redirectStrategy, times(1)).sendRedirect(request, response,
-		    "http://localhost:8081/auth/realms/demo/protocol/openid-connect/logout?id_token_hint=myToken");
-		
+
+		verify(redirectStrategy, times(1)).sendRedirect(request, response, "http://localhost:8081/auth/realms/demo/protocol/openid-connect/logout?id_token_hint=myToken");
+
 	}
 
 	public static void getPublicKey_shouldNotLookUpTheKeyFromTheIdentityProviderIfNoUrlIsSet(VerificationData verificationData) {

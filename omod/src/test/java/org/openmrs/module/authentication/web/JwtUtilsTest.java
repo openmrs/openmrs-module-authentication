@@ -98,7 +98,7 @@ public class JwtUtilsTest {
 	@Test
 	public  void getPublicKey_shouldNotLookUpTheKeyFromTheIdentityProviderIfNoUrlIsSet() throws Exception {
 		Assert.assertNull(JwtUtils.getPublicKey(null, mockProps));
-		PowerMockito.verifyStatic(null,never());
+		PowerMockito.verifyStatic(HttpUtils.class,never());
 		HttpUtils.getJsonWebKeys(anyString());
 	}
 	
