@@ -34,28 +34,27 @@ public class CustomLogoutSuccessHandlerTest {
 
 	@Test
 	public void onLogoutSuccess_redirectToLogoutURL() throws IOException, ServletException {
-		//setup
+		// Setup:
 		PowerMockito.mockStatic(Context.class);
 
 		CustomLogoutSuccessHandler customLogoutSuccessHandler = new CustomLogoutSuccessHandler();
 		RedirectStrategy redirectStrategy = mock(RedirectStrategy.class);
 		customLogoutSuccessHandler.setRedirectStrategy(redirectStrategy);
+
 		MockHttpServletRequest request = new MockHttpServletRequest();
 		HttpServletResponse response = mock(HttpServletResponse.class);
 		OAuth2RestOperations restTemplate = mock(OAuth2RestOperations.class);
 		customLogoutSuccessHandler.setRestTemplate(restTemplate);
+
 		when(restTemplate.getAccessToken()).thenReturn(new DefaultOAuth2AccessToken("myToken"));
-		//replay
+
 		customLogoutSuccessHandler.onLogoutSuccess(request, response, null);
 
-		//verify
-		PowerMockito.verifyStatic(HttpUtils.class,times(1));
+		// Verify
+		PowerMockito.verifyStatic(Context.class, times(1));
 		Context.logout();
 
-		verify(redirectStrategy, times(1)).sendRedirect(request, response, "http://localhost:8081/auth/realms/demo/protocol/openid-connect/logout?id_token_hint=myToken");
-
-	}
-
-	public static void getPublicKey_shouldNotLookUpTheKeyFromTheIdentityProviderIfNoUrlIsSet(VerificationData verificationData) {
+		verify(redirectStrategy, times(1)).sendRedirect(request, response,
+				"http://localhost:8081/auth/realms/demo/protocol/openid-connect/logout?id_token_hint=myToken");
 	}
 }
