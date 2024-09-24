@@ -1,7 +1,11 @@
 package org.openmrs.module.authentication.web;
 
-import java.io.IOException;
-import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.openmrs.User;
+import org.openmrs.module.authentication.AuthenticationConfig;
+import org.openmrs.util.OpenmrsConstants;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -11,80 +15,68 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.openmrs.module.authentication.AuthenticationConfig;
-import org.openmrs.module.authentication.UserLogin;
-import org.openmrs.util.OpenmrsConstants;
+import java.io.IOException;
+import java.util.List;
 
 /**
- * This filter checks if an authenticated user has been flagged by the admin to
- * change his password on first/subsequent login.
+ * This filter checks if an authenticated user has been flagged to change his password on first/subsequent login.
+ * If so, and a password change url has been configured, this redirects the user to that page.
  */
 public class ForcePasswordChangeFilter implements Filter {
-	
-	private FilterConfig config;
 
 	private boolean supportForcedPasswordChange;
-
 	private List<String> whiteList;
-
 	String changePasswordUrl;
 
-
-	protected final Log log = LogFactory.getLog(getClass());
+	private final Log log = LogFactory.getLog(getClass());
 
 	@Override
-	public void init(FilterConfig config) throws ServletException {
-		this.config = config;
-		this.changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
-		this.whiteList = AuthenticationConfig.getPasswordChangeWhiteList();
-		this.supportForcedPasswordChange = AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false);
+	public void init(FilterConfig config) {
+		supportForcedPasswordChange = AuthenticationConfig.getBoolean(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, false);
+		if (supportForcedPasswordChange) {
+			changePasswordUrl = AuthenticationConfig.getChangePasswordUrl();
+			if (StringUtils.isBlank(changePasswordUrl)) {
+				log.error("Authentication Config is set to support force password change, but url to change password has not been set, ignoring");
+				supportForcedPasswordChange = false;
+			}
+			whiteList = AuthenticationConfig.getPasswordChangeWhiteList();
+		}
 	}
-
 
 	@Override
 	public void destroy() {
+		supportForcedPasswordChange = false;
+		changePasswordUrl = null;
+		whiteList = null;
 	}
 
 	@Override
-	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
-			throws IOException, ServletException {
+	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain) throws IOException, ServletException {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (!supportForcedPasswordChange || changePasswordUrl == null || WebUtil.isWhiteListed(request, whiteList)) {
-			if (changePasswordUrl == null) {
-				log.error("Change password URL is not set. Continuing with the request chain.");
+		if (supportForcedPasswordChange && !WebUtil.isWhiteListed(request, whiteList)) {
+			User user = getAuthenticatedUser(request, response);
+			if (user != null) {
+				if (Boolean.parseBoolean(user.getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD))) {
+					response.sendRedirect(changePasswordUrl);
+				}
 			}
-			chain.doFilter(request, response);
-			return;
 		}
 
-		AuthenticationSession session = getAuthenticationSession(request, response);
-		UserLogin userLogin = session.getUserLogin();
-		String changePasswordProperty = userLogin.getUser().
-		  getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
-		boolean changePasswordFlag = Boolean.parseBoolean(changePasswordProperty);
-		if (userLogin.isUserAuthenticated() && changePasswordFlag) {
-			request.getRequestDispatcher(changePasswordUrl).forward(request, response);
-		} else {
+		if (!response.isCommitted()) {
 			chain.doFilter(request, response);
 		}
 	}
-
 
 	/**
-	 * Return a valid AuthenticationSession for the given request
-	 * 
-	 * @param request the HttpServletRequest to use to retrieve the
-	 *                AuthenticationSession
-	 * @return the AuthenticationSession associated with this HttpServletRequest
+	 * Return the current authenticated user, if present, or null if no user is currently authenticated
 	 */
-	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
-		return new AuthenticationSession(request, response);
+	protected User getAuthenticatedUser(HttpServletRequest request, HttpServletResponse response) {
+		AuthenticationSession session = new AuthenticationSession(request, response);
+		if (session.isUserAuthenticated()) {
+			return session.getUserLogin().getUser();
+		}
+		return null;
 	}
-
 }
