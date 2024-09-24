@@ -15,7 +15,7 @@ import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
 
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * Represents a particular method of authentication.
@@ -23,19 +23,19 @@ import java.util.Properties;
 public class TestAuthenticationScheme implements ConfigurableAuthenticationScheme {
 
     private String schemeId;
-    private Properties config;
+    private Map<String, String> config;
 
     public TestAuthenticationScheme() {}
 
     @Override
-    public void configure(String schemeId, Properties config) {
+    public void configure(String schemeId, Map<String, String> config) {
         this.schemeId = schemeId;
         this.config = config;
     }
 
     @Override
     public Authenticated authenticate(Credentials credentials) {
-        String users = config.getProperty("users");
+        String users = (String) config.get("users");
         if (users != null) {
             for (String username : users.split(",")) {
                 if (username.equals(credentials.getClientName())) {
@@ -53,7 +53,7 @@ public class TestAuthenticationScheme implements ConfigurableAuthenticationSchem
         return schemeId;
     }
 
-    public Properties getConfig() {
+    public Map<String, String> getConfig() {
         return config;
     }
 }

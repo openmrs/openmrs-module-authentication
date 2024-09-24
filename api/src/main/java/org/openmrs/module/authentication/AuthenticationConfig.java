@@ -18,7 +18,9 @@ import org.openmrs.util.OpenmrsUtil;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -37,10 +39,6 @@ public class AuthenticationConfig implements Serializable {
      * All configured authentication schemes are identified by a unique {schemeId} in the configuration
      */
     public static final String SCHEME_ID = "{schemeId}";
-
-    public static final String SUPPORT_FORCED_PASSWORD_CHANGE = "authentication.supportForcedPasswordChange ";
-
-    public static final String PASSWORD_CHANGE_URL = "authentication.passwordChangeUrl";
 
     /**
      * This property determines which authentication scheme is used
@@ -73,7 +71,7 @@ public class AuthenticationConfig implements Serializable {
     /**
      * URLs that might need to be made accessible without go through the password change authentication.
      */
-    public static final String PASSWORD_CHANGE_WHITE_LIST = "authentication.passwordChangeWhiteList";
+    public static final String PASSWORD_CHANGE_WHITE_LIST = "authentication.passwordChange.whiteList";
 
     /**
      * All AuthenticationScheme instances must be configured with, at minimum, a property that maps a particular
@@ -89,14 +87,39 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String SCHEME_CONFIG_PREFIX_TEMPLATE = "authentication.scheme.{schemeId}.config.";
 
-    private static Properties config;
+    /**
+     * This property controls whether the force password change flows in this module are enabled
+     * By default, forced password changes are not enabled
+     * If set to {@code true} a configuration must also supply a URL to redirect to
+     */
+    public static final String SUPPORT_FORCED_PASSWORD_CHANGE = "authentication.passwordChange.allowForcedChange";
+
+    /**
+     * When the force password change flow is enabled, this is the URL that a user will be redirected to if they are
+     * required to change their password
+     */
+    public static final String PASSWORD_CHANGE_URL = "authentication.passwordChange.url";
+
+
+    public static final String AUTH_SCHEME_COMPONENT = "oauth2login.userInfoAuthenticationScheme";
+
+    public static final String OAUTH_PROP_BEAN_NAME = "oauth2.properties";
+
+    /**
+     * By default, when the forced password change feature is enabled and the user hits an API endpoint, instead of
+     * being redirected to a login page, they will get a 403 response with a Location header indicating the page
+     * to go to
+     */
+    public static final String SUPPORT_FORCED_PASSWORD_CHANGE_REST_API = "authentication.passwordChange.supportRestApi";
+
+    private static Map<String, String> config;
 
     private static final List<ClassLoader> classLoaders = new ArrayList<>();
 
     /**
      * @return the configured properties, loading from runtime properties if necessary
      */
-    public static Properties getConfig() {
+    public static Map<String, String> getConfig() {
         if (config == null) {
             config = AuthenticationUtil.getPropertiesWithPrefix(Context.getRuntimeProperties(), PREFIX, false);
         }
@@ -114,7 +137,7 @@ public class AuthenticationConfig implements Serializable {
      * @param config sets the configuration with the given Properties
      */
     public static void setConfig(Properties config) {
-        AuthenticationConfig.config = config;
+        AuthenticationConfig.config = Collections.synchronizedMap(AuthenticationUtil.getPropertiesWithPrefix(config, "", false));
     }
 
     /**
@@ -122,7 +145,7 @@ public class AuthenticationConfig implements Serializable {
      * @return the value of the given configuration property
      */
     public static String getProperty(String key) {
-        return getConfig().getProperty(key);
+        return getConfig().get(key);
     }
 
     /**
@@ -131,7 +154,7 @@ public class AuthenticationConfig implements Serializable {
      * @return the value of the given configuration property or the defaultValue if null
      */
     public static String getProperty(String key, String defaultValue) {
-        return getConfig().getProperty(key, defaultValue);
+        return getConfig().getOrDefault(key, defaultValue);
     }
 
     /**
@@ -143,7 +166,7 @@ public class AuthenticationConfig implements Serializable {
             getConfig().remove(key);
         }
         else {
-            getConfig().setProperty(key, value);
+            getConfig().put(key, value);
         }
     }
 
@@ -151,7 +174,7 @@ public class AuthenticationConfig implements Serializable {
      * @return all configuration properties currently configured
      */
     public static Set<String> getKeys() {
-        return getConfig().stringPropertyNames();
+        return getConfig().keySet();
     }
 
     /**
@@ -161,7 +184,6 @@ public class AuthenticationConfig implements Serializable {
      */
     public static boolean getBoolean(String key, boolean defaultValue) {
         return AuthenticationUtil.getBoolean(getProperty(key), defaultValue);
-
     }
 
     /**
@@ -197,7 +219,7 @@ public class AuthenticationConfig implements Serializable {
      */
     @SuppressWarnings("unchecked")
     public static <T> Class<? extends T> getClass(String key, Class<T> ignoredType) {
-        String className = config.getProperty(key);
+        String className = config.get(key);
         if (StringUtils.isNotBlank(className)) {
             List<ClassLoader> loaders = new ArrayList<>();
             loaders.add(OpenmrsClassLoader.getInstance());
@@ -219,7 +241,7 @@ public class AuthenticationConfig implements Serializable {
      * @param stripPrefix if true, this will remove the prefix in the resulting Properties
      * @return the configuration properties that start with the given prefix, without the prefix if stripPrefix is true
      */
-    public static Properties getSubsetWithPrefix(String prefix, boolean stripPrefix) {
+    public static Map<String, String> getSubsetWithPrefix(String prefix, boolean stripPrefix) {
         return AuthenticationUtil.getPropertiesWithPrefix(config, prefix, stripPrefix);
     }
 
@@ -249,7 +271,7 @@ public class AuthenticationConfig implements Serializable {
     }
 
     public static String getChangePasswordUrl() {
-        return getConfig().getProperty(PASSWORD_CHANGE_URL);
+        return getConfig().get(PASSWORD_CHANGE_URL);
     }
 
 

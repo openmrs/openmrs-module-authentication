@@ -27,7 +27,7 @@ import org.openmrs.module.authentication.UserLogin;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Properties;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -46,13 +46,13 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	/**
 	 * This supports configuring the `primaryOptions` and `secondaryOptions` that are supported factors
 	 * These are both expected to be comma-delimited lists of schemeIds
-	 * @see ConfigurableAuthenticationScheme#configure(String, Properties)
+	 * @see ConfigurableAuthenticationScheme#configure(String, Map <String, String>)
 	 */
 	@Override
-	public void configure(String schemeId, Properties config) {
+	public void configure(String schemeId, Map<String, String> config) {
 		super.configure(schemeId, config);
-		primaryOptions = AuthenticationUtil.getStringList(config.getProperty("primaryOptions"), ",");
-		secondaryOptions = AuthenticationUtil.getStringList(config.getProperty("secondaryOptions"), ",");
+		primaryOptions = AuthenticationUtil.getStringList(config.get("primaryOptions"), ",");
+		secondaryOptions = AuthenticationUtil.getStringList(config.get("secondaryOptions"), ",");
 	}
 
 	/**

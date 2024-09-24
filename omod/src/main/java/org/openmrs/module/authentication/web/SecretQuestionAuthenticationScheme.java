@@ -21,7 +21,7 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.UserLogin;
 
-import java.util.Properties;
+import java.util.Map;
 
 /**
  * This is an implementation of a WebAuthenticationScheme that is intended to be used as a secondary authentication
@@ -46,11 +46,11 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
     protected String answerParam;
 
     @Override
-    public void configure(String schemeId, Properties config) {
+    public void configure(String schemeId, Map<String, String> config) {
         super.configure(schemeId, config);
-        loginPage = config.getProperty(LOGIN_PAGE, "/loginWithSecret.htm");
-        questionParam = config.getProperty(QUESTION_PARAM, QUESTION);
-        answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
+        loginPage = config.getOrDefault(LOGIN_PAGE, "/loginWithSecret.htm");
+        questionParam = config.getOrDefault(QUESTION_PARAM, QUESTION);
+        answerParam = config.getOrDefault(ANSWER_PARAM, ANSWER);
     }
 
     /**

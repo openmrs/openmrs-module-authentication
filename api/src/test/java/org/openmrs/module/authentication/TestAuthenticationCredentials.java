@@ -9,7 +9,6 @@
  */
 package org.openmrs.module.authentication;
 
-import liquibase.pro.packaged.U;
 import org.openmrs.User;
 
 /**

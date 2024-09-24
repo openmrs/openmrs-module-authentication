@@ -10,8 +10,6 @@
 package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
@@ -19,8 +17,9 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
-import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.util.AntPathMatcher;
 
 import javax.servlet.Filter;
@@ -52,7 +51,7 @@ import java.util.Date;
  */
 public class AuthenticationFilter implements Filter {
 	
-	protected final Log log = LogFactory.getLog(getClass());
+	protected final Logger log = LoggerFactory.getLogger(getClass());
 
 	private AntPathMatcher matcher;
 	
@@ -141,15 +140,18 @@ public class AuthenticationFilter implements Filter {
 						}
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
-							log.debug("Authentication failed: " + request.getRequestURI());
+							log.debug("Authentication failed: {}", request.getRequestURI());
 							session.sendRedirect(challengeUrl);
 						}
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
 						if (!WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList())) {
-							log.trace("Authentication required: " + request.getRequestURI());
-							session.sendRedirect(challengeUrl);
+							log.trace("Authentication required: {}", request.getRequestURI());
+
+							if (!challengeUrl.equals(request.getRequestURI())) {
+								session.sendRedirect(challengeUrl);
+							}
 						}
 					}
 				}

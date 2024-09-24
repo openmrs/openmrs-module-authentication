@@ -31,6 +31,13 @@
 		<MODULE_VERSION>${project.version}</MODULE_VERSION>
 		<MODULE_PACKAGE>${project.groupId}.${project.artifactId}</MODULE_PACKAGE>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<openmrsAppframeworkVersion>2.15.0</openmrsAppframeworkVersion>
+		<javax.servletVersion>2.0</javax.servletVersion>
+		<javax.servlet-apiVersion>3.0.1</javax.servlet-apiVersion>
+		<spring-security-oauth2Version>2.3.5.RELEASE</spring-security-oauth2Version>
+		<json-pathVersion>2.4.0</json-pathVersion>
+		<jjwtVersion>0.11.2</jjwtVersion>
+		<jose4jVersion>0.7.8</jose4jVersion>
 	</properties>
 
 	<modules>
@@ -54,6 +61,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.openmrs.module</groupId>
+			<artifactId>appframework-api</artifactId>
+			<version>${openmrsAppframeworkVersion}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.openmrs.test</groupId>
 			<artifactId>openmrs-test</artifactId>
 			<version>${openmrsVersion}</version>
@@ -64,6 +77,12 @@
 			<groupId>dev.samstevens.totp</groupId>
 			<artifactId>totp</artifactId>
 			<version>${totpVersion}</version>
+		</dependency>
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jsp-api</artifactId>
+			<version>${javax.servletVersion}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
