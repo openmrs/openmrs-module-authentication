@@ -1,15 +1,22 @@
 package org.openmrs.module;
 
+import org.openmrs.api.PatientService;
 import org.openmrs.module.Module;
 import org.openmrs.module.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.stream.Stream;
 
 public class TestDaemonToken {
-	
+
+	@Autowired
+	public PatientService patientService;
+
 	private class Activator extends BaseModuleActivator implements DaemonTokenAware {
 		
 		private DaemonToken token;
+
+
 		
 		@Override
 		public void setDaemonToken(DaemonToken token) {
@@ -29,12 +36,12 @@ public class TestDaemonToken {
 	 * @param awares The collection of {@link DaemonTokenAware} implementations.
 	 */
 	public void setDaemonToken(DaemonTokenAware... awares) {
+		patientService.getPatients("");
 		Module module = new Module("Spring Test Module");
 		module.setModuleId("spring-test-module");
 		final Activator activator = new Activator();
 		module.setModuleActivator(activator);
 		ModuleFactory.passDaemonToken(module);
-		
 		Stream.of(awares).forEach(a -> a.setDaemonToken(activator.getDaemonToken()));
 	}
 }

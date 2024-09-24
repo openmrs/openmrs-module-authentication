@@ -11,8 +11,8 @@ package org.openmrs.module.authentication.web.controller;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.openmrs.Provider;
 import org.openmrs.User;
@@ -23,9 +23,11 @@ import org.openmrs.module.DaemonTokenAware;
 import org.openmrs.module.TestDaemonToken;
 import org.openmrs.module.authentication.authscheme.OAuth2TokenCredentials;
 import org.openmrs.module.authentication.authscheme.UserInfo;
-import org.openmrs.test.BaseModuleContextSensitiveTest;
+import org.openmrs.test.jupiter.BaseContextSensitiveTest;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.util.PrivilegeConstants;
+import org.openmrs.web.test.jupiter.BaseModuleWebContextSensitiveTest;
+import org.powermock.reflect.Whitebox;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.client.RestOperations;
@@ -41,7 +43,7 @@ import static org.hamcrest.collection.IsIterableContainingInAnyOrder.containsInA
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
-public abstract class OAuth2IntegrationTest extends BaseModuleContextSensitiveTest {
+public abstract class OAuth2IntegrationTest extends BaseModuleWebContextSensitiveTest {
 	
 	private final static String OPENMRS_APPLICATION_DATA_DIRECTORY = "OPENMRS_APPLICATION_DATA_DIRECTORY";
 	
@@ -62,8 +64,10 @@ public abstract class OAuth2IntegrationTest extends BaseModuleContextSensitiveTe
 	}
 	
 	protected static void initBaseModuleContext(String appDataDirName) {
-		initPathInSystemProperties(appDataDirName);
-		BaseModuleContextSensitiveTest.runtimeProperties.setProperty(
+
+		Properties runtimeProperties = Whitebox.getInternalState(BaseContextSensitiveTest.class, "runtimeProperties");
+
+		runtimeProperties.setProperty(
 		    OpenmrsConstants.APPLICATION_DATA_DIRECTORY_RUNTIME_PROPERTY,
 		    System.getProperty(OPENMRS_APPLICATION_DATA_DIRECTORY));
 		Context.setRuntimeProperties(runtimeProperties);
@@ -93,10 +97,10 @@ public abstract class OAuth2IntegrationTest extends BaseModuleContextSensitiveTe
 	
 	@Autowired
 	private DaemonTokenAware authenticationScheme;
-	
-	@Autowired
-	@Qualifier("providerService")
-	private ProviderService ps;
+
+	private ProviderService getProviderService(){
+		return Context.getProviderService();
+	}
 	
 	@Override
 	protected Credentials getCredentials() {
@@ -112,10 +116,9 @@ public abstract class OAuth2IntegrationTest extends BaseModuleContextSensitiveTe
 		
 		return new OAuth2TokenCredentials(new UserInfo(oauth2Props, getUserInfoJson()));
 	}
-	
-	@Before
+
+	@BeforeEach
 	public void setup() throws Exception {
-		
 		new TestDaemonToken().setDaemonToken(authenticationScheme);
 		
 		controller.setOAuth2Properties(oauth2Props);
@@ -136,14 +139,14 @@ public abstract class OAuth2IntegrationTest extends BaseModuleContextSensitiveTe
 	
 	protected void assertThatProviderAccountIsActivated(User user) {
 		Context.addProxyPrivilege(PrivilegeConstants.GET_PROVIDERS);
-		Collection<Provider> possibleProvider = ps.getProvidersByPerson(user.getPerson(), false);
+		Collection<Provider> possibleProvider = getProviderService().getProvidersByPerson(user.getPerson(), false);
 		Assert.assertThat(possibleProvider, hasSize(1));
 		Context.removeProxyPrivilege(PrivilegeConstants.GET_PROVIDERS);
 	}
 	
 	protected void assertThatProviderAccountIsDeactivated(User user) {
 		Context.addProxyPrivilege(PrivilegeConstants.GET_PROVIDERS);
-		Collection<Provider> possibleProvider = ps.getProvidersByPerson(user.getPerson(), false);
+		Collection<Provider> possibleProvider = getProviderService().getProvidersByPerson(user.getPerson(), false);
 		Assert.assertThat(possibleProvider, hasSize(0));
 		Context.removeProxyPrivilege(PrivilegeConstants.GET_PROVIDERS);
 	}

@@ -10,15 +10,27 @@
 package org.openmrs.module.authentication.web.controller;
 
 import org.junit.Assert;
+import org.junit.jupiter.api.BeforeEach;
 import org.openmrs.User;
+import org.openmrs.api.PatientService;
+import org.openmrs.api.context.Context;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.springframework.beans.factory.annotation.Autowired;
 
+@PrepareForTest(Context.class)
 public class GoogleAPIAuthenticationTest extends OAuth2IntegrationTest {
-	
+
+	@Autowired
+	private PatientService patientService;
 	@Override
 	protected String getAppDataDirName() {
 		return "GoogleAPI";
 	}
-	
+
+	@BeforeEach
+	public void setup() throws Exception {
+		patientService.getPatients("");
+	}
 	@Override
 	protected String getUserInfoJson() {
 		return "{\n" + "  \"sub\": \"31a709c3-67f4-4b01-b76c-b39e650c0a41\",\n" + "  \"name\": \"John Doe\",\n"

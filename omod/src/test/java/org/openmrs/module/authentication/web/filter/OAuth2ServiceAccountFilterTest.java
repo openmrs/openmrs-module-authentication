@@ -7,6 +7,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -56,17 +58,18 @@ public class OAuth2ServiceAccountFilterTest {
 	private Logger mockLogger;
 	
 	private OAuth2ServiceAccountFilter filter;
-	
-	@Before
+
+
+	@BeforeEach
 	public void setup() {
-		MockitoAnnotations.initMocks(this);
-		mockStatic(Context.class);
-		mockStatic(JwtUtils.class);
+		MockitoAnnotations.initMocks(this);  // Initializes @Mock annotations
+		PowerMockito.mockStatic(Context.class);
+		PowerMockito.mockStatic(JwtUtils.class);
 		filter = PowerMockito.spy(new OAuth2ServiceAccountFilter());
 		Whitebox.setInternalState(OAuth2ServiceAccountFilter.class, Logger.class, mockLogger);
 	}
 	
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		verify(mockFilterChain).doFilter(mockRequest, null);
 	}

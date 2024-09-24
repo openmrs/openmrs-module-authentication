@@ -36,14 +36,14 @@ import static org.mockito.Mockito.*;
 public class OAuth2LoginRequestFilterTest {
 	
 	private final OAuth2LoginRequestFilter filter = new OAuth2LoginRequestFilter();
-	
+
 	@Before
 	public void setup() throws ServletException {
 		PowerMockito.mockStatic(Context.class);
 		OAuth2IntegrationTest.initPathInSystemProperties("Keycloak");
 		FilterConfig filterConfig = mock(FilterConfig.class);
-		when(filterConfig.getInitParameter(eq("servletPaths"))).thenReturn("/oauth2login");
-		when(filterConfig.getInitParameter(eq("requestURIs"))).thenReturn("/ws/rest/v1/session");
+		org.mockito.Mockito.when(filterConfig.getInitParameter(eq("servletPaths"))).thenReturn("/oauth2login");
+		org.mockito.Mockito.when(filterConfig.getInitParameter(eq("requestURIs"))).thenReturn("/ws/rest/v1/session");
 		filter.init(filterConfig);
 	}
 	

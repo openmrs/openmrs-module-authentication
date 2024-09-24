@@ -3,7 +3,7 @@
         {
             "kid": "APx_BYC9kRfT-EmqTPwLbUC9xXpi-YaUzojFHVxP1Rc",
             "kty": "RSA",
-            "alg": "PS256",
+            "alg": "RS256",
             "use": "sig",
             "n": "5xoHOaHh5ZcsBLkXYmfHUC9kN5PosWQ9SaTBoyW_Eq2ocVrVeq-pduAHSfHnb_VSR8PeEYhsw0pv3SHUgH6QvbUGCw8pr0Y_aFtHxoS4HqWC7k-ZH9rI23Pa5awcUnlIU47j0SUWLf_NoH_Sy_Gv1oPKfpJul38NAXAaiyJmc9Udnbsg4X4QWNnpmzDBaoKcR4QcCZY8054RInsfyAZ8-5Soan3COsRbVvrgRaCW9qYS3caB-CVL4c89pmb9eyEKzxfCxQTNm5u1SUizdtCLHmLtjav0uShBNwCvISZXZYpVp6zsElWr_1V9qn9rmU-6SEmZHSQih-MPWRISMfRjqQ",
             "e": "AQAB",
