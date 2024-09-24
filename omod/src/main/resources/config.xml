@@ -30,7 +30,7 @@
 	</filter>
 	<filter>
 		<filter-name>forcePasswordChangeFilter</filter-name>
-		<filter-class>org.openmrs.module.authentication.web.filter.ForcePasswordChangeFilter</filter-class>
+		<filter-class>org.openmrs.module.authentication.web.ForcePasswordChangeFilter</filter-class>
 	</filter>
 
 	<filter-mapping>

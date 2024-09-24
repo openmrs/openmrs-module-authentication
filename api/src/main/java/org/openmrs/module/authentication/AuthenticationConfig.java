@@ -38,8 +38,16 @@ public class AuthenticationConfig implements Serializable {
      */
     public static final String SCHEME_ID = "{schemeId}";
 
-    public static final String SUPPORT_FORCED_PASSWORD_CHANGE = "authentication.supportForcedPasswordChange ";
+    /**
+     * If set to true, this indicates that users who have been set to require a password change are directed
+     * to the corresponding `authentication.passwordChangeUrl` page before they can proceed into the system
+     */
+    public static final String SUPPORT_FORCED_PASSWORD_CHANGE = "authentication.supportForcedPasswordChange";
 
+    /**
+     * If `authentication.supportForcedPasswordChange` is to true, this indicates the url that users should be
+     * redirected to if they are set to require their password changed at next login.
+     */
     public static final String PASSWORD_CHANGE_URL = "authentication.passwordChangeUrl";
 
     /**
