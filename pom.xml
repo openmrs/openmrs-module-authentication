@@ -4,7 +4,7 @@
 
 	<groupId>org.openmrs.module</groupId>
 	<artifactId>authentication</artifactId>
-	<version>1.2.0-SNAPSHOT</version>
+	<version>2.0.0-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Authentication</name>
 	<description>Authentication support for OpenMRS</description>
@@ -22,8 +22,7 @@
 	</scm>
 
 	<properties>
-		<!-- 2.5.4 is set due to log4j2 dependency and changes to core logging classes -->
-		<openmrsVersion>2.5.4</openmrsVersion>
+		<openmrsVersion>2.7.0</openmrsVersion>
 		<totpVersion>1.7.1</totpVersion>
 		<!-- Other configuration -->
 		<MODULE_ID>${project.artifactId}</MODULE_ID>
