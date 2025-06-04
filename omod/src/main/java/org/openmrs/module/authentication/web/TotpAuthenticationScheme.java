@@ -33,6 +33,8 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.util.Security;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import java.util.Properties;
 
@@ -41,6 +43,7 @@ import java.util.Properties;
  * See: <a href="https://github.com/samdjstevens/java-totp">https://github.com/samdjstevens/java-totp</a>
  */
 public class TotpAuthenticationScheme extends WebAuthenticationScheme {
+	protected final Log log = LogFactory.getLog(getClass());
 
 	// Configuration properties for secret and code
 	public static final String SECRET_LENGTH = "secretLength";
@@ -102,8 +105,8 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		if (StringUtils.isBlank(userSecret)) {
 			throw new ContextAuthenticationException("authentication.error.noSecretConfiguredForUser");
 		}
-		String decodedSecret = Security.decrypt(userSecret);
-		if (!verifyCode(decodedSecret, c.code)) {
+		// decodedSecret = Security.decrypt(userSecret); Don't merge until resolved
+		if (!verifyCode(userSecret, c.code)) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
 
