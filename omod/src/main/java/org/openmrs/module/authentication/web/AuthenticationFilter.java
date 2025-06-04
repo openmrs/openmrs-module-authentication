@@ -22,6 +22,9 @@ import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.openmrs.module.webservices.rest.web.ConversionUtil;
+import org.openmrs.module.webservices.rest.web.representation.Representation;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -33,6 +36,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
@@ -108,7 +113,6 @@ public class AuthenticationFilter implements Filter {
 
 		AuthenticationSession session = getAuthenticationSession(request, response);
 		UserLogin userLogin = session.getUserLogin();
-
 		try {
 			UserLoginTracker.setLoginOnThread(userLogin);
 			userLogin.setLastActivityDate(new Date());
@@ -135,21 +139,37 @@ public class AuthenticationFilter implements Filter {
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
 							String successUrl = determineSuccessRedirectUrl(request);
+							log.trace("Success Redirect====>" + successUrl);
 							if (successUrl != null) {
-								response.sendRedirect(successUrl);
+								if (isRestSessionRequest(request)) {
+									sendRestSessionSuccessResponse(request, response, successUrl);
+									return;
+								} else {
+									response.sendRedirect(successUrl);
+								}
 							}
 						}
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
-							log.debug("Authentication failed: " + request.getRequestURI());
-							session.sendRedirect(challengeUrl);
+							log.debug("Authentication failed: " + challengeUrl);
+							if (isRestSessionRequest(request)) {
+								sendRestSessionChallengeResponse(response, challengeUrl, webScheme.getSchemeId());
+								return;
+							} else {
+								session.sendRedirect(challengeUrl);
+							}
 						}
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
 						if (!WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
-							session.sendRedirect(challengeUrl);
+							if (isRestSessionRequest(request)) {
+								sendRestSessionChallengeResponse(response, challengeUrl, webScheme.getSchemeId());
+								return;
+							} else {
+								session.sendRedirect(challengeUrl);
+							}
 						}
 					}
 				}
@@ -203,5 +223,56 @@ public class AuthenticationFilter implements Filter {
 	 */
 	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
 		return new AuthenticationSession(request, response);
+	}
+
+	private boolean isRestSessionRequest(HttpServletRequest request) {
+		String uri = request.getRequestURI();
+		return uri != null && uri.endsWith("/ws/rest/v1/session");
+	}
+
+	private void sendRestSessionChallengeResponse(HttpServletResponse response, String challengeUrl, String webSchemeId) throws IOException {
+		response.setStatus(HttpServletResponse.SC_OK);
+		response.setHeader("Location", challengeUrl);
+		response.setContentType("application/json");
+		Map<String, String> body = new HashMap<>();
+		body.put("location", challengeUrl);
+		body.put("webScheme", webSchemeId);
+		ObjectMapper mapper = new ObjectMapper();
+		response.getWriter().write(mapper.writeValueAsString(body));
+	}
+
+	private void sendRestSessionSuccessResponse(HttpServletRequest request, HttpServletResponse response, String successUrl) throws IOException {
+		response.setStatus(HttpServletResponse.SC_OK);
+		response.setHeader("Location", successUrl);
+		response.setContentType("application/json");
+		Map<String, Object> body = new HashMap<>();
+		body.put("successUrl", successUrl);
+		body.put("authenticated", Context.isAuthenticated());
+		body.put("locale", Context.getLocale().toString());
+		body.put("sessionLocation", ConversionUtil.convertToRepresentation(Context.getUserContext().getLocation(), Representation.REF));
+		body.put("currentProvider", ConversionUtil.convertToRepresentation(getCurrentProvider(), Representation.REF));
+		if (Context.isAuthenticated() && Context.getAuthenticatedUser() != null) {
+			Object userRep = ConversionUtil.convertToRepresentation(Context.getAuthenticatedUser(), Representation.DEFAULT);
+			body.put("user", userRep);
+		} else {
+			body.put("user", null);
+		}
+		ObjectMapper mapper = new ObjectMapper();
+		response.getWriter().write(mapper.writeValueAsString(body));
+	}
+
+	private org.openmrs.Provider getCurrentProvider() {
+		if (Context.isAuthenticated() && Context.getAuthenticatedUser() != null) {
+			try {
+				java.util.Collection<org.openmrs.Provider> providers = Context.getProviderService().getProvidersByPerson(Context.getAuthenticatedUser().getPerson());
+				if (providers != null && !providers.isEmpty()) {
+					return providers.iterator().next();
+				}
+			} catch (Exception e) {
+				// Provider module may not be installed or user may not be a provider
+				return null;
+			}
+		}
+		return null;
 	}
 }
