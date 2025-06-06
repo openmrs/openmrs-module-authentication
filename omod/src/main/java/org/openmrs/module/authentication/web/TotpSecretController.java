@@ -41,17 +41,14 @@ public class TotpSecretController {
     @GetMapping(value = "/secret", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public Map<String, Object> generateSecret() {
-        // Get config from AuthenticationConfig or similar
-        Properties config = AuthenticationConfig.getConfig();
-        TotpAuthenticationScheme totpScheme = new TotpAuthenticationScheme();
-        totpScheme.configure("totp", config);
+        TotpAuthenticationScheme scheme = (TotpAuthenticationScheme) AuthenticationConfig.getAuthenticationScheme("totp");
 
-        String secret = totpScheme.generateSecret();
+        String secret = scheme.generateSecret();
         String label = "";
         if (Context.getAuthenticatedUser() != null && Context.getAuthenticatedUser().getUsername() != null) {
             label = Context.getAuthenticatedUser().getDisplayString();
         }
-        String qrCodeUri = totpScheme.generateQrCodeUriForSecret(secret, label);
+        String qrCodeUri = scheme.generateQrCodeUriForSecret(secret, label);
 
         Map<String, Object> response = new HashMap<>();
         response.put("secret", secret);
@@ -70,16 +67,14 @@ public class TotpSecretController {
     public Map<String, Object> validateCode(@RequestBody Map<String, String> payload) {
         String secret = payload.get("secret");
         String code = payload.get("code");
-        Properties config = AuthenticationConfig.getConfig();
-        TotpAuthenticationScheme totpScheme = new TotpAuthenticationScheme();
-        totpScheme.configure("totp", config);
-        boolean valid = totpScheme.verifyCode(secret, code);
+        TotpAuthenticationScheme scheme = (TotpAuthenticationScheme) AuthenticationConfig.getAuthenticationScheme("totp");
+        boolean valid = scheme.verifyCode(secret, code);
         boolean saved = false;
         if (valid) {
             User user = Context.getAuthenticatedUser();
             if (user != null) {
-                String propertyName = totpScheme.getSecretUserPropertyName();
-                //String encryptedSecret = Security.encrypt(secret); Don't merge until resolved
+                String propertyName = scheme.getSecretUserPropertyName();
+                //String encryptedSecret = Security.encrypt(secret);
                 user.setUserProperty(propertyName, secret);
                 Context.getUserService().saveUser(user);
                 saved = true;
