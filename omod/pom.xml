@@ -67,17 +67,6 @@
             <version>3.1.0</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>${jacksonVersion}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.openmrs.module</groupId>
-        	<artifactId>webservices.rest-omod-1.8</artifactId>
-        	<version>${webservices.restVersion}</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>

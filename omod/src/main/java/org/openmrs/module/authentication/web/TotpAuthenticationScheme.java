@@ -105,7 +105,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		if (StringUtils.isBlank(userSecret)) {
 			throw new ContextAuthenticationException("authentication.error.noSecretConfiguredForUser");
 		}
-		// decodedSecret = Security.decrypt(userSecret); Don't merge until resolved
+		//String decodedSecret = Security.decrypt(userSecret);
 		if (!verifyCode(userSecret, c.code)) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
