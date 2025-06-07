@@ -55,7 +55,7 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (supportForcedPasswordChange && !WebUtil.isWhiteListed(request, whiteList)) {
+		if (supportForcedPasswordChange && !WebUtil.urlMatchesAnyPattern(request, whiteList)) {
 			User user = getAuthenticatedUser(request, response);
 			if (user != null) {
 				if (Boolean.parseBoolean(user.getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD))) {

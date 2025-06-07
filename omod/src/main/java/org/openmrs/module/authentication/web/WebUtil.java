@@ -15,14 +15,14 @@ public class WebUtil {
     }
 
     /**
-     * Checks if the request is for a URL that matches a configured whitelist pattern.
+     * Checks if the request is for a URL that matches at least one of the given patterns.
      * 
      * @param request the HttpServletRequest to check
-     * @param whiteList the list of URL patterns to check against
-     * @return true if the request is for a URL that matches a configured whitelist pattern
+     * @param patterns the list of URL patterns to check against
+     * @return true if the request is for a URL that matches at least one of the given patterns
      */
-    public static boolean isWhiteListed(HttpServletRequest request, List<String> whiteList) {
-        for (String pattern : whiteList) {
+    public static boolean urlMatchesAnyPattern(HttpServletRequest request, List<String> patterns) {
+        for (String pattern : patterns) {
             if (matchesPath(request, pattern)) {
                 return true;
             }
