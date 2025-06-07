@@ -35,11 +35,13 @@ import java.io.IOException;
 import java.util.Date;
 
 /**
- * This servlet filter checks whether the user is authenticated, and if not, redirects to the configured login page.
+ * This servlet filter checks whether the user is authenticated, and if not, returns a response to authenticate
+ * This will either be a 3xx redirection or a 4xx unauthenticated response depending on the url and configuration
  * This filter is configurable via runtime properties:
  * <p>
  * authentication.scheme = schemeId
  * authentication.whiteList = comma-delimited list of url patterns that should not require authentication
+ * authentication.nonRedirectUrls = comma-delimited list of url patterns that should not result in a 3xx redirect
  * <p>
  * If `authentication.scheme` references a `WebAuthenticationScheme`, then this filter will activate.
  * If this is not configured, or does not implement `WebAuthenticationScheme`, no filtering will occur
@@ -142,14 +144,18 @@ public class AuthenticationFilter implements Filter {
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
 							log.debug("Authentication failed: " + request.getRequestURI());
-							session.sendRedirect(challengeUrl);
+							handleAuthenticationFailure(request, response, challengeUrl);
 						}
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (!WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList())) {
+						if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
-							session.sendRedirect(challengeUrl);
+							handleAuthenticationFailure(request, response, challengeUrl);
+						}
+						else if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
+							// Add a location header to the session endpoint to support frontend redirection to login
+							response.setHeader("Location", challengeUrl);
 						}
 					}
 				}
@@ -161,6 +167,21 @@ public class AuthenticationFilter implements Filter {
 		}
 		finally {
 			UserLoginTracker.removeLoginFromThread();
+		}
+	}
+
+	/**
+	 * Upon authentication failure, this either issues a 3xx redirect or a 401 unauthenticated, depending on the url
+	 * @param request the request to handle
+	 * @param challengeUrl the challengeUrl to direct the response to
+	 */
+	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
+		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+			response.setHeader("Location", challengeUrl);
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+		}
+		else {
+			response.sendRedirect(challengeUrl);
 		}
 	}
 	
