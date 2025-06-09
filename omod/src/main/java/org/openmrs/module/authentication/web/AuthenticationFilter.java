@@ -149,13 +149,13 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
-							log.trace("Authentication required: " + request.getRequestURI());
-							handleAuthenticationFailure(request, response, challengeUrl);
-						}
-						else if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
+						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
 							// Add a location header to the session endpoint to support frontend redirection to login
 							response.setHeader("Location", challengeUrl);
+						}
+						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+							log.trace("Authentication required: " + request.getRequestURI());
+							handleAuthenticationFailure(request, response, challengeUrl);
 						}
 					}
 				}
