@@ -27,6 +27,7 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.Properties;
 
@@ -182,24 +183,24 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		AuthenticationConfig.setProperty(AuthenticationConfig.WHITE_LIST, "/login.htm,*.jpg,/**/*.gif");
 		request.setContextPath("/");
 		request.setRequestURI("/login.htm");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setRequestURI("login.htm");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 		request.setRequestURI("/loginForm.htm");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 		request.setRequestURI("/logo.jpg");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setRequestURI("/resources/module/folder/logo.jpg");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setRequestURI(null);
 		request.setServletPath("/logo.gif");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setServletPath("/resources/module/folder/logo.gif");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(true));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setServletPath("/logo.png");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 		request.setServletPath("/resources/module/folder/logo.png");
-		assertThat(WebUtil.isWhiteListed(request, AuthenticationConfig.getWhiteList()), equalTo(false));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 	}
 
 	@Test
@@ -258,6 +259,28 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(WebUtil.contextualizeUrl(request, "login.htm"), equalTo(expected));
 		assertThat(WebUtil.contextualizeUrl(request, "/openmrs/login.htm"), equalTo(expected));
 		assertThat(WebUtil.contextualizeUrl(request, "/login.html"), not(expected));
+	}
+
+	@Test
+	public void shouldRedirectIfUrlNotInNonRedirectUrlsPattern() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.NON_REDIRECT_URLS, "/ws/*");
+		request.setContextPath("/");
+		request.setRequestURI("/patientDashboard.htm");
+		filter.handleAuthenticationFailure(request, response, "/login.htm");
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_MOVED_TEMPORARILY));
+	}
+
+	@Test
+	public void shouldNotRedirectIfUrlInNonRedirectUrlsPattern() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.NON_REDIRECT_URLS, "/ws/**/*");
+		request.setContextPath("/");
+		request.setRequestURI("/ws/fhir2/R4/Patient/923f69ae-fa1a-43db-98e6-bafcc80f5c05");
+		filter.handleAuthenticationFailure(request, response, "/login.htm");
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
 
 	@AfterEach

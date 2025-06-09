@@ -79,6 +79,13 @@ public class AuthenticationConfig implements Serializable {
     public static final String WHITE_LIST = "authentication.whiteList";
 
     /**
+     * Some URL patterns should not result in a redirect to a challengeUrl, but rather should result in a 401
+     * unauthorized response with the challengeUrl set as the Location header.  This is generally true for all requests
+     * of RESTful endpoints that are interacting with the API in a single-page app rather than redirecting to new urls
+     */
+    public static final String NON_REDIRECT_URLS = "authentication.nonRedirectUrls";
+
+    /**
      * URLs that might need to be made accessible without go through the password change authentication.
      */
     public static final String PASSWORD_CHANGE_WHITE_LIST = "authentication.passwordChangeWhiteList";
@@ -245,6 +252,15 @@ public class AuthenticationConfig implements Serializable {
      */
     public static List<String> getWhiteList() {
         return getStringList(WHITE_LIST);
+    }
+
+    /**
+     * @return the List of url patterns that should not result in a redirect upon authentication failure
+     */
+    public static List<String> getNonRedirectUrls() {
+        List<String> nonRedirectUrls = getStringList(NON_REDIRECT_URLS);
+        nonRedirectUrls.add("/ws/**/*");
+        return nonRedirectUrls;
     }
 
      /**
