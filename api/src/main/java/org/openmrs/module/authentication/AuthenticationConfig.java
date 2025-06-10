@@ -251,7 +251,26 @@ public class AuthenticationConfig implements Serializable {
      * @return the List of url patterns to allow without authentication redirection
      */
     public static List<String> getWhiteList() {
-        return getStringList(WHITE_LIST);
+        List<String> whitelist = getStringList(WHITE_LIST);
+        whitelist.add("/login.htm");
+        whitelist.add("/authenticationui/login/login.page");
+        whitelist.add("/authenticationui/login/loginSecret.page");
+        whitelist.add("/authenticationui/login/loginTotp.page");
+        whitelist.add("/authenticationui/resetPassword/reset.action");
+        whitelist.add("/authenticationui/account/resetPassword.page");
+        whitelist.add("/appui/session/getLoginLocations.action");
+        whitelist.add("/csrfguard");
+        whitelist.add("/spa/**/*");
+        whitelist.add("*.js");
+        whitelist.add("*.css");
+        whitelist.add("*.gif");
+        whitelist.add("*.jpg");
+        whitelist.add("*.png");
+        whitelist.add("*.ico");
+        whitelist.add("*.ttf");
+        whitelist.add("*.woff");
+        whitelist.add("*.woff2");
+        return whitelist;
     }
 
     /**
