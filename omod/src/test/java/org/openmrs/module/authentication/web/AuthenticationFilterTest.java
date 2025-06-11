@@ -197,9 +197,9 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
 		request.setServletPath("/resources/module/folder/logo.gif");
 		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(true));
-		request.setServletPath("/logo.png");
+		request.setServletPath("/logo.gif2");
 		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(false));
-		request.setServletPath("/resources/module/folder/logo.png");
+		request.setServletPath("/resources/module/folder/logo.png2");
 		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()), equalTo(false));
 	}
 

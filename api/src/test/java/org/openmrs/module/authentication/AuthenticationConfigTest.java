@@ -44,9 +44,10 @@ public class AuthenticationConfigTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldGetStringListProperty() {
-		assertThat(AuthenticationConfig.getStringList(WHITE_LIST).size(), equalTo(0));
-		AuthenticationConfig.setProperty(WHITE_LIST, "*.css,*.gif,*.jpg,*.png");
-		List<String> urls = AuthenticationConfig.getStringList(WHITE_LIST);
+		String propertyName = "testStringList";
+		assertThat(AuthenticationConfig.getStringList(propertyName).size(), equalTo(0));
+		AuthenticationConfig.setProperty(propertyName, "*.css,*.gif,*.jpg,*.png");
+		List<String> urls = AuthenticationConfig.getStringList(propertyName);
 		assertThat(urls.size(), equalTo(4));
 		assertThat(urls.get(0), equalTo("*.css"));
 		assertThat(urls.get(1), equalTo("*.gif"));
@@ -108,12 +109,10 @@ public class AuthenticationConfigTest extends BaseAuthenticationTest {
 
 	@Test
 	public void shouldGetWhiteList() {
-		AuthenticationConfig.setProperty(WHITE_LIST, "*.css,*.gif,*.jpg");
+		AuthenticationConfig.setProperty(WHITE_LIST, "*.pdf");
 		List<String> patterns = AuthenticationConfig.getWhiteList();
-		assertThat(patterns.size(), equalTo(3));
-		assertThat(patterns.get(0), equalTo("*.css"));
-		assertThat(patterns.get(1), equalTo("*.gif"));
-		assertThat(patterns.get(2), equalTo("*.jpg"));
+		assertThat(patterns.size(), equalTo(19));
+		assertThat(patterns.contains("*.pdf"), equalTo(true));
 	}
 
 	@Test
