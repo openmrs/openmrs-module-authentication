@@ -199,6 +199,7 @@ public class UserLogin implements Serializable {
      * @param schemeId the id of the authentication scheme that failed
      */
     public synchronized void authenticationFailed(String schemeId) {
+        log.trace("authenticationFailed: " + schemeId);
         unvalidatedCredentials.remove(schemeId);
         if (validatedCredentials.isEmpty()) {
             setUser(null);
@@ -219,6 +220,7 @@ public class UserLogin implements Serializable {
      * Records a failed login into the system
      */
     public synchronized void loginFailed() {
+        log.trace("loginFailed: ");
         setUsername(null);
         setUser(null);
         recordEvent(AuthenticationEvent.LOGIN_FAILED, null);
@@ -335,6 +337,7 @@ public class UserLogin implements Serializable {
      * @return true if the credentials for the given schemeId have already been validated
      */
     public boolean isCredentialValidated(String schemeId) {
+        log.trace("isCredentialValidated: " + schemeId);
         return validatedCredentials.contains(schemeId);
     }
 
