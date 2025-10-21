@@ -111,7 +111,7 @@ public class AuthenticationConfigTest extends BaseAuthenticationTest {
 	public void shouldGetWhiteList() {
 		AuthenticationConfig.setProperty(WHITE_LIST, "*.pdf");
 		List<String> patterns = AuthenticationConfig.getWhiteList();
-		assertThat(patterns.size(), equalTo(19));
+		assertThat(patterns.size(), equalTo(20));
 		assertThat(patterns.contains("*.pdf"), equalTo(true));
 	}
 
