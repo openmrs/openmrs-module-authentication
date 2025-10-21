@@ -9,9 +9,12 @@
  */
 package org.openmrs.module.authentication.web;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
@@ -19,7 +22,6 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
-import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -33,6 +35,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * This servlet filter checks whether the user is authenticated, and if not, returns a response to authenticate
@@ -175,15 +179,27 @@ public class AuthenticationFilter implements Filter {
 	 * @param request the request to handle
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
-	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
-			response.setHeader("Location", challengeUrl);
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-		}
-		else {
-			response.sendRedirect(challengeUrl);
-		}
-	}
+    protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
+        boolean isWsRest = "application/json".equalsIgnoreCase(request.getHeader("Accept"))
+                || request.getRequestURI().contains("/ws/rest/");
+
+        if (isWsRest) {
+            response.setContentType("application/json");
+            response.setHeader("Location", challengeUrl);
+
+            Map wsRestResponse = wrapWsRestResponse(new APIAuthenticationException(
+                    Context.getMessageSourceService().getMessage("error.aunthenticationRequired")));
+            response.getWriter().write(new ObjectMapper().writeValueAsString(wsRestResponse));
+            response.getWriter().flush();
+        } else {
+            if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+                response.setHeader("Location", challengeUrl);
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            } else {
+                response.sendRedirect(challengeUrl);
+            }
+        }
+    }
 	
 	/**
 	 * Returns the configured authentication scheme.
@@ -225,4 +241,48 @@ public class AuthenticationFilter implements Filter {
 	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
 		return new AuthenticationSession(request, response);
 	}
+
+    /**
+     * Wraps the exception message as a SimpleObject to be sent to client
+     *
+     * See org.openmrs.module.webservices.rest.web.RestUtil.wrapErrorResponse()
+     *
+     * @param ex
+     * @return
+     */
+    public static Map wrapWsRestResponse(Exception ex) {
+        Map wsRestResponse = new LinkedHashMap();
+        wsRestResponse.put("authenticated", false);
+        wsRestResponse.put("locale", Context.getLocale());
+
+        String message = ex.getMessage();
+        Throwable cause = ex.getCause();
+        while (cause != null) {
+            String msg = cause.getMessage();
+            if (StringUtils.isNotBlank(msg)) {
+                if (StringUtils.isNotBlank(message)) {
+                    message += " => ";
+                } else {
+                    message = "";
+                }
+                message += msg;
+            }
+            cause = cause.getCause();
+        }
+
+        Map map = new LinkedHashMap();
+        map.put("message", "[" + message + "]");
+        StackTraceElement[] stackTraceElements = ex.getStackTrace();
+        if (stackTraceElements.length > 0) {
+            StackTraceElement stackTraceElement = ex.getStackTrace()[0];
+            map.put("code", stackTraceElement.getClassName() + ":" + stackTraceElement.getLineNumber());
+            map.put("detail", ExceptionUtils.getStackTrace(ex));
+        } else {
+            map.put("code", "");
+            map.put("detail", "");
+        }
+
+        wsRestResponse.put("error", map);
+        return wsRestResponse;
+    }
 }
