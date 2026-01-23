@@ -287,7 +287,8 @@ public class AuthenticationConfig implements Serializable {
      * @return the List of url patterns to allow without force password authentication redirection
      */
     public static List<String> getPasswordChangeWhiteList() {
-        List<String> whiteList = getStringList(PASSWORD_CHANGE_WHITE_LIST);
+        List<String> whiteList = getWhiteList();
+        whiteList.addAll(getStringList(PASSWORD_CHANGE_WHITE_LIST));
         whiteList.add(getChangePasswordUrl());  // Add the change password URL to the whitelist
         return whiteList;
     }

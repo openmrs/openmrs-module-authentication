@@ -245,6 +245,18 @@ public class AuthenticationSession {
     }
 
     /**
+     * This mirrors the core functionality to do the same, but ensures the UserLogin is also refreshed
+     */
+    public void refreshAuthenticatedUser() {
+        User authenticatedUser = Context.getAuthenticatedUser();
+        User userLoginUser = userLogin.getUser();
+        if (userLoginUser != null && userLoginUser.equals(authenticatedUser)) {
+            Context.refreshAuthenticatedUser();
+            userLogin.setUser(Context.getAuthenticatedUser());
+        }
+    }
+
+    /**
      * Sets an attribute on the HttpSession
      * @param key the attribute name
      * @param value the attribute value
