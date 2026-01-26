@@ -259,6 +259,7 @@ public class AuthenticationConfig implements Serializable {
         whitelist.add("/authenticationui/resetPassword/reset.action");
         whitelist.add("/authenticationui/account/resetPassword.page");
         whitelist.add("/appui/session/getLoginLocations.action");
+        whitelist.add("/appui/header/logout.action");
         whitelist.add("/csrfguard");
         whitelist.add("/spa/**/*");
         whitelist.add("/ws/rest/v1/session");
