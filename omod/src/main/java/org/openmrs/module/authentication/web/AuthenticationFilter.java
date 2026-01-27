@@ -22,6 +22,8 @@ import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -33,36 +35,44 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * This servlet filter checks whether the user is authenticated, and if not, returns a response to authenticate
- * This will either be a 3xx redirection or a 4xx unauthenticated response depending on the url and configuration
+ * This servlet filter checks whether the user is authenticated, and if not,
+ * redirects to the configured login page.
  * This filter is configurable via runtime properties:
  * <p>
  * authentication.scheme = schemeId
- * authentication.whiteList = comma-delimited list of url patterns that should not require authentication
- * authentication.nonRedirectUrls = comma-delimited list of url patterns that should not result in a 3xx redirect
+ * authentication.whiteList = comma-delimited list of url patterns that should
+ * not require authentication
  * <p>
- * If `authentication.scheme` references a `WebAuthenticationScheme`, then this filter will activate.
- * If this is not configured, or does not implement `WebAuthenticationScheme`, no filtering will occur
+ * If `authentication.scheme` references a `WebAuthenticationScheme`, then this
+ * filter will activate.
+ * If this is not configured, or does not implement `WebAuthenticationScheme`,
+ * no filtering will occur
  * <p>
  * NOTE: If a pattern in unprotected urls starts with a "*", then
- * it is assumed to be an "ends with" pattern match, and will match on any path that ends with the
- * indicated pattern In order to load the login page and successfully login on a 1.x system using
+ * it is assumed to be an "ends with" pattern match, and will match on any path
+ * that ends with the
+ * indicated pattern In order to load the login page and successfully login on a
+ * 1.x system using
  * legacyui, the following unprotectedUrls configuration can be used:
  * /login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.css,*.gif,*.jpg,*.png
  */
 public class AuthenticationFilter implements Filter {
-	
+
 	protected final Log log = LogFactory.getLog(getClass());
 
 	private AntPathMatcher matcher;
-	
+
 	public AuthenticationFilter() {
 	}
 
 	/**
-	 * This module is intended to be fully configurable by implementations and not configured statically here
+	 * This module is intended to be fully configurable by implementations and not
+	 * configured statically here
+	 * 
 	 * @see Filter#init(FilterConfig)
 	 */
 	@Override
@@ -82,35 +92,47 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
-	 * This filter operates on a specific type of AuthenticationScheme, which is a WebAuthenticationScheme
-	 * If the configured scheme (authentication.scheme in the runtime properties) is a WebAuthenticationScheme, and
-	 * if the user is not yet authenticated, then this filter will interact with the WebAuthenticationScheme to:
+	 * This filter operates on a specific type of AuthenticationScheme, which is a
+	 * WebAuthenticationScheme
+	 * If the configured scheme (authentication.scheme in the runtime properties) is
+	 * a WebAuthenticationScheme, and
+	 * if the user is not yet authenticated, then this filter will interact with the
+	 * WebAuthenticationScheme to:
 	 * <ul>
-	 *     <li>Try to instantiate valid AuthenticationCredentials from the current request</li>
-	 *     <li>Determine if there is a challenge URL where the user should be redirected to submit credentials</li>
-	 *     <li>If credentials are incomplete, and a challenge URL is needed, redirect the user</li>
-	 *     <li>Otherwise, if credentials are complete and no further challenge urls are presented, authenticate</li>
-	 *     <li>Redirect back to a challenge URL if authentication fails</li>
-	 *     <li>Redirect to an appropriate success URL if authentication succeeds</li>
+	 * <li>Try to instantiate valid AuthenticationCredentials from the current
+	 * request</li>
+	 * <li>Determine if there is a challenge URL where the user should be redirected
+	 * to submit credentials</li>
+	 * <li>If credentials are incomplete, and a challenge URL is needed, redirect
+	 * the user</li>
+	 * <li>Otherwise, if credentials are complete and no further challenge urls are
+	 * presented, authenticate</li>
+	 * <li>Redirect back to a challenge URL if authentication fails</li>
+	 * <li>Redirect to an appropriate success URL if authentication succeeds</li>
 	 * </ul>
-	 * In order to allow challengeUrl redirection to work, this filter also checks a list of white-listed URL
-	 * patterns to determine if a given URL should result in an authentication redirect or not.
-	 * This is configurable in OpenMRS runtime properties as `authentication.whiteList`
-	 * Typically this should be set to include any page and any resource (images, scripts, etc) that is needed for
-	 * the challenge urls that the WebAuthenticationScheme instances will redirect to.
+	 * In order to allow challengeUrl redirection to work, this filter also checks a
+	 * list of white-listed URL
+	 * patterns to determine if a given URL should result in an authentication
+	 * redirect or not.
+	 * This is configurable in OpenMRS runtime properties as
+	 * `authentication.whiteList`
+	 * Typically this should be set to include any page and any resource (images,
+	 * scripts, etc) that is needed for
+	 * the challenge urls that the WebAuthenticationScheme instances will redirect
+	 * to.
 	 * <p>
+	 * 
 	 * @see Filter#doFilter(ServletRequest, ServletResponse, FilterChain)
 	 */
 	@Override
 	public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain chain)
-	        throws IOException, ServletException {
-		
+			throws IOException, ServletException {
+
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
 		AuthenticationSession session = getAuthenticationSession(request, response);
 		UserLogin userLogin = session.getUserLogin();
-
 		try {
 			UserLoginTracker.setLoginOnThread(userLogin);
 			userLogin.setLastActivityDate(new Date());
@@ -127,35 +149,47 @@ public class AuthenticationFilter implements Filter {
 
 					WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
 
-					// If any credentials were passed in the request or session attempt to authentication with them
+					// If any credentials were passed in the request or session attempt to
+					// authentication with them
 					AuthenticationCredentials credentials = webScheme.getCredentials(session);
 					String challengeUrl = WebUtil.contextualizeUrl(request, webScheme.getChallengeUrl(session));
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
 							session.authenticate(webScheme, credentials);
-							session.regenerateHttpSession();  // Guard against session fixation attacks
+							session.regenerateHttpSession(); // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
 							String successUrl = determineSuccessRedirectUrl(request);
 							if (successUrl != null) {
-								response.sendRedirect(successUrl);
+								if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+									sendRestSessionSuccessResponse(request, response, successUrl);
+									return;
+								} else {
+									response.sendRedirect(successUrl);
+								}
 							}
 						}
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
-							log.debug("Authentication failed: " + request.getRequestURI());
-							handleAuthenticationFailure(request, response, challengeUrl);
+							log.debug("Authentication failed: " + challengeUrl);
+							if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+								sendRestSessionChallengeResponse(response, challengeUrl, webScheme.getSchemeId());
+								return;
+							} else {
+								session.sendRedirect(challengeUrl);
+							}
 						}
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
 						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
-							// Add a location header to the session endpoint to support frontend redirection to login
-							response.setHeader("Location", challengeUrl);
-						}
-						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
-							handleAuthenticationFailure(request, response, challengeUrl);
+							if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+								sendRestSessionChallengeResponse(response, challengeUrl, webScheme.getSchemeId());
+								return;
+							} else {
+								session.sendRedirect(challengeUrl);
+							}
 						}
 					}
 				}
@@ -164,8 +198,7 @@ public class AuthenticationFilter implements Filter {
 			if (!response.isCommitted()) {
 				chain.doFilter(servletRequest, servletResponse);
 			}
-		}
-		finally {
+		} finally {
 			UserLoginTracker.removeLoginFromThread();
 		}
 	}
@@ -178,16 +211,17 @@ public class AuthenticationFilter implements Filter {
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
 		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			response.setHeader("Location", challengeUrl);
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+			//response.sendError(HttpServletResponse.SC_OK);
 		}
 		else {
 			response.sendRedirect(challengeUrl);
 		}
 	}
-	
+
 	/**
 	 * Returns the configured authentication scheme.
-	 * If this is a DelegatingAuthenticationScheme, returns the AuthenticationScheme that this delegates to
+	 * If this is a DelegatingAuthenticationScheme, returns the AuthenticationScheme
+	 * that this delegates to
 	 */
 	protected AuthenticationScheme getAuthenticationScheme() {
 		AuthenticationScheme authenticationScheme = Context.getAuthenticationScheme();
@@ -200,12 +234,16 @@ public class AuthenticationFilter implements Filter {
 
 	/**
 	 * This returns an appropriate redirect URL following successful authentication
-	 * This first checks for a parameter named `redirect`, followed by a parameter named `refererURL`
-	 * If either of these are found, then it returns the appropriate url, otherwise returns null
+	 * This first checks for a parameter named `redirect`, followed by a parameter
+	 * named `refererURL`
+	 * If either of these are found, then it returns the appropriate url, otherwise
+	 * returns null
+	 * 
 	 * @param request the request to use to determine url redirection
 	 */
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
-		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
+		// First check for any "redirect" or "refererURL" parameters in the request,
+		// default to context path
 		String redirect = request.getParameter("redirect");
 		if (StringUtils.isBlank(redirect)) {
 			redirect = request.getParameter("refererURL");
@@ -213,16 +251,37 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isNotBlank(redirect)) {
 			return WebUtil.contextualizeUrl(request, redirect);
 		}
-		
+
 		return null;
 	}
 
 	/**
 	 * Return a valid AuthenticationSession for the given request
-	 * @param request the HttpServletRequest to use to retrieve the AuthenticationSession
+	 * 
+	 * @param request the HttpServletRequest to use to retrieve the
+	 *                AuthenticationSession
 	 * @return the AuthenticationSession associated with this HttpServletRequest
 	 */
 	protected AuthenticationSession getAuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
 		return new AuthenticationSession(request, response);
+	}
+
+	private void sendRestSessionChallengeResponse(HttpServletResponse response, String challengeUrl, String webSchemeId)
+			throws IOException {
+		response.setStatus(HttpServletResponse.SC_OK);
+		response.setHeader("Location", challengeUrl);
+		response.setContentType("application/json");
+		Map<String, String> body = new HashMap<>();
+		ObjectMapper mapper = new ObjectMapper();
+		response.getWriter().write(mapper.writeValueAsString(body));
+	}
+
+	private void sendRestSessionSuccessResponse(HttpServletRequest request, HttpServletResponse response,
+			String successUrl) throws IOException {
+		response.setHeader("Location", successUrl);
+		response.setHeader("X-TOTP-AUTH-SUCCESS", "true");
+		Map<String, String> body = new HashMap<>();
+		ObjectMapper mapper = new ObjectMapper();
+		response.getWriter().write(mapper.writeValueAsString(body));
 	}
 }
