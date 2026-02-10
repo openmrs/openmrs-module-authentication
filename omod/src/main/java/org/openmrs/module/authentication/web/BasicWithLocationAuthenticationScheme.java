@@ -16,8 +16,10 @@ package org.openmrs.module.authentication.web;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.Location;
 import org.openmrs.LocationTag;
+import org.openmrs.User;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.util.OpenmrsConstants;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
@@ -36,12 +38,16 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 	public static final String LOCATION_REQUIRED = "locationRequired";
 	public static final String LOCATION_SESSION_ATTRIBUTE_NAME = "locationSessionAttributeName";
 	public static final String LAST_LOCATION_COOKIE_NAME = "lastLocationCookieName";
+	public static final String USE_DEFAULT_LOCATION = "loginUsingDefaultLocationIfSpecified";
+	public static final String DEFAULT_LOCATION_ATTRIBUTE_NAME = "defaultLocationAttributeName";
 
 	private String locationParamName = "sessionLocation";
 	private String onlyLocationsWithTag = null;
 	private boolean locationRequired = false;
 	private String locationSessionAttributeName = "emrContext.sessionLocationId";
 	private String lastLocationCookieName = "emr.lastSessionLocation";
+	private boolean useDefaultLocation = false;
+	private String defaultLocationAttributeName = OpenmrsConstants.USER_PROPERTY_DEFAULT_LOCATION;
 
 	@Override
 	public void configure(String schemeId, Properties config) {
@@ -51,6 +57,8 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 		locationRequired = getBoolean(config.getProperty(LOCATION_REQUIRED), false);
 		locationSessionAttributeName = config.getProperty(LOCATION_SESSION_ATTRIBUTE_NAME, "emrContext.sessionLocationId");
 		lastLocationCookieName = config.getProperty(LAST_LOCATION_COOKIE_NAME, "emr.lastSessionLocation");
+		useDefaultLocation = getBoolean(config.getProperty(USE_DEFAULT_LOCATION), false);
+		defaultLocationAttributeName = config.getProperty(DEFAULT_LOCATION_ATTRIBUTE_NAME, OpenmrsConstants.USER_PROPERTY_DEFAULT_LOCATION);
 	}
 
 	@Override
@@ -69,6 +77,9 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 	public void afterAuthenticationSuccess(AuthenticationSession session) {
 		super.afterAuthenticationSuccess(session);
 		Location loginLocation = getLoginLocation(session.getHttpRequest());
+		if (loginLocation == null && useDefaultLocation) {
+			loginLocation = getDefaultLoginLocation(session.getUserLogin().getUser());
+		}
 		if (loginLocation != null) {
 			Context.getUserContext().setLocation(loginLocation);
 			if (StringUtils.isNotBlank(locationSessionAttributeName)) {
@@ -101,6 +112,17 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 			}
 		}
 		return loginLocation;
+	}
+
+	/**
+	 * @return the Location defined as the user's default location if it is a valid login location
+	 */
+	protected Location getDefaultLoginLocation(User user) {
+		Location defaultLocation = getLocation(user.getUserProperty(defaultLocationAttributeName));
+		if (defaultLocation != null && isValidLocation(defaultLocation)) {
+			return defaultLocation;
+		}
+		return null;
 	}
 
 	/**
