@@ -28,6 +28,7 @@ import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
+import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
@@ -154,7 +155,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		QrData data = new QrData.Builder()
 				.label(label)
 				.secret(secret)
-				.issuer(qrCodeIssuer)
+				.issuer(Context.getMessageSourceService().getMessage(qrCodeIssuer))
 				.algorithm(hashingAlgorithm)
 				.digits(codeLength)
 				.period(codeValidityPeriod)
