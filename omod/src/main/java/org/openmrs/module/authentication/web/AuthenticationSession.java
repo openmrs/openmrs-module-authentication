@@ -159,6 +159,7 @@ public class AuthenticationSession {
      */
     public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
         Authenticated authenticated;
+        log.trace("Authenticate: " + scheme.getSchemeId());
         try {
             String schemeId = scheme.getSchemeId();
             scheme.beforeAuthentication(this);
