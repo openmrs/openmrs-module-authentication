@@ -148,16 +148,23 @@ public class AuthenticationFilter implements Filter {
 						}
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
-					else {
-						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
-							// Add a location header to the session endpoint to support frontend redirection to login
-							response.setHeader("Location", challengeUrl);
-						}
-						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
-							log.trace("Authentication required: " + request.getRequestURI());
-							handleAuthenticationFailure(request, response, challengeUrl);
-						}
-					}
+else {
+    if (WebUtil.matchesPath(request, "/ws/rest/**")) {
+        // Inject a Location header so that SPA/REST clients can redirect to the login page.
+        // For the session endpoint we allow the request to proceed so its own JSON body is
+        // returned (the openmrs-esm-core reads this header on every session poll).
+        // For all other REST endpoints we also send a 401 so the client knows to re-auth.
+        response.setHeader("Location", challengeUrl);
+        if (!WebUtil.matchesPath(request, "/ws/rest/*/session")) {
+            log.trace("Authentication required (REST): " + request.getRequestURI());
+            handleAuthenticationFailure(request, response, challengeUrl);
+        }
+    }
+    else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+        log.trace("Authentication required: " + request.getRequestURI());
+        handleAuthenticationFailure(request, response, challengeUrl);
+    }
+}
 				}
 			}
 

@@ -282,7 +282,45 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(response.getHeader("Location"), equalTo("/login.htm"));
 		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
+@Test
+public void shouldInjectLocationHeaderForSessionEndpointAndLetRequestProceed() throws Exception {
+    setupTestThatInvokesAuthenticationCheck();
+    request.setMethod("GET");
+    request.setServletPath("/ws/rest/v1/session");
+    filter.doFilter(request, response, chain);
+    // Session endpoint must pass through so the REST module writes its own JSON
+    assertThat(chain.getRequest(), notNullValue());
+    // Location header must be set so openmrs-esm-core can redirect to login
+    assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+    // Must NOT be a 401-the session resource handles its own response body
+    assertThat(response.getStatus(), not(equalTo(HttpServletResponse.SC_UNAUTHORIZED)));
+}
 
+@Test
+public void shouldReturn401WithLocationHeaderForUnauthenticatedRestCalls() throws Exception {
+    setupTestThatInvokesAuthenticationCheck();
+    AuthenticationConfig.setProperty(AuthenticationConfig.NON_REDIRECT_URLS, "/ws/**/*");
+    request.setMethod("GET");
+    request.setServletPath("/ws/rest/v1/patient");
+    filter.doFilter(request, response, chain);
+    // Request must NOT proceed to the REST resource
+    assertThat(chain.getRequest(), nullValue());
+    // Location header must be present so SPA clients know where to send the user
+    assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+    // Must be a 401 so SPA clients treat it as an auth challenge
+    assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+}
+
+@Test
+public void shouldReturn302ForUnauthenticatedNonRestCalls() throws Exception {
+    setupTestThatInvokesAuthenticationCheck();
+    request.setMethod("GET");
+    request.setServletPath("/patientDashboard.htm");
+    filter.doFilter(request, response, chain);
+    // Non-REST unauthenticated request must be redirected (302) to the login page
+    assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_MOVED_TEMPORARILY));
+    assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+}
 	@AfterEach
 	@Override
 	public void teardown() {
