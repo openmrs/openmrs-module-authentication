@@ -176,9 +176,18 @@ public class AuthenticationFilter implements Filter {
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+		String acceptHeader = request.getHeader("Accept");
+		boolean isSpaRequest = acceptHeader != null && acceptHeader.contains("application/json");
+
+		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls()) || isSpaRequest) {
 			response.setHeader("Location", challengeUrl);
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+			if (isSpaRequest) {
+				response.setContentType("application/json");
+				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+				response.getWriter().write("{\"challengeRequired\": true, \"location\": \"" + challengeUrl + "\"}");
+			} else {
+				response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+			}
 		}
 		else {
 			response.sendRedirect(challengeUrl);
