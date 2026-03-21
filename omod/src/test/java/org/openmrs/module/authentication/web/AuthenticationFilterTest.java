@@ -220,7 +220,39 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(WebUtil.matchesPath(request, "/openmrs/login.htm"), equalTo(true));
 		assertThat(WebUtil.matchesPath(request, "/login.html"), equalTo(false));
 	}
+    @Test
+	public void shouldMatchDoubleWildcardPatternForAllRestPaths() {
+    request.setContextPath("/");
+    request.setServletPath("/ws/rest/v1/patient");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/**"), equalTo(true));
+    request.setServletPath("/ws/rest/v1/session");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/**"), equalTo(true));
+    request.setServletPath("/ws/rest/v1/patient/923f69ae-fa1a-43db-98e6-bafcc80f5c05");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/**"), equalTo(true));
+    request.setServletPath("/ws/fhir2/R4/Patient");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/**"), equalTo(false));
+    request.setServletPath("/patientDashboard.htm");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/**"), equalTo(false));
+}
 
+@Test
+public void shouldMatchSingleSegmentWildcardOnlyForSessionEndpoint() {
+    request.setContextPath("/");
+    request.setServletPath("/ws/rest/v1/session");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/*/session"), equalTo(true));
+    request.setServletPath("/ws/rest/v2/session");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/*/session"), equalTo(true));
+    request.setServletPath("/ws/rest/v1/patient");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/*/session"), equalTo(false));
+}
+
+@Test
+public void shouldMatchDoubleWildcardButNotSingleWildcardForDeepRestPaths() {
+    request.setContextPath("/");
+    request.setServletPath("/ws/rest/v1/obs/abc-123/value");
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/**"), equalTo(true));
+    assertThat(WebUtil.matchesPath(request, "/ws/rest/*/session"), equalTo(false));
+}
 	@Test
 	public void shouldGetTheDefaultAuthenticationSchemeIfNoneConfigured() {
 		AuthenticationScheme scheme = filter.getAuthenticationScheme();
