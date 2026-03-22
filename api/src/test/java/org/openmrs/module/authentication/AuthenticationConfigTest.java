@@ -1,10 +1,5 @@
 package org.openmrs.module.authentication;
 
-import org.junit.jupiter.api.Test;
-import org.openmrs.User;
-import org.openmrs.api.context.AuthenticationScheme;
-import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -13,6 +8,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import org.junit.jupiter.api.Test;
+import org.openmrs.User;
+import org.openmrs.api.context.AuthenticationScheme;
+import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
+import static org.openmrs.module.authentication.AuthenticationConfig.NON_REDIRECT_URLS;
+import static org.openmrs.module.authentication.AuthenticationConfig.PASSWORD_CHANGE_URL;
 import static org.openmrs.module.authentication.AuthenticationConfig.SCHEME;
 import static org.openmrs.module.authentication.AuthenticationConfig.SETTINGS_CACHED;
 import static org.openmrs.module.authentication.AuthenticationConfig.WHITE_LIST;
@@ -114,7 +115,34 @@ public class AuthenticationConfigTest extends BaseAuthenticationTest {
 		assertThat(patterns.size(), equalTo(21));
 		assertThat(patterns.contains("*.pdf"), equalTo(true));
 	}
+    @Test
+public void shouldGetNonRedirectUrls() {
+    List<String> defaults = AuthenticationConfig.getNonRedirectUrls();
+    assertThat(defaults.contains("/ws/**/*"), equalTo(true));
+    AuthenticationConfig.setProperty(NON_REDIRECT_URLS, "/api/**");
+    List<String> patterns = AuthenticationConfig.getNonRedirectUrls();
+    assertThat(patterns.contains("/api/**"), equalTo(true));
+    assertThat(patterns.contains("/ws/**/*"), equalTo(true));
+}
 
+@Test
+public void shouldGetChangePasswordUrl() {
+    assertThat(AuthenticationConfig.getChangePasswordUrl(), nullValue());
+    AuthenticationConfig.setProperty(PASSWORD_CHANGE_URL, "/passwordChange.htm");
+    assertThat(AuthenticationConfig.getChangePasswordUrl(), equalTo("/passwordChange.htm"));
+}
+
+@Test
+public void shouldGetPasswordChangeWhiteList() {
+    AuthenticationConfig.setProperty(PASSWORD_CHANGE_URL, "/passwordChange.htm");
+    List<String> patterns = AuthenticationConfig.getPasswordChangeWhiteList();
+    assertThat(patterns.contains("/login.htm"), equalTo(true));
+    assertThat(patterns.contains("*.js"), equalTo(true));
+    assertThat(patterns.contains("/passwordChange.htm"), equalTo(true));
+    AuthenticationConfig.setProperty("authentication.passwordChangeWhiteList", "/resetPassword.htm");
+    patterns = AuthenticationConfig.getPasswordChangeWhiteList();
+    assertThat(patterns.contains("/resetPassword.htm"), equalTo(true));
+}
 	@Test
 	public void shouldGetAuthenticationScheme() {
 		AuthenticationConfig.setProperty("authentication.scheme.test.type", "org.openmrs.module.authentication.TestAuthenticationScheme");
