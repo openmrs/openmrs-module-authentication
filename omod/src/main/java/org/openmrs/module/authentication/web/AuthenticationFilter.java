@@ -182,8 +182,8 @@ public class AuthenticationFilter implements Filter {
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
 		if (WebUtil.matchesPath(request, "/ws/rest/**") || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			response.setHeader("Location", challengeUrl);
-			response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-			response.flushBuffer();
+			// Using sendError is more secure as it signals the container to clear the buffer and handle the error page
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
 		}
 		else {
 			response.sendRedirect(challengeUrl);

@@ -188,7 +188,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	/**
 	 * Credentials inner class, to enable access and visibility of credential details to be limited to scheme
 	 */
-	public class TotpCredentials implements AuthenticationCredentials {
+	class TotpCredentials implements AuthenticationCredentials {
 
 		protected final User user;
 		protected final String code;
@@ -198,7 +198,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			return getSchemeId();
 		}
 
-		public TotpCredentials(User user, String code) {
+		protected TotpCredentials(User user, String code) {
 			this.user = user;
 			this.code = code;
 		}

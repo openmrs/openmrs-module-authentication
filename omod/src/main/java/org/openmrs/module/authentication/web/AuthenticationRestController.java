@@ -1,13 +1,9 @@
-package org.openmrs.module.authentication.web.controller;
+package org.openmrs.module.authentication.web;
 
 import org.openmrs.User;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
-import org.openmrs.module.authentication.web.AuthenticationSession;
-import org.openmrs.module.authentication.web.TotpAuthenticationScheme;
-import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
-import org.openmrs.module.authentication.web.WebAuthenticationScheme;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;

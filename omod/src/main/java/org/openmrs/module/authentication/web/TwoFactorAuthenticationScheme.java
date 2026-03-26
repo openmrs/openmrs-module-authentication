@@ -160,7 +160,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 * If no AuthenticationScheme can be returned, or if it is not a WebAuthenticationScheme, an exception is thrown
 	 * @return the WebAuthenticationScheme to use for the given MultiFactorAuthenticationCredentials
 	 */
-	public WebAuthenticationScheme getPrimaryAuthenticationScheme() {
+	protected WebAuthenticationScheme getPrimaryAuthenticationScheme() {
 		String authScheme = null;
 		if (!primaryOptions.isEmpty()) {
 			authScheme = primaryOptions.get(0);
@@ -189,7 +189,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 * @param user the User to check for configured secondary WebAuthenticationScheme
 	 * @return the WebAuthenticationScheme to use for the given MultiFactorAuthenticationCredentials
 	 */
-	public WebAuthenticationScheme getSecondaryAuthenticationScheme(User user) {
+	protected WebAuthenticationScheme getSecondaryAuthenticationScheme(User user) {
 		if (user != null) {
 			String secondaryName = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
 			if (StringUtils.isNotBlank(secondaryName)) {
