@@ -210,7 +210,7 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isBlank(redirect)) {
 			redirect = request.getParameter("refererURL");
 		}
-		if (StringUtils.isNotBlank(redirect)) {
+		if (StringUtils.isNotBlank(redirect) && WebUtil.isLocalUrl(redirect)) {
 			return WebUtil.contextualizeUrl(request, redirect);
 		}
 		
