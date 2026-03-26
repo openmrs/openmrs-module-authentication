@@ -198,7 +198,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			return getSchemeId();
 		}
 
-		protected TotpCredentials(User user, String code) {
+		public TotpCredentials(User user, String code) {
 			this.user = user;
 			this.code = code;
 		}
