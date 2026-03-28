@@ -248,3 +248,12 @@ Then, configure a `log4j2.xml` file within your application data directory (or w
   </Loggers>
 </Configuration>
 ```
+
+
+## OpenMRS 3 (O3) Integration
+
+The Authentication Module is being integrated with the modern O3 frontend as part of the GSoC 2026 project.  
+See the active work in:
+- [PR #18](https://github.com/openmrs/openmrs-module-authentication/pull/18) — Introduce changes needed to support TOTP in O3
+
+This small documentation update helps new contributors and GSoC applicants quickly find the ongoing O3 + TOTP integration effort.
