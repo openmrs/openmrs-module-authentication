@@ -175,42 +175,20 @@ public class AuthenticationFilter implements Filter {
 	 * @param request the request to handle
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
-	protected void handleAuthenticationFailure(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        String challengeUrl) throws IOException {
+	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
 
-    if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+    boolean isNonRedirectUrl = WebUtil.urlMatchesAnyPattern(
+        request,
+        AuthenticationConfig.getNonRedirectUrls()
+    );
 
+    if (isNonRedirectUrl) {
         response.setHeader("Location", challengeUrl);
-
-        // Detect REST / SPA request
-        String accept = request.getHeader("Accept");
-
-        if (accept != null && accept.contains("application/json")) {
-
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-
-            String challengeType = resolveChallengeType(challengeUrl);
-            String spaUrl = resolveSpaRedirectUrl(challengeType);
-
-            response.getWriter().write(
-                "{\"type\":\"" + challengeType + "\",\"redirectUrl\":\"" + spaUrl + "\"}"
-            );
-
-        } else {
-
-            // original behaviour
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-
-        }
-
-    } else {
-
-        response.sendRedirect(challengeUrl);
-
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return;
     }
+
+    response.sendRedirect(challengeUrl);
 }
 	/**
  * Reads the challenge URL and returns a short string identifying
