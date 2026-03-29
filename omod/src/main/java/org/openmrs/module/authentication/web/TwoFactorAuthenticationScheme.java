@@ -194,6 +194,9 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			String secondaryName = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
 			if (StringUtils.isNotBlank(secondaryName)) {
 				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(secondaryName);
+				if (scheme == null) {
+					throw new ContextAuthenticationException("Invalid authentication scheme: " + secondaryName);
+				}
 				if (scheme instanceof WebAuthenticationScheme) {
 					return (WebAuthenticationScheme) scheme;
 				}
