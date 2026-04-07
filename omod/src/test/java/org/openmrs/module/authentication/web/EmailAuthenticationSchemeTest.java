@@ -120,7 +120,7 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	public void isUserConfigurationRequiredShouldReturnTrueWhenVerifiedEmailDoesNotMatchCurrentEmail() {
 		User user = new User();
 		user.setEmail("new@example.com");
-		user.setUserProperty(EmailAuthenticationScheme.USER_PROPERTY_VERIFIED_EMAIL, "old@example.com");
+		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "old@example.com");
 		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(true));
 	}
 
@@ -128,7 +128,7 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	public void isUserConfigurationRequiredShouldReturnFalseWhenEmailIsValidAndVerified() {
 		User user = new User();
 		user.setEmail("user@example.com");
-		user.setUserProperty(EmailAuthenticationScheme.USER_PROPERTY_VERIFIED_EMAIL, "user@example.com");
+		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "user@example.com");
 		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(false));
 	}
 

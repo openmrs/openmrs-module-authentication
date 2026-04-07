@@ -20,6 +20,7 @@ import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.notification.Message;
 import org.openmrs.notification.MessageException;
+import org.openmrs.util.PrivilegeConstants;
 
 import java.security.SecureRandom;
 import java.util.Properties;
@@ -41,10 +42,6 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String EMAIL_SUBJECT = "emailSubject";
 	public static final String EMAIL_FROM = "emailFrom";
 	public static final String RESEND_PARAM = "resendParam";
-
-	public static final String USER_PROPERTY_VERIFIED_EMAIL = "verified_email_address";
-	public static final String USER_PROPERTY_VERIFICATION_TOKEN = "email_verification_token";
-	public static final String USER_PROPERTY_VERIFICATION_TOKEN_EXPIRY = "email_verification_token_expiry";
 
 	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
@@ -69,6 +66,13 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	}
 
 	/**
+	 * @return the name of the user property that stores the secret configured for this scheme
+	 */
+	public String getVerifiedEmailUserPropertyName() {
+		return "authentication." + getSchemeId() + ".verifiedEmail";
+	}
+
+	/**
 	 * @see WebAuthenticationScheme#isUserConfigurationRequired(User)
 	 */
 	@Override
@@ -77,7 +81,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		if (StringUtils.isBlank(email) || !EMAIL_PATTERN.matcher(email).matches()) {
 			return true;
 		}
-		String verifiedEmail = user.getUserProperty(USER_PROPERTY_VERIFIED_EMAIL);
+		String verifiedEmail = user.getUserProperty(getVerifiedEmailUserPropertyName());
 		return !email.equals(verifiedEmail);
 	}
 
@@ -185,12 +189,16 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	protected void sendCode(User user, String code) {
 		String email = getUserEmail(user);
 		try {
+			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 			String subject = Context.getMessageSourceService().getMessage(emailSubject, null, emailSubject, Context.getLocale());
 			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, code);
 			Context.getMessageService().sendMessage(message);
 		}
 		catch (MessageException e) {
 			throw new ContextAuthenticationException("authentication.error.emailSendFailed");
+		}
+		finally {
+			Context.removeProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 		}
 	}
 
