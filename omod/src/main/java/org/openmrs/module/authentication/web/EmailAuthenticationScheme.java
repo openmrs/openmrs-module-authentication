@@ -42,6 +42,10 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String EMAIL_FROM = "emailFrom";
 	public static final String RESEND_PARAM = "resendParam";
 
+	public static final String USER_PROPERTY_VERIFIED_EMAIL = "verified_email_address";
+	public static final String USER_PROPERTY_VERIFICATION_TOKEN = "email_verification_token";
+	public static final String USER_PROPERTY_VERIFICATION_TOKEN_EXPIRY = "email_verification_token_expiry";
+
 	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
 	private String loginPage;
@@ -55,11 +59,11 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	@Override
 	public void configure(String schemeId, Properties config) {
 		super.configure(schemeId, config);
-		loginPage = config.getProperty(LOGIN_PAGE, "/loginEmail.page");
+		loginPage = config.getProperty(LOGIN_PAGE, "/loginEmail.htm");
 		codeParam = config.getProperty(CODE_PARAM, "code");
 		codeLength = AuthenticationUtil.getInteger(config.getProperty(CODE_LENGTH), 6);
 		codeExpirationMinutes = AuthenticationUtil.getInteger(config.getProperty(CODE_EXPIRATION_MINUTES), 10);
-		emailSubject = config.getProperty(EMAIL_SUBJECT, "Your verification code");
+		emailSubject = config.getProperty(EMAIL_SUBJECT, "authentication.email.subject");
 		emailFrom = config.getProperty(EMAIL_FROM, "");
 		resendParam = config.getProperty(RESEND_PARAM, "resend");
 	}
@@ -70,7 +74,11 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	@Override
 	public boolean isUserConfigurationRequired(User user) {
 		String email = user.getEmail();
-		return StringUtils.isBlank(email) || !EMAIL_PATTERN.matcher(email).matches();
+		if (StringUtils.isBlank(email) || !EMAIL_PATTERN.matcher(email).matches()) {
+			return true;
+		}
+		String verifiedEmail = user.getUserProperty(USER_PROPERTY_VERIFIED_EMAIL);
+		return !email.equals(verifiedEmail);
 	}
 
 	@Override
@@ -177,7 +185,8 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	protected void sendCode(User user, String code) {
 		String email = getUserEmail(user);
 		try {
-			Message message = Context.getMessageService().createMessage(email, emailFrom, emailSubject, code);
+			String subject = Context.getMessageSourceService().getMessage(emailSubject, null, emailSubject, Context.getLocale());
+			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, code);
 			Context.getMessageService().sendMessage(message);
 		}
 		catch (MessageException e) {
