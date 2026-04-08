@@ -23,6 +23,7 @@ import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.notification.Message;
 import org.openmrs.notification.MessageException;
 import org.openmrs.util.PrivilegeConstants;
+import org.springframework.context.MessageSource;
 
 import java.security.SecureRandom;
 import java.util.Properties;
@@ -182,8 +183,8 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		try {
 			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
-			MessageSourceService mss = Context.getMessageSourceService();
-			String subject = mss.getMessage(emailSubject, new Object[] {code}, emailSubject, Context.getLocale());
+			MessageSource messageSource = Context.getMessageSourceService().getActiveMessageSource();
+			String subject = messageSource.getMessage(emailSubject, new Object[] {code}, Context.getLocale());
 			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, subject);
 			Context.getMessageService().sendMessage(message);
 		}
