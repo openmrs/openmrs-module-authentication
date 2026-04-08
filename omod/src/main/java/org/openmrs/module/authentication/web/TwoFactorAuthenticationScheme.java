@@ -25,6 +25,7 @@ import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -191,9 +192,10 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 */
 	protected WebAuthenticationScheme getSecondaryAuthenticationScheme(User user) {
 		if (user != null) {
-			String secondaryName = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
-			if (StringUtils.isNotBlank(secondaryName)) {
-				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(secondaryName);
+			List<String> secondarySchemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
+			if (!secondarySchemeIds.isEmpty()) {
+				String preferredScheme = secondarySchemeIds.get(0);
+				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(preferredScheme);
 				if (scheme instanceof WebAuthenticationScheme) {
 					return (WebAuthenticationScheme) scheme;
 				}
@@ -203,6 +205,27 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			}
 		}
 		return null;
+	}
+
+	public List<String> getSecondaryAuthenticationSchemeIdsForUser(User user) {
+		List<String> schemeIds = new ArrayList<>();
+		String userProperty = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
+		if (StringUtils.isNotBlank(userProperty)) {
+			schemeIds.addAll(Arrays.asList(userProperty.split(",")));
+		}
+		return schemeIds;
+	}
+
+	public void addSecondaryAuthenticationSchemeForUser(User user, String schemeId) {
+		List<String> schemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
+		if (!schemeIds.contains(schemeId)) {
+			schemeIds.add(schemeId);
+			user.setUserProperty(USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
+		}
+	}
+
+	public void setSecondaryAuthenticationSchemeIdsForUser(User user, List<String> schemeIds) {
+		user.setUserProperty(USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
 	}
 
 	/**

@@ -16,6 +16,7 @@ import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
+import org.openmrs.messagesource.MessageSourceService;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
@@ -28,8 +29,8 @@ import java.util.Properties;
 
 /**
  * This is an implementation of a WebAuthenticationScheme that is intended to be used as a secondary authentication
- * scheme, and validates a one-time code sent to the user's email address.
- * This scheme supports configuration parameters that enable implementations to utilize it with their own pages.
+ * scheme and validates a one-time code sent to the user's email address.
+ * This scheme supports configuration parameters that enable implementations to use it with their own pages.
  * This includes the ability to configure the `loginPage` that the user should be taken to, as well as the
  * `codeParam` that should be read from the http request submission to authenticate.
  */
@@ -64,12 +65,15 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	}
 
 	/**
-	 * @return the name of the user property that stores the secret configured for this scheme
+	 * @return the name of the user property that stores the verified email address that a given code should be sent
 	 */
 	public String getVerifiedEmailUserPropertyName() {
 		return "authentication." + getSchemeId() + ".verifiedEmail";
 	}
 
+	/**
+	 * @return the verified email address for the given user, or an empty string if none is configured
+	 */
 	public String getVerifiedEmailForUser(User user) {
 		return user.getUserProperty(getVerifiedEmailUserPropertyName(), "");
 	}
@@ -178,8 +182,9 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		try {
 			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
-			String subject = Context.getMessageSourceService().getMessage(emailSubject, null, emailSubject, Context.getLocale());
-			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, code);
+			MessageSourceService mss = Context.getMessageSourceService();
+			String subject = mss.getMessage(emailSubject, new Object[] {code}, emailSubject, Context.getLocale());
+			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, subject);
 			Context.getMessageService().sendMessage(message);
 		}
 		catch (MessageException e) {
