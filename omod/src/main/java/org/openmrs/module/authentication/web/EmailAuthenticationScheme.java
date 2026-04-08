@@ -10,6 +10,7 @@
 package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.validator.routines.EmailValidator;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
@@ -24,7 +25,6 @@ import org.openmrs.util.PrivilegeConstants;
 
 import java.security.SecureRandom;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 /**
  * This is an implementation of a WebAuthenticationScheme that is intended to be used as a secondary authentication
@@ -42,8 +42,6 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String EMAIL_SUBJECT = "emailSubject";
 	public static final String EMAIL_FROM = "emailFrom";
 	public static final String RESEND_PARAM = "resendParam";
-
-	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 
 	private String loginPage;
 	private String codeParam;
@@ -72,17 +70,17 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		return "authentication." + getSchemeId() + ".verifiedEmail";
 	}
 
+	public String getVerifiedEmailForUser(User user) {
+		return user.getUserProperty(getVerifiedEmailUserPropertyName(), "");
+	}
+
 	/**
 	 * @see WebAuthenticationScheme#isUserConfigurationRequired(User)
 	 */
 	@Override
 	public boolean isUserConfigurationRequired(User user) {
-		String email = user.getEmail();
-		if (StringUtils.isBlank(email) || !EMAIL_PATTERN.matcher(email).matches()) {
-			return true;
-		}
-		String verifiedEmail = user.getUserProperty(getVerifiedEmailUserPropertyName());
-		return !email.equals(verifiedEmail);
+		String email = getVerifiedEmailForUser(user);
+		return (StringUtils.isBlank(email) || !EmailValidator.getInstance().isValid(email));
 	}
 
 	@Override
@@ -168,26 +166,16 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	}
 
 	/**
-	 * @param user the user to retrieve the email address for
-	 * @return the email address for the given user
-	 * @throws ContextAuthenticationException if the user has no email address configured
-	 */
-	protected String getUserEmail(User user) {
-		String email = user.getEmail();
-		if (StringUtils.isBlank(email)) {
-			throw new ContextAuthenticationException("authentication.error.noEmailConfiguredForUser");
-		}
-		return email;
-	}
-
-	/**
 	 * Sends the one-time code to the user's email address via the OpenMRS MessageService
 	 * @param user the user to send the code to
 	 * @param code the code to send
 	 * @throws ContextAuthenticationException if the user has no email or the message could not be sent
 	 */
 	protected void sendCode(User user, String code) {
-		String email = getUserEmail(user);
+		String email = getVerifiedEmailForUser(user);
+		if (StringUtils.isBlank(email)) {
+			throw new ContextAuthenticationException("authentication.error.noEmailConfiguredForUser");
+		}
 		try {
 			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 			String subject = Context.getMessageSourceService().getMessage(emailSubject, null, emailSubject, Context.getLocale());

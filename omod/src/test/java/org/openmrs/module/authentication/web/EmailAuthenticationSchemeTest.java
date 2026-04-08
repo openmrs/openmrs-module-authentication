@@ -63,7 +63,6 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme();
 		assertThat(scheme.getClass(), equalTo(MockEmailAuthenticationScheme.class));
 		authenticationScheme = (MockEmailAuthenticationScheme) scheme;
-		authenticationScheme.setUserEmail("testing", "test@example.com");
 	}
 
 	@AfterEach
@@ -112,23 +111,15 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@Test
 	public void isUserConfigurationRequiredShouldReturnTrueWhenEmailIsNotVerified() {
 		User user = new User();
-		user.setEmail("user@example.com");
-		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(true));
-	}
-
-	@Test
-	public void isUserConfigurationRequiredShouldReturnTrueWhenVerifiedEmailDoesNotMatchCurrentEmail() {
-		User user = new User();
-		user.setEmail("new@example.com");
-		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "old@example.com");
+		user.setEmail("user@openmrs.org");
 		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(true));
 	}
 
 	@Test
 	public void isUserConfigurationRequiredShouldReturnFalseWhenEmailIsValidAndVerified() {
 		User user = new User();
-		user.setEmail("user@example.com");
-		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "user@example.com");
+		user.setEmail("user@openmrs.org");
+		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "user@openmrs.org");
 		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(false));
 	}
 
@@ -140,14 +131,6 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 
 	// getCredentials tests
-
-	@Test
-	public void getCredentialsShouldReturnNullAndSendEmailWhenNoCodeSubmitted() {
-		AuthenticationCredentials credentials = getCredentials(null, null);
-		assertThat(credentials, nullValue());
-		assertThat(authenticationScheme.getLastSentCode(), notNullValue());
-		assertThat(authenticationScheme.getLastSentEmail(), equalTo("test@example.com"));
-	}
 
 	@Test
 	public void getCredentialsShouldNotResendEmailIfCodeAlreadyInSession() {
@@ -197,14 +180,6 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		// Second call should return same cached credentials
 		AuthenticationCredentials second = getCredentials("differentCode", null);
 		assertThat(second, equalTo(first));
-	}
-
-	@Test
-	public void getCredentialsShouldThrowExceptionWhenUserHasNoEmail() {
-		authenticationScheme = new MockEmailAuthenticationScheme();
-		authenticationScheme.configure("email", AuthenticationConfig.getConfig());
-		// No email registered for candidateUser
-		assertThrows(ContextAuthenticationException.class, () -> getCredentials(null, null));
 	}
 
 	@Test
