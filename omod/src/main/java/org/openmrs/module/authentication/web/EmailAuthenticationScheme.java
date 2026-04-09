@@ -43,6 +43,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String CODE_CHARACTERS = "codeCharacters";
 	public static final String CODE_EXPIRATION_MINUTES = "codeExpirationMinutes";
 	public static final String EMAIL_SUBJECT = "emailSubject";
+	public static final String EMAIL_BODY = "emailBody";
 	public static final String EMAIL_FROM = "emailFrom";
 	public static final String RESEND_PARAM = "resendParam";
 
@@ -52,6 +53,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	private String codeCharacters;
 	private int codeExpirationMinutes;
 	private String emailSubject;
+	private String emailBody;
 	private String emailFrom;
 	private String resendParam;
 
@@ -64,6 +66,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		codeCharacters = config.getProperty(CODE_CHARACTERS, "0123456789");
 		codeExpirationMinutes = AuthenticationUtil.getInteger(config.getProperty(CODE_EXPIRATION_MINUTES), 10);
 		emailSubject = config.getProperty(EMAIL_SUBJECT, "authentication.email.subject");
+		emailBody = config.getProperty(EMAIL_BODY, "authentication.email.body");
 		emailFrom = config.getProperty(EMAIL_FROM, "");
 		resendParam = config.getProperty(RESEND_PARAM, "resend");
 	}
@@ -189,7 +192,8 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 			Context.addProxyPrivilege(PrivilegeConstants.GET_GLOBAL_PROPERTIES);
 			MessageSource messageSource = Context.getMessageSourceService().getActiveMessageSource();
 			String subject = messageSource.getMessage(emailSubject, new Object[] {code}, Context.getLocale());
-			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, subject);
+			String body = messageSource.getMessage(emailBody, new Object[] {code}, Context.getLocale());
+			Message message = Context.getMessageService().createMessage(email, emailFrom, subject, body);
 			Context.getMessageService().sendMessage(message);
 		}
 		catch (MessageException e) {
