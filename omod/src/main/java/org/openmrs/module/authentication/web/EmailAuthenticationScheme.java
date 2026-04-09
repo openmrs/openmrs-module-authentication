@@ -10,13 +10,13 @@
 package org.openmrs.module.authentication.web;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.messagesource.MessageSourceService;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
@@ -25,7 +25,7 @@ import org.openmrs.notification.MessageException;
 import org.openmrs.util.PrivilegeConstants;
 import org.springframework.context.MessageSource;
 
-import java.security.SecureRandom;
+import java.security.MessageDigest;
 import java.util.Properties;
 
 /**
@@ -40,6 +40,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String LOGIN_PAGE = "loginPage";
 	public static final String CODE_PARAM = "codeParam";
 	public static final String CODE_LENGTH = "codeLength";
+	public static final String CODE_CHARACTERS = "codeCharacters";
 	public static final String CODE_EXPIRATION_MINUTES = "codeExpirationMinutes";
 	public static final String EMAIL_SUBJECT = "emailSubject";
 	public static final String EMAIL_FROM = "emailFrom";
@@ -48,6 +49,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	private String loginPage;
 	private String codeParam;
 	private int codeLength;
+	private String codeCharacters;
 	private int codeExpirationMinutes;
 	private String emailSubject;
 	private String emailFrom;
@@ -59,6 +61,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		loginPage = config.getProperty(LOGIN_PAGE, "/loginEmail.htm");
 		codeParam = config.getProperty(CODE_PARAM, "code");
 		codeLength = AuthenticationUtil.getInteger(config.getProperty(CODE_LENGTH), 6);
+		codeCharacters = config.getProperty(CODE_CHARACTERS, "0123456789");
 		codeExpirationMinutes = AuthenticationUtil.getInteger(config.getProperty(CODE_EXPIRATION_MINUTES), 10);
 		emailSubject = config.getProperty(EMAIL_SUBJECT, "authentication.email.subject");
 		emailFrom = config.getProperty(EMAIL_FROM, "");
@@ -149,7 +152,8 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 		if (c.expectedExpiry == null || System.currentTimeMillis() > c.expectedExpiry) {
 			throw new ContextAuthenticationException("authentication.error.codeExpired");
 		}
-		if (!c.submittedCode.equals(c.expectedCode)) {
+		// We use MessageDigest.isEqual to compare byte arrays securely and in constant-time to limit timing attacks
+		if (!MessageDigest.isEqual(c.submittedCode.getBytes(), c.expectedCode.getBytes())) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
 
@@ -201,8 +205,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	 */
 	protected String generateCode() {
 		int max = (int) Math.pow(10, codeLength);
-		int code = new SecureRandom().nextInt(max);
-		return String.format("%0" + codeLength + "d", code);
+		return RandomStringUtils.secureStrong().next(codeLength, codeCharacters);
 	}
 
 	/**

@@ -104,21 +104,13 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@Test
 	public void isUserConfigurationRequiredShouldReturnTrueWhenEmailIsInvalid() {
 		User user = new User();
-		user.setEmail("notanemail");
-		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(true));
-	}
-
-	@Test
-	public void isUserConfigurationRequiredShouldReturnTrueWhenEmailIsNotVerified() {
-		User user = new User();
-		user.setEmail("user@openmrs.org");
+		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "notanemail");
 		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(true));
 	}
 
 	@Test
 	public void isUserConfigurationRequiredShouldReturnFalseWhenEmailIsValidAndVerified() {
 		User user = new User();
-		user.setEmail("user@openmrs.org");
 		user.setUserProperty(authenticationScheme.getVerifiedEmailUserPropertyName(), "user@openmrs.org");
 		assertThat(authenticationScheme.isUserConfigurationRequired(user), equalTo(false));
 	}
@@ -209,9 +201,8 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@Test
 	public void shouldFailToAuthenticateWithIncorrectCode() {
 		getCredentials(null, null);
-		AuthenticationCredentials credentials = getCredentials("000000", null);
-		// Only fails if 000000 isn't the actual sent code (extremely unlikely with 6 digits)
-		if (!authenticationScheme.getLastSentCode().equals("000000")) {
+		AuthenticationCredentials credentials = getCredentials("ABCDEF", null);
+		if (!authenticationScheme.getLastSentCode().equals("ABCDEF")) {
 			assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(credentials));
 		}
 	}

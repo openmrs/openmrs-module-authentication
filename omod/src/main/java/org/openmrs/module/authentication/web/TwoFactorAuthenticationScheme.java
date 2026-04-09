@@ -72,7 +72,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(session, candidateUser);
 		if (secondaryScheme != null) {
-			return getSecondaryAuthenticationScheme(session, candidateUser).getChallengeUrl(session);
+			return secondaryScheme.getChallengeUrl(session);
 		}
 		return null;
 	}
