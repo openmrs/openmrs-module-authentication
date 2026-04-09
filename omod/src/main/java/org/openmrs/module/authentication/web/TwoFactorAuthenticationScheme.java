@@ -25,6 +25,7 @@ import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
@@ -69,9 +70,9 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		if (candidateUser == null) {
 			return getPrimaryAuthenticationScheme().getChallengeUrl(session);
 		}
-		WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(candidateUser);
+		WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(session, candidateUser);
 		if (secondaryScheme != null) {
-			return getSecondaryAuthenticationScheme(candidateUser).getChallengeUrl(session);
+			return secondaryScheme.getChallengeUrl(session);
 		}
 		return null;
 	}
@@ -104,7 +105,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 
 		// Secondary Authentication
 		if (userLogin.getUser() != null) {
-			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(userLogin.getUser());
+			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(session, userLogin.getUser());
 			if (secondaryScheme != null) {
 				if (!userLogin.isCredentialValidated(secondaryScheme.getSchemeId())) {
 					AuthenticationCredentials secondaryCredentials = secondaryScheme.getCredentials(session);
@@ -145,9 +146,15 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		if (!mfaCreds.validatedCredentials.contains(getPrimaryAuthenticationScheme().getSchemeId())) {
 			throw new ContextAuthenticationException("authentication.error.primaryAuthenticationRequired");
 		}
-		WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(mfaCreds.user);
-		if (secondaryScheme != null) {
-			if (!mfaCreds.validatedCredentials.contains(secondaryScheme.getSchemeId())) {
+		List<String> secondarySchemes = getSecondaryAuthenticationSchemeIdsForUser(mfaCreds.user);
+		if (!secondarySchemes.isEmpty()) {
+			int numSecondarySchemesValidated = 0;
+			for (String secondarySchemeId : secondarySchemes) {
+				if (mfaCreds.validatedCredentials.contains(secondarySchemeId)) {
+					numSecondarySchemesValidated++;
+				}
+			}
+			if (numSecondarySchemesValidated == 0) {
 				throw new ContextAuthenticationException("authentication.error.secondaryAuthenticationRequired");
 			}
 		}
@@ -183,26 +190,71 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	}
 
 	/**
+	 * @return the session attribute key used to store the preferred second factor scheme for the current session
+	 */
+	protected String getSessionKeyForSecondarySchemeId() {
+		return "authentication." + getSchemeId() + ".secondarySchemeId";
+	}
+
+	public void setSecondaryAuthenticationSchemeForSession(AuthenticationSession session, String secondarySchemeId) {
+		List<String> allowed = getSecondaryAuthenticationSchemeIdsForUser(session.getUserLogin().getUser());
+		if (!allowed.contains(secondarySchemeId)) {
+			throw new ContextAuthenticationException("authentication.error.secondFactorNotEnabledForUser");
+		}
+		session.getHttpSession().setAttribute(getSessionKeyForSecondarySchemeId(), secondarySchemeId);
+	}
+
+	/**
 	 * This returns the WebAuthenticationScheme that is configured for the given User
 	 * This is configured via a user property named `authentication.secondaryType`
 	 * This throws an Exception the configured AuthenticationScheme is not a WebAuthenticationScheme
 	 * @param user the User to check for configured secondary WebAuthenticationScheme
 	 * @return the WebAuthenticationScheme to use for the given MultiFactorAuthenticationCredentials
 	 */
-	protected WebAuthenticationScheme getSecondaryAuthenticationScheme(User user) {
+	public WebAuthenticationScheme getSecondaryAuthenticationScheme(AuthenticationSession session, User user) {
 		if (user != null) {
-			String secondaryName = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
-			if (StringUtils.isNotBlank(secondaryName)) {
-				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(secondaryName);
+			String preferredScheme = null;
+			Object sessionVal = session.getHttpSessionAttributes().get(getSessionKeyForSecondarySchemeId());
+			if (sessionVal != null) {
+				preferredScheme = (String) sessionVal;
+			}
+			else {
+				List<String> secondarySchemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
+				if (!secondarySchemeIds.isEmpty()) {
+					preferredScheme = secondarySchemeIds.get(0);
+				}
+			}
+			if (preferredScheme != null) {
+				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(preferredScheme);
 				if (scheme instanceof WebAuthenticationScheme) {
 					return (WebAuthenticationScheme) scheme;
-				}
-				else {
+				} else {
 					throw new ContextAuthenticationException("authentication.error.secondarySchemeInvalidType");
 				}
 			}
 		}
 		return null;
+	}
+
+	public List<String> getSecondaryAuthenticationSchemeIdsForUser(User user) {
+		List<String> schemeIds = new ArrayList<>();
+		String userProperty = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
+		if (StringUtils.isNotBlank(userProperty)) {
+			schemeIds.addAll(Arrays.asList(userProperty.split(",")));
+		}
+		return schemeIds;
+	}
+
+	public void addSecondaryAuthenticationSchemeForUser(User user, String schemeId) {
+		List<String> schemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
+		if (!schemeIds.contains(schemeId)) {
+			schemeIds.add(schemeId);
+			user.setUserProperty(USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
+		}
+	}
+
+	public void setSecondaryAuthenticationSchemeIdsForUser(User user, List<String> schemeIds) {
+		user.setUserProperty(USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
 	}
 
 	/**
