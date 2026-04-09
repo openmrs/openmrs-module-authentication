@@ -9,7 +9,6 @@
  */
 package org.openmrs.module.authentication.web.mocks;
 
-import org.openmrs.User;
 import org.openmrs.module.authentication.web.EmailAuthenticationScheme;
 
 /**
@@ -33,8 +32,8 @@ public class MockEmailAuthenticationScheme extends EmailAuthenticationScheme {
 	}
 
 	@Override
-	protected void sendCode(User user, String code) {
-		lastSentEmail = getVerifiedEmailForUser(user);
+	public void sendCode(String email, String code) {
+		lastSentEmail = email;
 		lastSentCode = code;
 	}
 }

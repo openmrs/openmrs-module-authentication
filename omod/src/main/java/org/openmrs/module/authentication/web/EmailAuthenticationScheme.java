@@ -122,7 +122,8 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 			storedExpiry = System.currentTimeMillis() + (codeExpirationMinutes * 60_000L);
 			session.setHttpSessionAttribute(getSessionCodeKey(), storedCode);
 			session.setHttpSessionAttribute(getSessionExpiryKey(), storedExpiry);
-			sendCode(candidateUser, storedCode);
+			String email = getVerifiedEmailForUser(candidateUser);
+			sendCode(email, storedCode);
 		}
 
 		String submittedCode = session.getRequestParam(codeParam);
@@ -179,12 +180,11 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 
 	/**
 	 * Sends the one-time code to the user's email address via the OpenMRS MessageService
-	 * @param user the user to send the code to
+	 * @param email the email to send the code to
 	 * @param code the code to send
 	 * @throws ContextAuthenticationException if the user has no email or the message could not be sent
 	 */
-	protected void sendCode(User user, String code) {
-		String email = getVerifiedEmailForUser(user);
+	public void sendCode(String email, String code) {
 		if (StringUtils.isBlank(email)) {
 			throw new ContextAuthenticationException("authentication.error.noEmailConfiguredForUser");
 		}
@@ -207,8 +207,7 @@ public class EmailAuthenticationScheme extends WebAuthenticationScheme {
 	/**
 	 * @return a randomly generated numeric code of the configured length
 	 */
-	protected String generateCode() {
-		int max = (int) Math.pow(10, codeLength);
+	public String generateCode() {
 		return RandomStringUtils.secureStrong().next(codeLength, codeCharacters);
 	}
 
