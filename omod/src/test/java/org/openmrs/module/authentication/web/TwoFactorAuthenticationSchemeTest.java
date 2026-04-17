@@ -253,7 +253,7 @@ public class TwoFactorAuthenticationSchemeTest extends BaseWebAuthenticationTest
 	public void shouldGetSecondaryAuthenticationScheme() {
 		primaryAuth("tester", "primaryPw");
 		User u = authenticationSession.getUserLogin().getUser();
-		WebAuthenticationScheme secondaryScheme = authenticationScheme.getSecondaryAuthenticationScheme(u);
+		WebAuthenticationScheme secondaryScheme = authenticationScheme.getSecondaryAuthenticationScheme(authenticationSession, u);
 		assertThat(secondaryScheme.getSchemeId(), equalTo("secondary"));
 	}
 
