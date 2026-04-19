@@ -13,17 +13,8 @@
  */
 package org.openmrs.module.authentication.web;
 
-import dev.samstevens.totp.code.CodeGenerator;
-import dev.samstevens.totp.code.DefaultCodeGenerator;
-import dev.samstevens.totp.code.DefaultCodeVerifier;
-import dev.samstevens.totp.code.HashingAlgorithm;
-import dev.samstevens.totp.qr.QrData;
-import dev.samstevens.totp.qr.QrGenerator;
-import dev.samstevens.totp.qr.ZxingPngQrGenerator;
-import dev.samstevens.totp.secret.DefaultSecretGenerator;
-import dev.samstevens.totp.time.SystemTimeProvider;
-import dev.samstevens.totp.time.TimeProvider;
-import dev.samstevens.totp.util.Utils;
+import java.util.Properties;
+
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
 import org.openmrs.api.context.Authenticated;
@@ -35,7 +26,17 @@ import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.util.Security;
 
-import java.util.Properties;
+import dev.samstevens.totp.code.CodeGenerator;
+import dev.samstevens.totp.code.DefaultCodeGenerator;
+import dev.samstevens.totp.code.DefaultCodeVerifier;
+import dev.samstevens.totp.code.HashingAlgorithm;
+import dev.samstevens.totp.qr.QrData;
+import dev.samstevens.totp.qr.QrGenerator;
+import dev.samstevens.totp.qr.ZxingPngQrGenerator;
+import dev.samstevens.totp.secret.DefaultSecretGenerator;
+import dev.samstevens.totp.time.SystemTimeProvider;
+import dev.samstevens.totp.time.TimeProvider;
+import dev.samstevens.totp.util.Utils;
 
 /**
  * This supports configuring and validating against a TOTP provider using something like Google Authenticator
@@ -123,9 +124,10 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			return credentials;
 		}
 		String code = session.getRequestParam(codeParam);
-		if (StringUtils.isNotBlank(code)) {
-			User candidateUser = session.getUserLogin().getUser();
-			credentials = new TotpAuthenticationScheme.TotpCredentials(candidateUser, code);
+if (StringUtils.isNotBlank(code)) {
+    code = code.trim();
+    User candidateUser = session.getUserLogin().getUser();
+    credentials = new TotpAuthenticationScheme.TotpCredentials(candidateUser, code);
 			session.getUserLogin().addUnvalidatedCredentials(credentials);
 			return credentials;
 		}
