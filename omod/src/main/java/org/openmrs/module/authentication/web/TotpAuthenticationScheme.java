@@ -104,7 +104,9 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			throw new ContextAuthenticationException("authentication.error.noSecretConfiguredForUser");
 		}
 		String decodedSecret = Security.decrypt(userSecret);
-		if (!verifyCode(decodedSecret, c.code)) {
+		// Normalize code to remove whitespace (some authenticator apps include spaces)
+		String normalizedCode = StringUtils.deleteWhitespace(c.code);
+		if (!verifyCode(decodedSecret, normalizedCode)) {
 			throw new ContextAuthenticationException("authentication.error.invalidCredentials");
 		}
 
