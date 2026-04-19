@@ -213,19 +213,12 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 */
 	public WebAuthenticationScheme getSecondaryAuthenticationScheme(AuthenticationSession session, User user) {
 		if (user != null) {
-			String preferredScheme = null;
-			Object sessionVal = session.getHttpSessionAttributes().get(getSessionKeyForSecondarySchemeId());
-			if (sessionVal != null) {
-				preferredScheme = (String) sessionVal;
-			}
-			else {
-				List<String> secondarySchemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
-				if (!secondarySchemeIds.isEmpty()) {
-					preferredScheme = secondarySchemeIds.get(0);
+			String secondaryName = user.getUserProperty(USER_PROPERTY_SECONDARY_TYPE);
+			if (StringUtils.isNotBlank(secondaryName)) {
+				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(secondaryName);
+				if (scheme == null) {
+					throw new ContextAuthenticationException("Invalid authentication scheme: " + secondaryName);
 				}
-			}
-			if (preferredScheme != null) {
-				AuthenticationScheme scheme = AuthenticationConfig.getAuthenticationScheme(preferredScheme);
 				if (scheme instanceof WebAuthenticationScheme) {
 					return (WebAuthenticationScheme) scheme;
 				} else {
