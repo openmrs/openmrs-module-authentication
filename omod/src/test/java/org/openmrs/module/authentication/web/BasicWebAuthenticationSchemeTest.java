@@ -137,16 +137,14 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldAcceptLowercaseBasicScheme() {
-		String encoded = new String(Base64.encodeBase64("admin:adminPassword".getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-		AuthenticationCredentials credentials = getCredentialsFromHeader("basic " + encoded);
+		AuthenticationCredentials credentials = getCredentialsFromHeader("basic " + encoded("admin:adminPassword"));
 		assertThat(credentials, notNullValue());
 		assertThat(credentials.getClientName(), equalTo("admin"));
 	}
 
 	@Test
 	public void shouldAcceptMixedCaseBasicScheme() {
-		String encoded = new String(Base64.encodeBase64("admin:adminPassword".getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-		AuthenticationCredentials credentials = getCredentialsFromHeader("BaSiC " + encoded);
+		AuthenticationCredentials credentials = getCredentialsFromHeader("BaSiC " + encoded("admin:adminPassword"));
 		assertThat(credentials, notNullValue());
 		assertThat(credentials.getClientName(), equalTo("admin"));
 	}
@@ -166,8 +164,7 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 
 	@Test
 	public void shouldReturnNullForMalformedBasicHeaderWithoutColon() {
-		String encoded = new String(Base64.encodeBase64("nocolonhere".getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
-		assertThat(getCredentialsFromHeader("Basic " + encoded), nullValue());
+		assertThat(getCredentialsFromHeader("Basic " + encoded("nocolonhere")), nullValue());
 	}
 
 	protected AuthenticationCredentials getCredentialsFromHeader(String authHeader) {
@@ -182,6 +179,10 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 	}
 
 	private static String basic(String userAndPass) {
-		return "Basic " + new String(Base64.encodeBase64(userAndPass.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+		return "Basic " + encoded(userAndPass);
+	}
+
+	private static String encoded(String userAndPass) {
+		return new String(Base64.encodeBase64(userAndPass.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 	}
 }

@@ -96,7 +96,6 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
         else {
             String authHeader = session.getRequestHeader(AUTHORIZATION_HEADER);
             if (StringUtils.isNotBlank(authHeader)
-                    && authHeader.length() > 6
                     && authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
                 try {
                     String encoded = authHeader.substring(6);
