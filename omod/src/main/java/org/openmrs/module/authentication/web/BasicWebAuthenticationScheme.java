@@ -95,13 +95,20 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
         }
         else {
             String authHeader = session.getRequestHeader(AUTHORIZATION_HEADER);
-            if (StringUtils.isNotBlank(authHeader)) {
-                // Expected format:  "Basic ${base64encode(username + ":" + password)}"
+            if (StringUtils.isNotBlank(authHeader)
+                    && authHeader.length() > 6
+                    && authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
                 try {
-                    authHeader = authHeader.substring(6); // remove the leading "Basic "
-                    String decodedAuthHeader = new String(Base64.decodeBase64(authHeader), StandardCharsets.UTF_8);
-                    String[] userAndPass = decodedAuthHeader.split(":");
-                    credentials = new BasicCredentials(userAndPass[0], userAndPass[1]);
+                    String encoded = authHeader.substring(6);
+                    String decoded = new String(Base64.decodeBase64(encoded), StandardCharsets.UTF_8);
+                    // RFC 7617 §2: the first ':' separates user-id from password; the password itself may contain ':'.
+                    int firstColon = decoded.indexOf(':');
+                    if (firstColon > 0) {
+                        credentials = new BasicCredentials(decoded.substring(0, firstColon), decoded.substring(firstColon + 1));
+                    }
+                    else {
+                        session.setErrorMessage("authentication.error.invalidCredentials");
+                    }
                 }
                 catch (Exception e) {
                     session.setErrorMessage("authentication.error.invalidCredentials");
