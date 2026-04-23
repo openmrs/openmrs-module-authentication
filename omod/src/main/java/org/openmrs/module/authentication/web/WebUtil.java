@@ -64,4 +64,18 @@ public class WebUtil {
         }
         return url;
     }
+
+    /**
+     * It is considered safe if it's a relative URL.
+     * Absolute URLs are considered unsafe.
+     *
+     * @param url The URL to check.
+     * @return true if the URL is safe for redirection.
+     */
+    public static boolean isLocalUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        return !url.contains("://") && !url.startsWith("//");
+    }
 }
