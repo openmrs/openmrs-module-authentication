@@ -102,7 +102,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 				}
 			}
 		}
-
+        
 		// Secondary Authentication
 		if (userLogin.getUser() != null) {
 			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(session, userLogin.getUser());
@@ -110,6 +110,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 				if (!userLogin.isCredentialValidated(secondaryScheme.getSchemeId())) {
 					AuthenticationCredentials secondaryCredentials = secondaryScheme.getCredentials(session);
 					if (secondaryCredentials != null) {
+                        log.trace("Secondary Authentication: Call isCredentialValidated" + secondaryCredentials);
 						try {
 							session.authenticate(secondaryScheme, secondaryCredentials).getUser();
 						} catch (Exception e) {
