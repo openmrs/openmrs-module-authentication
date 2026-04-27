@@ -149,8 +149,8 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
-							// Add a location header to the session endpoint to support frontend redirection to login
+						if (WebUtil.urlMatchesAnyPattern(request, 
+							AuthenticationConfig.getNonRedirectUrls())) {
 							response.setHeader("Location", challengeUrl);
 						}
 						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
@@ -190,50 +190,7 @@ public class AuthenticationFilter implements Filter {
 
     response.sendRedirect(challengeUrl);
 }
-	/**
- * Reads the challenge URL and returns a short string identifying
- * the type of credential the user still needs to provide.
- * This string is written into the JSON body returned to API callers (e.g. O3 frontend).
- * 
- * Examples:
- *   "/openmrs/module/authenticationui/login/loginTotp.page" → "totp-required"
- *   "/openmrs/module/authenticationui/login/loginSecret.page" → "secret-required"
- *   anything else → "credentials-required"
- */
-protected String resolveChallengeType(String challengeUrl) {
-    if (challengeUrl == null) {
-        return "credentials-required";
-    }
-    if (challengeUrl.contains("totp")) {
-        return "totp-required";
-    }
-    if (challengeUrl.contains("secret")) {
-        return "secret-required";
-    }
-    return "credentials-required";
-}
 
-/**
- * Returns the O3 SPA route the frontend should navigate to
- * in order to collect the required credentials.
- * This is written into the JSON body as "redirectUrl" so that
- * openmrsFetch can call navigate({ to: redirectUrl }) on the frontend.
- *
- * Examples:
- *   "totp-required"       → "/spa/login/totp"
- *   "secret-required"     → "/spa/login/secret"
- *   "credentials-required"→ "/spa/login"
- */
-protected String resolveSpaRedirectUrl(String challengeType) {
-    switch (challengeType) {
-        case "totp-required":
-            return "/spa/login/totp";
-        case "secret-required":
-            return "/spa/login/secret";
-        default:
-            return "/spa/login";
-    }
-}
 	/**
 	 * Returns the configured authentication scheme.
 	 * If this is a DelegatingAuthenticationScheme, returns the AuthenticationScheme that this delegates to
