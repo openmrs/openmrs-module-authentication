@@ -152,6 +152,7 @@ public class AuthenticationFilter implements Filter {
 						if (WebUtil.urlMatchesAnyPattern(request, 
 							AuthenticationConfig.getNonRedirectUrls())) {
 							response.setHeader("Location", challengeUrl);
+							response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
 						}
 						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
