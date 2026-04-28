@@ -12,11 +12,14 @@ package org.openmrs.module.authentication;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.openmrs.module.BaseModuleActivator;
+import org.openmrs.module.DaemonToken;
+import org.openmrs.module.DaemonTokenAware;
+import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
 
 /**
  * This class contains the logic that is run every time this module is either started or shutdown
  */
-public class AuthenticationModuleActivator extends BaseModuleActivator {
+public class AuthenticationModuleActivator extends BaseModuleActivator implements DaemonTokenAware {
 
 	private static final Logger log = LogManager.getLogger(AuthenticationModuleActivator.class);
 	
@@ -28,5 +31,10 @@ public class AuthenticationModuleActivator extends BaseModuleActivator {
 	@Override
 	public void stopped() {
 		log.info("Authentication Module Stopped");
+	}
+
+	@Override
+	public void setDaemonToken(DaemonToken daemonToken) {
+		TwoFactorAuthenticationScheme.setDaemonToken(daemonToken);
 	}
 }
