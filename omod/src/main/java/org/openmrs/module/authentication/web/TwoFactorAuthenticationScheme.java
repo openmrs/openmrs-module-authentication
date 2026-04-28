@@ -406,6 +406,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		SeriesAndToken parts = parseRememberMeCookieValue(cookie.getValue());
 		if (parts == null) {
+			expireRememberMeCookie(session);
 			return null;
 		}
 		String stored = readRememberMeToken(user, parts.seriesId);
