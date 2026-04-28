@@ -61,7 +61,8 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String REMEMBER_ME_ENABLED = "rememberMeEnabled";
 	public static final String REMEMBER_ME_PARAM = "rememberMeParam";
 	public static final String REMEMBER_ME_COOKIE_NAME = "rememberMeCookieName";
-	public static final String REMEMBER_ME_DURATION_DAYS = "rememberMeDurationDays";
+	public static final String REMEMBER_ME_DURATION_MINUTES = "rememberMeDurationMinutes";
+	public static final int REMEMBER_ME_DURATION_MINUTES_DEFAULT = 30 * 24 * 60;  // 30 days by default
 	public static final String REMEMBER_ME_COOKIE_PATH = "rememberMeCookiePath";
 	public static final String REMEMBER_ME_COOKIE_SECURE = "rememberMeCookieSecure";
 
@@ -70,7 +71,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	protected boolean rememberMeEnabled = false;
 	protected String rememberMeParam = "rememberMe";
 	protected String rememberMeCookieName = null;
-	protected int rememberMeDurationDays = 30;
+	protected int rememberMeDurationMinutes = REMEMBER_ME_DURATION_MINUTES_DEFAULT;
 	protected String rememberMeCookiePath = "/";
 	protected boolean rememberMeCookieSecure = true;
 
@@ -87,7 +88,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		rememberMeEnabled = AuthenticationUtil.getBoolean(config.getProperty(REMEMBER_ME_ENABLED), false);
 		rememberMeParam = config.getProperty(REMEMBER_ME_PARAM, "rememberMe");
 		rememberMeCookieName = config.getProperty(REMEMBER_ME_COOKIE_NAME, "authentication." + schemeId + ".rememberMe");
-		rememberMeDurationDays = AuthenticationUtil.getInteger(config.getProperty(REMEMBER_ME_DURATION_DAYS), 30);
+		rememberMeDurationMinutes = AuthenticationUtil.getInteger(config.getProperty(REMEMBER_ME_DURATION_MINUTES), REMEMBER_ME_DURATION_MINUTES_DEFAULT);
 		rememberMeCookiePath = config.getProperty(REMEMBER_ME_COOKIE_PATH, "/");
 		rememberMeCookieSecure = AuthenticationUtil.getBoolean(config.getProperty(REMEMBER_ME_COOKIE_SECURE), true);
 	}
@@ -148,11 +149,14 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			WebAuthenticationScheme secondaryScheme = getSecondaryAuthenticationScheme(session, userLogin.getUser());
 			if (secondaryScheme != null) {
 				if (!userLogin.isCredentialValidated(secondaryScheme.getSchemeId())) {
-					// Try to bypass secondary authentication via a valid remember-me cookie
-					if (validateRememberMeBypass(session, userLogin.getUser(), secondaryScheme)) {
+					// Try to bypass secondary authentication via a valid remember-me cookie.
+					// On success, the original expiry is stashed on the session so that the rotated cookie issued
+					// in afterAuthenticationSuccess inherits it, rather than effectively never expiring.
+					Long preservedExpiry = validateRememberMeBypass(session, userLogin.getUser(), secondaryScheme);
+					if (preservedExpiry != null) {
 						userLogin.authenticationSuccessful(secondaryScheme.getSchemeId(),
 								new BasicAuthenticated(userLogin.getUser(), secondaryScheme.getSchemeId()));
-						session.setHttpSessionAttribute(getSessionKeyForRememberMeBypass(), Boolean.TRUE);
+						session.setHttpSessionAttribute(getSessionKeyForRememberMeBypass(), preservedExpiry);
 					}
 					else {
 						AuthenticationCredentials secondaryCredentials = secondaryScheme.getCredentials(session);
@@ -195,10 +199,14 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		if (user == null || getSecondaryAuthenticationSchemeIdsForUser(user).isEmpty()) {
 			return;
 		}
-		boolean bypassUsed = Boolean.TRUE.equals(session.getHttpSession().getAttribute(getSessionKeyForRememberMeBypass()));
+		// If the bypass was used this session, preserve the original expiry so periodic logins via cookie can't
+		// effectively extend remember-me indefinitely - the user must re-validate the secondary factor before the
+		// expiry to refresh the lifetime.  If the user is opting in fresh (rememberMe param), use a new expiry.
+		Object bypassAttr = session.getHttpSession().getAttribute(getSessionKeyForRememberMeBypass());
+		Long preservedExpiry = (bypassAttr instanceof Long) ? (Long) bypassAttr : null;
 		boolean requested = AuthenticationUtil.getBoolean(session.getRequestParam(rememberMeParam), false);
-		if (bypassUsed || requested) {
-			rotateAndIssueRememberMeCookie(session, user);
+		if (preservedExpiry != null || requested) {
+			rotateAndIssueRememberMeCookie(session, user, preservedExpiry);
 		}
 	}
 
@@ -384,43 +392,46 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 * @param session the current authentication session
 	 * @param user the authenticated user
 	 * @param secondaryScheme the secondary authentication scheme that would otherwise be required
-	 * @return true if the cookie is valid and should bypass secondary authentication
+	 * @return the original expiry (epoch millis) of the consumed token if the cookie is valid, or null if the cookie
+	 * is missing/invalid/expired and the bypass should not be granted.  The expiry is preserved so the rotated cookie
+	 * keeps the same lifetime instead of resetting on every bypass.
 	 */
-	protected boolean validateRememberMeBypass(AuthenticationSession session, User user, WebAuthenticationScheme secondaryScheme) {
+	protected Long validateRememberMeBypass(AuthenticationSession session, User user, WebAuthenticationScheme secondaryScheme) {
 		if (!rememberMeEnabled || user == null || secondaryScheme == null) {
-			return false;
+			return null;
 		}
 		Cookie cookie = readRememberMeCookie(session);
 		if (cookie == null) {
-			return false;
+			return null;
 		}
 		SeriesAndToken parts = parseRememberMeCookieValue(cookie.getValue());
 		if (parts == null) {
-			return false;
+			return null;
 		}
 		String stored = readRememberMeToken(user, parts.seriesId);
 		if (stored == null) {
-			return false;
+			return null;
 		}
 		StoredRememberMeToken storedToken = StoredRememberMeToken.parse(stored);
 		if (storedToken == null) {
 			// Malformed entry, remove it
 			removeRememberMeToken(user, parts.seriesId);
-			return false;
+			return null;
 		}
 		if (storedToken.expiryEpochMillis <= System.currentTimeMillis()) {
 			removeRememberMeToken(user, parts.seriesId);
-			return false;
+			return null;
 		}
 		String submittedHash = sha256Hex(parts.rawToken);
 		if (!constantTimeEquals(submittedHash, storedToken.tokenHash)) {
 			// Token mismatch on a known series id is suspicious - drop this series
 			removeRememberMeToken(user, parts.seriesId);
-			return false;
+			return null;
 		}
-		// Consume the matched series; afterAuthenticationSuccess will issue a rotated replacement
+		// Consume the matched series; afterAuthenticationSuccess will issue a rotated replacement that inherits
+		// the original expiry so periodic bypass logins do not effectively extend remember-me indefinitely.
 		removeRememberMeToken(user, parts.seriesId);
-		return true;
+		return storedToken.expiryEpochMillis;
 	}
 
 	/**
@@ -428,8 +439,12 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 * cleaned up (its server-side entry is removed) so that exactly one active series per browser is maintained.
 	 * @param session the current authentication session
 	 * @param user the authenticated user
+	 * @param preservedExpiry if non-null, the new token will inherit this expiry (epoch millis) instead of
+	 * starting a fresh {@code rememberMeDurationMinutes} window. Used during cookie rotation after a bypass so the
+	 * lifetime is anchored to the user's last successful secondary-factor authentication, not to the most recent
+	 * bypass login.
 	 */
-	protected void rotateAndIssueRememberMeCookie(AuthenticationSession session, User user) {
+	protected void rotateAndIssueRememberMeCookie(AuthenticationSession session, User user, Long preservedExpiry) {
 		// Drop any pre-existing token entry for the cookie this request arrived with
 		Cookie existing = readRememberMeCookie(session);
 		if (existing != null) {
@@ -438,12 +453,16 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 				removeRememberMeToken(user, parts.seriesId);
 			}
 		}
+		long now = System.currentTimeMillis();
+		long expiry = (preservedExpiry != null && preservedExpiry > now)
+				? preservedExpiry
+				: now + (rememberMeDurationMinutes * 60_000L);
+		int maxAgeSeconds = (int) Math.max(0L, (expiry - now) / 1000L);
 		String seriesId = generateRandomToken();
 		String rawToken = generateRandomToken();
-		long expiry = System.currentTimeMillis() + (rememberMeDurationDays * 86_400_000L);
 		String stored = sha256Hex(rawToken) + ":" + expiry;
 		writeRememberMeToken(user, seriesId, stored);
-		writeRememberMeCookie(session, seriesId + "." + rawToken);
+		writeRememberMeCookie(session, seriesId + "." + rawToken, maxAgeSeconds);
 	}
 
 	/**
@@ -472,7 +491,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	 * classpath; on any Servlet 3.0+ container actually serving production traffic, the HttpOnly attribute is
 	 * applied.
 	 */
-	protected void writeRememberMeCookie(AuthenticationSession session, String value) {
+	protected void writeRememberMeCookie(AuthenticationSession session, String value, int maxAgeSeconds) {
 		HttpServletResponse response = session.getHttpResponse();
 		if (response == null) {
 			return;
@@ -481,7 +500,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		if (StringUtils.isNotBlank(rememberMeCookiePath)) {
 			cookie.setPath(rememberMeCookiePath);
 		}
-		cookie.setMaxAge(rememberMeDurationDays * 86_400);
+		cookie.setMaxAge(maxAgeSeconds);
 		cookie.setSecure(rememberMeCookieSecure);
 		invokeSetHttpOnly(cookie);
 		response.addCookie(cookie);

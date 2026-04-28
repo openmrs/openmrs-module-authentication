@@ -157,7 +157,8 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 		assertThat(issued.getValue(), notNullValue());
 		assertThat(issued.getPath(), equalTo("/"));
 		assertThat(issued.getSecure(), equalTo(false));
-		assertThat(issued.getMaxAge(), equalTo(30 * 86_400));
+		// Default of 30 days, expressed as seconds
+		assertThat(issued.getMaxAge(), equalTo(30 * 24 * 60 * 60));
 		User user = userLogin.getUser();
 		assertThat(user.getUserProperties().keySet().stream()
 				.anyMatch(k -> k.startsWith("authentication.2fa.rememberMe.")), equalTo(true));
@@ -230,6 +231,89 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 		User user = userLogin.getUser();
 		assertThat(user.getUserProperties().containsKey("authentication.2fa.rememberMe." + seriesA), equalTo(false));
 		assertThat(user.getUserProperties().containsKey("authentication.2fa.rememberMe." + seriesB), equalTo(true));
+	}
+
+	@Test
+	public void shouldHonorMinutesBasedDurationConfig() {
+		AuthenticationConfig.setProperty("authentication.scheme.2fa.config.rememberMeDurationMinutes", "5");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		authenticationScheme = (MockTwoFactorAuthenticationScheme) AuthenticationConfig.getAuthenticationScheme();
+
+		long before = System.currentTimeMillis();
+		primary("tester", "primaryPw", null);
+		AuthenticationCredentials creds = secondary("tester", "secondaryPw", "true");
+		authenticationSession.authenticate(authenticationScheme, creds);
+		Cookie issued = issuedCookie();
+		long after = System.currentTimeMillis();
+
+		// Cookie Max-Age reflects 5 minutes
+		assertThat(issued.getMaxAge(), equalTo(5 * 60));
+
+		// Server-side expiry is "now + 5 minutes"
+		User user = userLogin.getUser();
+		String series = issued.getValue().split("\\.")[0];
+		long expiry = parseExpiry(user.getUserProperty("authentication.2fa.rememberMe." + series));
+		long fiveMinMs = 5L * 60_000L;
+		assertThat(expiry >= before + fiveMinMs, equalTo(true));
+		assertThat(expiry <= after + fiveMinMs, equalTo(true));
+	}
+
+	@Test
+	public void shouldPreserveExpiryAcrossRotation() {
+		// Initial opt-in: a fresh expiry is generated
+		primary("tester", "primaryPw", null);
+		AuthenticationCredentials creds1 = secondary("tester", "secondaryPw", "true");
+		authenticationSession.authenticate(authenticationScheme, creds1);
+		Cookie cookieA = issuedCookie();
+		String seriesA = cookieA.getValue().split("\\.")[0];
+		User user = userLogin.getUser();
+		long originalExpiry = parseExpiry(user.getUserProperty("authentication.2fa.rememberMe." + seriesA));
+		int originalMaxAge = cookieA.getMaxAge();
+
+		// Backdate the stored expiry by 10 days to simulate a token that's 10 days into its 30-day lifetime
+		long backdatedExpiry = originalExpiry - (10L * 86_400_000L);
+		String hashOnly = user.getUserProperty("authentication.2fa.rememberMe." + seriesA).split(":")[0];
+		user.setUserProperty("authentication.2fa.rememberMe." + seriesA, hashOnly + ":" + backdatedExpiry);
+
+		// Use the cookie to bypass; the rotated entry must inherit the (now backdated) expiry, not start a fresh one
+		newHttpSession();
+		AuthenticationCredentials creds2 = primary("tester", "primaryPw", null, cookieA);
+		authenticationSession.authenticate(authenticationScheme, creds2);
+		Cookie cookieB = issuedCookie();
+		String seriesB = cookieB.getValue().split("\\.")[0];
+		long rotatedExpiry = parseExpiry(user.getUserProperty("authentication.2fa.rememberMe." + seriesB));
+
+		// Expiry preserved (within a small drift tolerance)
+		assertThat(Math.abs(rotatedExpiry - backdatedExpiry) <= 100L, equalTo(true));
+		// And the cookie's Max-Age is shorter than the original full window (we lost ~10 days)
+		assertThat(cookieB.getMaxAge() < originalMaxAge, equalTo(true));
+	}
+
+	@Test
+	public void shouldExpireAfterOriginalLifetimeEvenWithFrequentBypassLogins() {
+		// Opt in
+		primary("tester", "primaryPw", null);
+		AuthenticationCredentials creds1 = secondary("tester", "secondaryPw", "true");
+		authenticationSession.authenticate(authenticationScheme, creds1);
+		Cookie cookie = issuedCookie();
+		User user = userLogin.getUser();
+
+		// Simulate the token already past expiry on the server, even though the user is logging in often
+		String series = cookie.getValue().split("\\.")[0];
+		String storedKey = "authentication.2fa.rememberMe." + series;
+		String hashOnly = user.getUserProperty(storedKey).split(":")[0];
+		user.setUserProperty(storedKey, hashOnly + ":" + (System.currentTimeMillis() - 1L));
+
+		newHttpSession();
+		primary("tester", "primaryPw", null, cookie);
+		// Bypass denied; secondary still required
+		assertThat(userLogin.isCredentialValidated("secondary"), equalTo(false));
+		// And no fresh cookie was issued by the bypass path
+		assertThat(issuedCookie(), nullValue());
+	}
+
+	private long parseExpiry(String stored) {
+		return Long.parseLong(stored.substring(stored.lastIndexOf(':') + 1));
 	}
 
 	@Test
