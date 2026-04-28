@@ -140,6 +140,11 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 		return null;
 	}
 
+	private boolean cookieWasCleared() {
+		Cookie c = issuedCookie();
+		return c != null && c.getMaxAge() == 0;
+	}
+
 	private void newHttpSession() {
 		session = newSession();
 		newAuthenticationSession();
@@ -308,8 +313,8 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 		primary("tester", "primaryPw", null, cookie);
 		// Bypass denied; secondary still required
 		assertThat(userLogin.isCredentialValidated("secondary"), equalTo(false));
-		// And no fresh cookie was issued by the bypass path
-		assertThat(issuedCookie(), nullValue());
+		// No fresh remember-me cookie issued. Any cookie present is the clearing cookie (Max-Age=0)
+		assertThat(cookieWasCleared(), equalTo(true));
 	}
 
 	private long parseExpiry(String stored) {
@@ -334,6 +339,8 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 		primary("tester", "primaryPw", null, cookie);
 		assertThat(userLogin.isCredentialValidated("secondary"), equalTo(false));
 		assertThat(user.getUserProperties().containsKey(storedKey), equalTo(false));
+		// Browser cookie is cleared when the server-side entry is rejected
+		assertThat(cookieWasCleared(), equalTo(true));
 	}
 
 	@Test
@@ -353,6 +360,7 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 		primary("tester", "primaryPw", null, tampered);
 		assertThat(userLogin.isCredentialValidated("secondary"), equalTo(false));
 		assertThat(user.getUserProperties().containsKey(storedKey), equalTo(false));
+		assertThat(cookieWasCleared(), equalTo(true));
 	}
 
 	@Test

@@ -410,22 +410,27 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		String stored = readRememberMeToken(user, parts.seriesId);
 		if (stored == null) {
+			// Browser is sending a cookie whose server-side entry no longer exists - clear it
+			expireRememberMeCookie(session);
 			return null;
 		}
 		StoredRememberMeToken storedToken = StoredRememberMeToken.parse(stored);
 		if (storedToken == null) {
-			// Malformed entry, remove it
+			// Malformed entry, remove it and clear the browser cookie too
 			removeRememberMeToken(user, parts.seriesId);
+			expireRememberMeCookie(session);
 			return null;
 		}
 		if (storedToken.expiryEpochMillis <= System.currentTimeMillis()) {
 			removeRememberMeToken(user, parts.seriesId);
+			expireRememberMeCookie(session);
 			return null;
 		}
 		String submittedHash = sha256Hex(parts.rawToken);
 		if (!constantTimeEquals(submittedHash, storedToken.tokenHash)) {
-			// Token mismatch on a known series id is suspicious - drop this series
+			// Token mismatch on a known series id is suspicious - drop this series and the browser cookie
 			removeRememberMeToken(user, parts.seriesId);
+			expireRememberMeCookie(session);
 			return null;
 		}
 		// Consume the matched series; afterAuthenticationSuccess will issue a rotated replacement that inherits
@@ -501,6 +506,26 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			cookie.setPath(rememberMeCookiePath);
 		}
 		cookie.setMaxAge(maxAgeSeconds);
+		cookie.setSecure(rememberMeCookieSecure);
+		invokeSetHttpOnly(cookie);
+		response.addCookie(cookie);
+	}
+
+	/**
+	 * Sends a Set-Cookie header that expires the remember-me cookie immediately, so the browser stops sending it.
+	 * Used when we encounter and reject a cookie (expired entry, tampered token, unknown series) so the browser
+	 * state matches the server state.
+	 */
+	protected void expireRememberMeCookie(AuthenticationSession session) {
+		HttpServletResponse response = session.getHttpResponse();
+		if (response == null) {
+			return;
+		}
+		Cookie cookie = new Cookie(rememberMeCookieName, "");
+		if (StringUtils.isNotBlank(rememberMeCookiePath)) {
+			cookie.setPath(rememberMeCookiePath);
+		}
+		cookie.setMaxAge(0);
 		cookie.setSecure(rememberMeCookieSecure);
 		invokeSetHttpOnly(cookie);
 		response.addCookie(cookie);
