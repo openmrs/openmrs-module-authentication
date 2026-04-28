@@ -203,6 +203,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		// effectively extend remember-me indefinitely - the user must re-validate the secondary factor before the
 		// expiry to refresh the lifetime.  If the user is opting in fresh (rememberMe param), use a new expiry.
 		Object bypassAttr = session.getHttpSession().getAttribute(getSessionKeyForRememberMeBypass());
+		session.getHttpSession().removeAttribute(getSessionKeyForRememberMeBypass());
 		Long preservedExpiry = (bypassAttr instanceof Long) ? (Long) bypassAttr : null;
 		boolean requested = AuthenticationUtil.getBoolean(session.getRequestParam(rememberMeParam), false);
 		if (preservedExpiry != null || requested) {
