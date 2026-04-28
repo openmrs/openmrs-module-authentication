@@ -19,12 +19,13 @@ import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.api.context.Credentials;
+import org.openmrs.api.context.Daemon;
+import org.openmrs.module.DaemonToken;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
-import org.openmrs.util.PrivilegeConstants;
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
@@ -49,6 +50,9 @@ import java.util.Set;
 public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 
 	protected final Log log = LogFactory.getLog(getClass());
+
+	// Daemon Token
+	private static DaemonToken daemonToken;
 
 	// User configuration
 	public static final String USER_PROPERTY_SECONDARY_TYPE = "authentication.secondaryType";
@@ -86,6 +90,10 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		rememberMeDurationDays = AuthenticationUtil.getInteger(config.getProperty(REMEMBER_ME_DURATION_DAYS), 30);
 		rememberMeCookiePath = config.getProperty(REMEMBER_ME_COOKIE_PATH, "/");
 		rememberMeCookieSecure = AuthenticationUtil.getBoolean(config.getProperty(REMEMBER_ME_COOKIE_SECURE), true);
+	}
+
+	public static void setDaemonToken(DaemonToken daemonToken) {
+		TwoFactorAuthenticationScheme.daemonToken = daemonToken;
 	}
 
 	/**
@@ -188,8 +196,7 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 			return;
 		}
 		boolean bypassUsed = Boolean.TRUE.equals(session.getHttpSession().getAttribute(getSessionKeyForRememberMeBypass()));
-		boolean requested = StringUtils.isNotBlank(session.getRequestParam(rememberMeParam))
-				&& AuthenticationUtil.getBoolean(session.getRequestParam(rememberMeParam), false);
+		boolean requested = AuthenticationUtil.getBoolean(session.getRequestParam(rememberMeParam), false);
 		if (bypassUsed || requested) {
 			rotateAndIssueRememberMeCookie(session, user);
 		}
@@ -518,34 +525,27 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	}
 
 	/**
-	 * Persists the remember-me entry value for the given user and series id.  This wraps the call in proxy
-	 * privileges so it can be invoked during the unauthenticated phase of the login workflow.
+	 * Persists the remember-me entry value for the given user and series id.
+	 * This is run in a Daemon thread so it can be invoked during the unauthenticated phase of the login workflow.
 	 */
 	protected void writeRememberMeToken(User user, String seriesId, String value) {
 		String propertyName = getRememberMeUserPropertyName(seriesId);
-		user.setUserProperty(propertyName, value);
-		try {
-			Context.addProxyPrivilege(PrivilegeConstants.EDIT_USERS);
-			Context.getUserService().setUserProperty(user, propertyName, value);
-		}
-		finally {
-			Context.removeProxyPrivilege(PrivilegeConstants.EDIT_USERS);
-		}
+		Daemon.runInDaemonThreadAndWait(() -> {
+            User userToUpdate = Context.getUserService().getUser(user.getUserId());
+            Context.getUserService().setUserProperty(userToUpdate, propertyName, value);
+        }, daemonToken);
 	}
 
 	/**
 	 * Removes the remember-me entry for the given user and series id.
+	 * This is run in a Daemon thread so it can be invoked during the unauthenticated phase of the login workflow.
 	 */
 	protected void removeRememberMeToken(User user, String seriesId) {
 		String propertyName = getRememberMeUserPropertyName(seriesId);
-		user.removeUserProperty(propertyName);
-		try {
-			Context.addProxyPrivilege(PrivilegeConstants.EDIT_USERS);
-			Context.getUserService().removeUserProperty(user, propertyName);
-		}
-		finally {
-			Context.removeProxyPrivilege(PrivilegeConstants.EDIT_USERS);
-		}
+		Daemon.runInDaemonThreadAndWait(() -> {
+			User userToUpdate = Context.getUserService().getUser(user.getUserId());
+			Context.getUserService().removeUserProperty(userToUpdate, propertyName);
+		}, daemonToken);
 	}
 
 	/**
