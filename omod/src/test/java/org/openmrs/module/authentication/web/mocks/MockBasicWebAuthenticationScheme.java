@@ -34,6 +34,14 @@ public class MockBasicWebAuthenticationScheme extends BasicWebAuthenticationSche
     public MockBasicWebAuthenticationScheme() {
     }
 
+    /**
+     * Clears the static user/credential registry so tests that mutate user properties do not leak state.
+     */
+    public static void reset() {
+        validCredentials.clear();
+        users.clear();
+    }
+
     @Override
     public void configure(String schemeId, Properties config) {
         super.configure(schemeId, config);
