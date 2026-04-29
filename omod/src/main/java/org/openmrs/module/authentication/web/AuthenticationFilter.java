@@ -149,9 +149,10 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
-							// Add a location header to the session endpoint to support frontend redirection to login
+						if (WebUtil.urlMatchesAnyPattern(request, 
+							AuthenticationConfig.getNonRedirectUrls())) {
 							response.setHeader("Location", challengeUrl);
+							response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
 						}
 						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
@@ -176,15 +177,21 @@ public class AuthenticationFilter implements Filter {
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
-			response.setHeader("Location", challengeUrl);
-			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-		}
-		else {
-			response.sendRedirect(challengeUrl);
-		}
-	}
-	
+
+    boolean isNonRedirectUrl = WebUtil.urlMatchesAnyPattern(
+        request,
+        AuthenticationConfig.getNonRedirectUrls()
+    );
+
+    if (isNonRedirectUrl) {
+        response.setHeader("Location", challengeUrl);
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return;
+    }
+
+    response.sendRedirect(challengeUrl);
+}
+
 	/**
 	 * Returns the configured authentication scheme.
 	 * If this is a DelegatingAuthenticationScheme, returns the AuthenticationScheme that this delegates to
