@@ -129,7 +129,11 @@ public class AuthenticationFilter implements Filter {
 
 					// If any credentials were passed in the request or session attempt to authentication with them
 					AuthenticationCredentials credentials = webScheme.getCredentials(session);
-					String challengeUrl = WebUtil.contextualizeUrl(request, webScheme.getChallengeUrl(session));
+					String challengeUrlStr = webScheme.getChallengeUrl(session);
+					if (WebUtil.matchesPath(request, "/ws/rest/**") && "/login.htm".equals(challengeUrlStr)) {
+						challengeUrlStr = "/spa/login";
+					}
+					String challengeUrl = WebUtil.contextualizeUrl(request, challengeUrlStr);
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
@@ -144,18 +148,18 @@ public class AuthenticationFilter implements Filter {
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
 							log.debug("Authentication failed: " + request.getRequestURI());
-							handleAuthenticationFailure(request, response, challengeUrl);
+							if (!(WebUtil.matchesPath(request, "/ws/rest/*/session") || WebUtil.matchesPath(request, "/ws/rest/v1/authentication/**") || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList()))) {
+								handleAuthenticationFailure(request, response, challengeUrl);
+								return;
+							}
 						}
 					}
-					// If no credentials were found, redirect to challenge url unless whitelisted
+					// If no credentials were found, or authentication is incomplete, redirect/challenge
 					else {
-						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
-							// Add a location header to the session endpoint to support frontend redirection to login
-							response.setHeader("Location", challengeUrl);
-						}
-						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
-							log.trace("Authentication required: " + request.getRequestURI());
+						if (WebUtil.matchesPath(request, "/ws/rest/*/session") || WebUtil.matchesPath(request, "/ws/rest/v1/authentication/**") || !WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+							log.trace("Authentication required (incomplete auth): " + request.getRequestURI());
 							handleAuthenticationFailure(request, response, challengeUrl);
+							return;
 						}
 					}
 				}
@@ -176,8 +180,9 @@ public class AuthenticationFilter implements Filter {
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+		if (WebUtil.matchesPath(request, "/ws/rest/**") || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			response.setHeader("Location", challengeUrl);
+			// Using sendError is more secure as it signals the container to clear the buffer and handle the error page
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
 		}
 		else {
