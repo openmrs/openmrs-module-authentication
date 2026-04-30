@@ -122,6 +122,30 @@ One can configure a comma-delimited list of primary and secondary options that a
 
 This scheme operates by first instantiating the first listed option in the `primaryOptions` configuration property, collecting user credentials, and authenticating to retrieve a valid "Candidate User".  The scheme then checks whether this user has a schemeId configured as their secondary authentication scheme, via a user property named `authentication.secondaryType`, the value of which is the `schemeId` of the scheme they have chosen.  If the user does not have anything defined for this, then secondary authentication is not done, and their authentication is completed successfully.  If the user does have a secondary type configured, then they are directed to authenticate using this configured scheme as well.
 
+##### Remember-me cookie (skip secondary-factor on trusted browsers)
+
+When secondary authentication is configured, the `TwoFactorAuthenticationScheme` can issue a long-lived "remember me" cookie that allows a user to bypass the secondary factor on subsequent logins from the same browser. The user opts in per browser by submitting a `rememberMe=true` parameter alongside their secondary credentials. When 2FA succeeds, a random remember-me token is set in a secure HTTP-only cookie and a hash of that token is stored as a user property. On subsequent logins, after primary authentication succeeds, a valid cookie causes the secondary factor to be marked as already validated. The token is rotated on every successful bypass (single-use) and the entry is dropped on tamper or expiry.
+
+The expiry is anchored to the user's last successful **secondary-factor** authentication, not to the most recent bypass login - rotated tokens inherit the original expiry, so frequent bypass logins cannot indefinitely extend the remember-me window. Once the window elapses, the user is required to re-validate the secondary factor.
+
+```properties
+# All optional - defaults shown
+authentication.scheme.2fa.config.rememberMeEnabled=false
+authentication.scheme.2fa.config.rememberMeParam=rememberMe
+authentication.scheme.2fa.config.rememberMeCookieName=authentication.{schemeId}.rememberMe
+authentication.scheme.2fa.config.rememberMeDurationMinutes=43200
+authentication.scheme.2fa.config.rememberMeCookiePath=/
+authentication.scheme.2fa.config.rememberMeCookieSecure=true
+```
+
+`rememberMeDurationMinutes` is expressed in minutes so short windows can be configured for testing or stricter security policies (for example, `5` for 5 minutes, `720` for 12 hours). The default `43200` is 30 days.
+
+Notes:
+* The cookie is set with `HttpOnly` and (when `rememberMeCookieSecure=true`) `Secure`. `SameSite` is not emitted by the module and should be configured at the container level (e.g. Tomcat's `CookieProcessor` `sameSiteCookies=lax`).
+* Each browser/series is stored as a separate user property under `authentication.{schemeId}.rememberMe.{seriesId}`, so a user can have valid remember-me sessions on multiple devices independently.
+* `TwoFactorAuthenticationScheme#clearAllRememberMeTokens(User)` is available to revoke all remembered devices for a user (for example, after a password change or "log out everywhere" action).
+* A remember-me cookie cannot bypass primary authentication - only the secondary factor.
+
 ### Configuration Examples
 
 #### Legacy UI (1.x) login page
