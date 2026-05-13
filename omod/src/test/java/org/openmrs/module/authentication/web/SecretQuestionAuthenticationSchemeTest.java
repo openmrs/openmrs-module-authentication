@@ -123,4 +123,70 @@ public class SecretQuestionAuthenticationSchemeTest extends BaseWebAuthenticatio
 		UsernamePasswordCredentials creds = new UsernamePasswordCredentials("admin", "adminPassword");
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(creds));
 	}
+
+	private AuthenticationCredentials getCredentialsFromHeaders(String headerQuestion, String headerAnswer) {
+		MockHttpServletRequest req = newPostRequest("192.168.1.1", "/login");
+		if (headerQuestion != null) {
+			req.addHeader("X-Secret-Question", headerQuestion);
+		}
+		if (headerAnswer != null) {
+			req.addHeader("X-Secret-Answer", headerAnswer);
+		}
+		req.setSession(session);
+		authenticationSession = new MockAuthenticationSession(req, newResponse());
+		return authenticationScheme.getCredentials(authenticationSession);
+	}
+
+	@Test
+	public void shouldGetCredentialsFromHeaders() {
+		AuthenticationCredentials credentials = getCredentialsFromHeaders("Favorite color?", "Red");
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("testing"));
+		assertThat(credentials.getAuthenticationScheme(), equalTo("secret"));
+	}
+
+	@Test
+	public void shouldPreferParamsOverHeaders() {
+		request = newPostRequest("192.168.1.1", "/login");
+		request.setParameter("secretQ", "param question");
+		request.setParameter("secretA", "param answer");
+		request.addHeader("X-Secret-Question", "header question");
+		request.addHeader("X-Secret-Answer", "header answer");
+		request.setSession(session);
+		authenticationSession = new MockAuthenticationSession(request, newResponse());
+		AuthenticationCredentials credentials = authenticationScheme.getCredentials(authenticationSession);
+		assertThat(credentials, notNullValue());
+		SecretQuestionAuthenticationScheme.SecretQuestionAuthenticationCredentials sq =
+				(SecretQuestionAuthenticationScheme.SecretQuestionAuthenticationCredentials) credentials;
+		assertThat(sq.question, equalTo("param question"));
+		assertThat(sq.answer, equalTo("param answer"));
+	}
+
+	@Test
+	public void shouldReturnNullIfQuestionPresentButAnswerAbsentViaHeaders() {
+		assertThat(getCredentialsFromHeaders("Favorite color?", null), nullValue());
+	}
+
+	@Test
+	public void shouldReturnNullIfAnswerPresentButQuestionAbsentViaHeaders() {
+		assertThat(getCredentialsFromHeaders(null, "Red"), nullValue());
+	}
+
+	@Test
+	public void shouldUseConfiguredHeaderNames() {
+		AuthenticationConfig.setProperty("authentication.scheme.secret.config.questionHeader", "X-Custom-Question");
+		AuthenticationConfig.setProperty("authentication.scheme.secret.config.answerHeader", "X-Custom-Answer");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		MockSecretQuestionAuthenticationScheme customScheme =
+				(MockSecretQuestionAuthenticationScheme) AuthenticationConfig.getAuthenticationScheme();
+
+		MockHttpServletRequest req = newPostRequest("192.168.1.1", "/login");
+		req.addHeader("X-Custom-Question", "Favorite color?");
+		req.addHeader("X-Custom-Answer", "Red");
+		req.setSession(session);
+		authenticationSession = new MockAuthenticationSession(req, newResponse());
+		AuthenticationCredentials credentials = customScheme.getCredentials(authenticationSession);
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("testing"));
+	}
 }

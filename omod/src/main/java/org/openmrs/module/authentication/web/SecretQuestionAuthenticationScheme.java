@@ -37,6 +37,8 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
     public static final String LOGIN_PAGE = "loginPage";
     public static final String QUESTION_PARAM = "questionParam";
     public static final String ANSWER_PARAM = "answerParam";
+    public static final String QUESTION_HEADER = "questionHeader";
+    public static final String ANSWER_HEADER = "answerHeader";
 
     public static final String QUESTION = "question";
     public static final String ANSWER = "answer";
@@ -44,6 +46,8 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
     protected String loginPage;
     protected String questionParam;
     protected String answerParam;
+    protected String questionHeader;
+    protected String answerHeader;
 
     @Override
     public void configure(String schemeId, Properties config) {
@@ -51,6 +55,8 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
         loginPage = config.getProperty(LOGIN_PAGE, "/loginWithSecret.htm");
         questionParam = config.getProperty(QUESTION_PARAM, QUESTION);
         answerParam = config.getProperty(ANSWER_PARAM, ANSWER);
+        questionHeader = config.getProperty(QUESTION_HEADER, "X-Secret-Question");
+        answerHeader = config.getProperty(ANSWER_HEADER, "X-Secret-Answer");
     }
 
     /**
@@ -74,6 +80,12 @@ public class SecretQuestionAuthenticationScheme extends WebAuthenticationScheme 
         }
         String question = session.getRequestParam(questionParam);
         String answer = session.getRequestParam(answerParam);
+        if (StringUtils.isBlank(question)) {
+            question = session.getRequestHeader(questionHeader);
+        }
+        if (StringUtils.isBlank(answer)) {
+            answer = session.getRequestHeader(answerHeader);
+        }
         if (StringUtils.isNotBlank(question) && StringUtils.isNotBlank(answer)) {
             User candidateUser = session.getUserLogin().getUser();
             credentials = new SecretQuestionAuthenticationCredentials(candidateUser, question, answer);
