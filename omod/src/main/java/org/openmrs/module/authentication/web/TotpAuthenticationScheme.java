@@ -54,6 +54,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	// Configuration properties for login page
 	public static final String LOGIN_PAGE = "loginPage";
 	public static final String CODE_PARAM = "codeParam";
+	public static final String CODE_HEADER = "codeHeader";
 
 	private int secretLength;
 	private HashingAlgorithm hashingAlgorithm;
@@ -63,6 +64,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	private int allowedDiscrepancy;
 	private String loginPage;
 	private String codeParam;
+	private String codeHeader;
 
 	@Override
 	public void configure(String schemeId, Properties config) {
@@ -75,6 +77,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		allowedDiscrepancy = AuthenticationUtil.getInteger(config.getProperty(ALLOWED_DISCREPANCY), 2);
 		loginPage = config.getProperty(LOGIN_PAGE, "/loginTotp.page");
 		codeParam = config.getProperty(CODE_PARAM, "code");
+		codeHeader = config.getProperty(CODE_HEADER, "X-Totp-Code");
 	}
 
 	@Override
@@ -123,6 +126,9 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			return credentials;
 		}
 		String code = session.getRequestParam(codeParam);
+		if (StringUtils.isBlank(code)) {
+			code = session.getRequestHeader(codeHeader);
+		}
 		if (StringUtils.isNotBlank(code)) {
 			User candidateUser = session.getUserLogin().getUser();
 			credentials = new TotpAuthenticationScheme.TotpCredentials(candidateUser, code);
