@@ -130,6 +130,7 @@ public class AuthenticationFilter implements Filter {
 					// If any credentials were passed in the request or session attempt to authentication with them
 					AuthenticationCredentials credentials = webScheme.getCredentials(session);
 					String challengeUrl = WebUtil.contextualizeUrl(request, webScheme.getChallengeUrl(session));
+					String o3ChallengeUrl = WebUtil.contextualizeUrl(request, webScheme.getO3ChallengeUrl(session));
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
@@ -149,9 +150,8 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (WebUtil.matchesPath(request, "/ws/rest/*/session")) {
-							// Add a location header to the session endpoint to support frontend redirection to login
-							response.setHeader("Location", challengeUrl);
+						if (WebUtil.isO3SpaRequest(request)) {
+							handleAuthenticationFailure(request, response, o3ChallengeUrl);
 						}
 						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
@@ -176,7 +176,7 @@ public class AuthenticationFilter implements Filter {
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+		if (WebUtil.isO3SpaRequest(request) || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			response.setHeader("Location", challengeUrl);
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
 		}

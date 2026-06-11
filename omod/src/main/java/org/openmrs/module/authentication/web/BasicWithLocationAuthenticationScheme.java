@@ -36,12 +36,14 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 	public static final String LOCATION_REQUIRED = "locationRequired";
 	public static final String LOCATION_SESSION_ATTRIBUTE_NAME = "locationSessionAttributeName";
 	public static final String LAST_LOCATION_COOKIE_NAME = "lastLocationCookieName";
+	public static final String O3_CHALLENGE_2FA_SETUP = "o3Challenge2FaSetup";
 
 	private String locationParamName = "sessionLocation";
 	private String onlyLocationsWithTag = null;
 	private boolean locationRequired = false;
 	private String locationSessionAttributeName = "emrContext.sessionLocationId";
 	private String lastLocationCookieName = "emr.lastSessionLocation";
+	private String o3Challenge2FaSetup = null;
 
 	@Override
 	public void configure(String schemeId, Properties config) {
@@ -51,6 +53,12 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 		locationRequired = getBoolean(config.getProperty(LOCATION_REQUIRED), false);
 		locationSessionAttributeName = config.getProperty(LOCATION_SESSION_ATTRIBUTE_NAME, "emrContext.sessionLocationId");
 		lastLocationCookieName = config.getProperty(LAST_LOCATION_COOKIE_NAME, "emr.lastSessionLocation");
+		o3Challenge2FaSetup = config.getProperty(O3_CHALLENGE_2FA_SETUP);
+	}
+
+	@Override
+	public String getO3ChallengeUrl(AuthenticationSession session) {
+		return o3Challenge2FaSetup != null ? o3Challenge2FaSetup : getChallengeUrl(session);
 	}
 
 	@Override

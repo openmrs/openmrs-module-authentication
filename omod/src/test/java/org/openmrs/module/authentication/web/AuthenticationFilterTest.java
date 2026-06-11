@@ -283,6 +283,87 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
 
+	public void setupO3SessionRequest() {
+		AuthenticationConfig.setProperty("authentication.scheme", "basic");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.type", MockBasicWebAuthenticationScheme.class.getName());
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.loginPage", "/login.htm");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users", "admin");
+		AuthenticationConfig.setProperty("authentication.scheme.basic.config.users.admin.password", "adminPassword");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		authenticationSession.setAuthenticatedUser(null);
+		request.setMethod("GET");
+		request.setContextPath("/");
+		request.setRequestURI("/ws/rest/v1/session");
+	}
+
+	// isO3SpaRequest detection tests
+
+	@Test
+	public void shouldDetectO3SpaRequestByServletPath() {
+		request.setContextPath("/");
+		request.setServletPath("/ws/rest/v1/session");
+		assertThat(WebUtil.isO3SpaRequest(request), equalTo(true));
+	}
+
+	@Test
+	public void shouldDetectO3SpaRequestByRequestUri() {
+		request.setContextPath("/openmrs");
+		request.setRequestURI("/openmrs/ws/rest/v1/session");
+		assertThat(WebUtil.isO3SpaRequest(request), equalTo(true));
+	}
+
+	@Test
+	public void shouldNotDetectO3SpaRequestForOtherRestPaths() {
+		request.setContextPath("/");
+		request.setRequestURI("/ws/rest/v1/patient");
+		assertThat(WebUtil.isO3SpaRequest(request), equalTo(false));
+	}
+
+	@Test
+	public void shouldNotDetectO3SpaRequestForNonRestPaths() {
+		request.setContextPath("/");
+		request.setRequestURI("/patientDashboard.htm");
+		assertThat(WebUtil.isO3SpaRequest(request), equalTo(false));
+	}
+
+	// O3 session endpoint filter behavior tests
+
+	@Test
+	public void shouldReturn401WithLocationHeaderForUnauthenticatedO3SessionRequest() throws Exception {
+		setupO3SessionRequest();
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+		assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+	}
+
+	@Test
+	public void shouldReturn401ForO3SessionRequestEvenThoughSessionEndpointIsWhitelisted() throws Exception {
+		setupO3SessionRequest();
+		assertThat(AuthenticationConfig.getWhiteList().contains("/ws/rest/v1/session"), equalTo(true));
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+	}
+
+	@Test
+	public void shouldPassThroughForAuthenticatedO3SessionRequest() throws Exception {
+		setupO3SessionRequest();
+		authenticationSession.setAuthenticatedUser(user);
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(false));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_OK));
+	}
+
+	@Test
+	public void shouldRedirectAndNotReturn401ForUnauthenticatedNonO3Request() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_MOVED_TEMPORARILY));
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
+	}
+
 	@AfterEach
 	@Override
 	public void teardown() {

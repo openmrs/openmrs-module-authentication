@@ -64,4 +64,14 @@ public class WebUtil {
         }
         return url;
     }
+    
+    /**
+     * Checks if the request is coming from the O3 Frontend (REST session endpoint)
+     *
+     * @param request the HttpServletRequest to check
+     * @return true if the request is from O3 and should receive a 401 rather than a redirect
+     */
+    public static boolean isO3SpaRequest(HttpServletRequest request) {
+        return matchesPath(request, "/ws/rest/v1/session");
+    }
 }
