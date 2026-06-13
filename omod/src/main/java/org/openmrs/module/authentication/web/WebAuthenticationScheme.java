@@ -121,7 +121,7 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
      */
     public abstract String getChallengeUrl(AuthenticationSession session);
 
-/**
+    /**
      * This method is intended to be used by implementations to inspect the AuthenticationSession and
      * associated session and response for any submitted credentials.  If found, this should construct and
      * return valid AuthenticatorCredentials.  If not found, this should return null.
