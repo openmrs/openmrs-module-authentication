@@ -263,7 +263,6 @@ public class AuthenticationConfig implements Serializable {
         whitelist.add("/appui/header/logout.action");
         whitelist.add("/csrfguard");
         whitelist.add("/spa/**/*");
-        whitelist.add("/ws/rest/v1/session");
         whitelist.add("*.js");
         whitelist.add("*.css");
         whitelist.add("*.gif");

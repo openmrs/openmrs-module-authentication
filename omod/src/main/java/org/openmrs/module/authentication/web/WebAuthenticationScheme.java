@@ -121,17 +121,7 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
      */
     public abstract String getChallengeUrl(AuthenticationSession session);
 
-    /**
-     * Returns the challenge url sent in the Location header of a 401 response to O3 clients.
-     * Defaults to getChallengeUrl. Override (e.g. in BasicWithLocationAuthenticationScheme) to
-     * return a dedicated O3 destination such as a TOTP setup screen.
-     * @param session the current AuthenticationSession
-     */
-    public String getO3ChallengeUrl(AuthenticationSession session) {
-        return getChallengeUrl(session);
-    }
-
-    /**
+/**
      * This method is intended to be used by implementations to inspect the AuthenticationSession and
      * associated session and response for any submitted credentials.  If found, this should construct and
      * return valid AuthenticatorCredentials.  If not found, this should return null.

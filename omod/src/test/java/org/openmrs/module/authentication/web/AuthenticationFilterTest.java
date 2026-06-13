@@ -296,40 +296,40 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		request.setRequestURI("/ws/rest/v1/session");
 	}
 
-	// isO3SpaRequest detection tests
+	// isRestSessionEndpointRequest detection tests
 
 	@Test
-	public void shouldDetectO3SpaRequestByServletPath() {
+	public void shouldDetectRestSessionEndpointRequestByServletPath() {
 		request.setContextPath("/");
 		request.setServletPath("/ws/rest/v1/session");
-		assertThat(WebUtil.isO3SpaRequest(request), equalTo(true));
+		assertThat(WebUtil.isRestSessionEndpointRequest(request), equalTo(true));
 	}
 
 	@Test
-	public void shouldDetectO3SpaRequestByRequestUri() {
+	public void shouldDetectRestSessionEndpointRequestByRequestUri() {
 		request.setContextPath("/openmrs");
 		request.setRequestURI("/openmrs/ws/rest/v1/session");
-		assertThat(WebUtil.isO3SpaRequest(request), equalTo(true));
+		assertThat(WebUtil.isRestSessionEndpointRequest(request), equalTo(true));
 	}
 
 	@Test
-	public void shouldNotDetectO3SpaRequestForOtherRestPaths() {
+	public void shouldNotDetectRestSessionEndpointRequestForOtherRestPaths() {
 		request.setContextPath("/");
 		request.setRequestURI("/ws/rest/v1/patient");
-		assertThat(WebUtil.isO3SpaRequest(request), equalTo(false));
+		assertThat(WebUtil.isRestSessionEndpointRequest(request), equalTo(false));
 	}
 
 	@Test
-	public void shouldNotDetectO3SpaRequestForNonRestPaths() {
+	public void shouldNotDetectRestSessionEndpointRequestForNonRestPaths() {
 		request.setContextPath("/");
 		request.setRequestURI("/patientDashboard.htm");
-		assertThat(WebUtil.isO3SpaRequest(request), equalTo(false));
+		assertThat(WebUtil.isRestSessionEndpointRequest(request), equalTo(false));
 	}
 
-	// O3 session endpoint filter behavior tests
+	// Session endpoint filter behavior tests
 
 	@Test
-	public void shouldReturn401WithLocationHeaderForUnauthenticatedO3SessionRequest() throws Exception {
+	public void shouldReturn401WithLocationHeaderForUnauthenticatedSessionEndpointRequest() throws Exception {
 		setupO3SessionRequest();
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
@@ -338,16 +338,17 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldReturn401ForO3SessionRequestEvenThoughSessionEndpointIsWhitelisted() throws Exception {
+	public void shouldReturn401ForSessionEndpointRequestBecauseItMatchesNonRedirectUrlPattern() throws Exception {
 		setupO3SessionRequest();
-		assertThat(AuthenticationConfig.getWhiteList().contains("/ws/rest/v1/session"), equalTo(true));
+		assertThat(AuthenticationConfig.getWhiteList().contains("/ws/rest/v1/session"), equalTo(false));
+		assertThat(WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls()), equalTo(true));
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));
 		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
 
 	@Test
-	public void shouldPassThroughForAuthenticatedO3SessionRequest() throws Exception {
+	public void shouldPassThroughForAuthenticatedSessionEndpointRequest() throws Exception {
 		setupO3SessionRequest();
 		authenticationSession.setAuthenticatedUser(user);
 		filter.doFilter(request, response, chain);
@@ -356,7 +357,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldRedirectAndNotReturn401ForUnauthenticatedNonO3Request() throws Exception {
+	public void shouldRedirectAndNotReturn401ForUnauthenticatedNonSessionEndpointRequest() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(true));

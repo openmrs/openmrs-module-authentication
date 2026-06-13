@@ -66,12 +66,14 @@ public class WebUtil {
     }
     
     /**
-     * Checks if the request is coming from the O3 Frontend (REST session endpoint)
+     * Checks if the request is targeting the REST session endpoint.
+     * Any REST client hitting this endpoint should receive a 401 with a Location header
+     * rather than a browser redirect.
      *
      * @param request the HttpServletRequest to check
-     * @return true if the request is from O3 and should receive a 401 rather than a redirect
+     * @return true if the request is to the REST session endpoint
      */
-    public static boolean isO3SpaRequest(HttpServletRequest request) {
+    public static boolean isRestSessionEndpointRequest(HttpServletRequest request) {
         return matchesPath(request, "/ws/rest/v1/session");
     }
 }
