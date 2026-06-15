@@ -149,7 +149,10 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+						if (WebUtil.isRestSessionEndpointRequest(request)) {
+							handleAuthenticationFailure(request, response, challengeUrl);
+						}
+						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
 							handleAuthenticationFailure(request, response, challengeUrl);
 						}
