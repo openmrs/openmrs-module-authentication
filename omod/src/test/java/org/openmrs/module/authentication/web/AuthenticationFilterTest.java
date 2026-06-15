@@ -364,6 +364,16 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_MOVED_TEMPORARILY));
 		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
 	}
+	
+	@Test
+	public void shouldReturn401ForUnauthenticatedRestEndpointRequest() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		request.setRequestURI("/ws/rest/v1/patient");
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+		assertThat(response.getHeader("Location"), equalTo("/login.htm"));
+	}
 
 	@AfterEach
 	@Override

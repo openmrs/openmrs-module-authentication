@@ -149,10 +149,7 @@ public class AuthenticationFilter implements Filter {
 					}
 					// If no credentials were found, redirect to challenge url unless whitelisted
 					else {
-						if (WebUtil.isRestSessionEndpointRequest(request)) {
-							handleAuthenticationFailure(request, response, challengeUrl);
-						}
-						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+						if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
 							handleAuthenticationFailure(request, response, challengeUrl);
 						}
@@ -175,7 +172,7 @@ public class AuthenticationFilter implements Filter {
 	 * @param challengeUrl the challengeUrl to direct the response to
 	 */
 	protected void handleAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, String challengeUrl) throws IOException {
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+		if (WebUtil.isRestSessionEndpointRequest(request) || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			response.setHeader("Location", challengeUrl);
 			response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
 		}
