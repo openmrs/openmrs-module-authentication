@@ -264,6 +264,7 @@ public class AuthenticationConfig implements Serializable {
         whitelist.add("/csrfguard");
         whitelist.add("/spa/**/*");
         whitelist.add("/ws/rest/v1/session");
+        whitelist.add("/ws/rest/v1/auth/**");
         whitelist.add("*.js");
         whitelist.add("*.css");
         whitelist.add("*.gif");
