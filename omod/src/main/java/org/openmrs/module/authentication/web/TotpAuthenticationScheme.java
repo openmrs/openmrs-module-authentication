@@ -57,7 +57,11 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String LOGIN_PAGE = "loginPage";
 	public static final String CODE_PARAM = "codeParam";
 	public static final String CODE_HEADER = "codeHeader";
-
+	
+	// Configuration properties for the controller
+	public static final String PENDING_ENROLLMENT_SECRET = "pending_enrollment_totp_secret";
+	
+	
 	private int secretLength;
 	private HashingAlgorithm hashingAlgorithm;
 	private String qrCodeIssuer;
@@ -226,7 +230,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		String secret = generateSecret();
 		String qrCodeUri = generateQrCodeUriForSecret(secret, user.getUsername());
 		
-		request.getSession().setAttribute("pending_enrollment_totp_secret", secret);
+		request.getSession().setAttribute(PENDING_ENROLLMENT_SECRET, secret);
 		
 		SimpleObject response = new SimpleObject();
 		response.put("secret", secret);
@@ -241,7 +245,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	@Override
 	public SimpleObject verifyEnrollment(SimpleObject payload, HttpServletRequest request) {
 		User user = Context.getAuthenticatedUser();
-		String temporarySavedSecret = (String) request.getSession().getAttribute("pending_enrollment_totp_secret");
+		String temporarySavedSecret = (String) request.getSession().getAttribute(PENDING_ENROLLMENT_SECRET);
 		
 		if (temporarySavedSecret == null) {
 			throw new IllegalArgumentException("No pending enrollment totp secret found");
@@ -257,7 +261,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		String encryptedSecret = Security.encrypt(temporarySavedSecret);
 		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 		
-		request.getSession().removeAttribute("pending_enrollment_totp_secret");
+		request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
 		
 		SimpleObject response = new SimpleObject();
 		response.put("isValidCode", isValidCode);
