@@ -33,8 +33,10 @@ import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
 import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.util.Security;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Properties;
 
 /**
@@ -213,5 +215,52 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		public String getClientName() {
 			return user == null ? null : user.getUsername();
 		}
+	}
+	
+	/**
+	 * Generates a new TOTP secret and a QR code URI, then stashes the secret in the HTTP session for verification.
+	 */
+	@Override
+	public SimpleObject initiateEnrollment(HttpServletRequest request) {
+		User user = Context.getAuthenticatedUser();
+		String secret = generateSecret();
+		String qrCodeUri = generateQrCodeUriForSecret(secret, user.getUsername());
+		
+		request.getSession().setAttribute("pending_enrollment_totp_secret", secret);
+		
+		SimpleObject response = new SimpleObject();
+		response.put("secret", secret);
+		response.put("qrCodeUri", qrCodeUri);
+		return response;
+	}
+	
+	/**
+	 * Verifies the submitted TOTP code against the stashed session secret, and on success,
+	 * encrypts and saves the secret permanently to the user properties.
+	 */
+	@Override
+	public SimpleObject verifyEnrollment(SimpleObject payload, HttpServletRequest request) {
+		User user = Context.getAuthenticatedUser();
+		String temporarySavedSecret = (String) request.getSession().getAttribute("pending_enrollment_totp_secret");
+		
+		if (temporarySavedSecret == null) {
+			throw new IllegalArgumentException("No pending enrollment totp secret found");
+		}
+		
+		String code = payload.get("code");
+		
+		boolean isValidCode = verifyCode(temporarySavedSecret, code);
+		if (!isValidCode) {
+			throw new IllegalArgumentException("Invalid code Entered");
+		}
+		
+		String encryptedSecret = Security.encrypt(temporarySavedSecret);
+		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
+		
+		request.getSession().removeAttribute("pending_enrollment_totp_secret");
+		
+		SimpleObject response = new SimpleObject();
+		response.put("isValidCode", isValidCode);
+		return response;
 	}
 }
