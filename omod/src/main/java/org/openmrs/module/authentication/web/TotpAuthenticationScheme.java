@@ -58,9 +58,8 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String CODE_PARAM = "codeParam";
 	public static final String CODE_HEADER = "codeHeader";
 	
-	// Configuration properties for the controller
+	// Session attribute key to temporarily store the secret during enrollment
 	public static final String PENDING_ENROLLMENT_SECRET = "pending_enrollment_totp_secret";
-	
 	
 	private int secretLength;
 	private HashingAlgorithm hashingAlgorithm;
