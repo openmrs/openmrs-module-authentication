@@ -19,7 +19,6 @@ import org.openmrs.module.authentication.ConfigurableAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.webservices.rest.SimpleObject;
-import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Properties;

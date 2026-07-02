@@ -26,6 +26,7 @@ import dev.samstevens.totp.time.TimeProvider;
 import dev.samstevens.totp.util.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
+import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
@@ -226,6 +227,11 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	@Override
 	public SimpleObject initiateEnrollment(HttpServletRequest request) {
 		User user = Context.getAuthenticatedUser();
+		
+		if (user == null) {
+			throw new APIAuthenticationException("Must be authenticated user to enroll 2FA");
+		}
+		
 		String secret = generateSecret();
 		String qrCodeUri = generateQrCodeUriForSecret(secret, user.getUsername());
 		
@@ -244,6 +250,11 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	@Override
 	public SimpleObject verifyEnrollment(SimpleObject payload, HttpServletRequest request) {
 		User user = Context.getAuthenticatedUser();
+		
+		if (user == null) {
+			throw new APIAuthenticationException("Must be authenticated user to enroll 2FA");
+		}
+		
 		String temporarySavedSecret = (String) request.getSession().getAttribute(PENDING_ENROLLMENT_SECRET);
 		
 		if (temporarySavedSecret == null) {
