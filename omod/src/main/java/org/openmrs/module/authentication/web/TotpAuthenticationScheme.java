@@ -229,7 +229,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		User user = Context.getAuthenticatedUser();
 		
 		if (user == null) {
-			throw new APIAuthenticationException("Must be authenticated user to enroll 2FA");
+			throw new APIAuthenticationException("authentication.error.mustBeAuthenticatedToEnroll");
 		}
 		
 		String secret = generateSecret();
@@ -252,23 +252,23 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		User user = Context.getAuthenticatedUser();
 		
 		if (user == null) {
-			throw new APIAuthenticationException("Must be authenticated user to enroll 2FA");
+			throw new APIAuthenticationException("authentication.error.mustBeAuthenticatedToEnroll");
 		}
 		
 		String temporarySavedSecret = (String) request.getSession().getAttribute(PENDING_ENROLLMENT_SECRET);
 		
 		if (temporarySavedSecret == null) {
-			throw new IllegalArgumentException("No pending enrollment totp secret found");
+			throw new IllegalArgumentException("authentication.error.noPendingEnrollmentTotpSecretFound");
 		}
 		
 		Object rawCode = payload.get("code");
 		if (rawCode == null || StringUtils.isBlank(rawCode.toString())) {
-			throw new IllegalArgumentException("Required a verification code");
+			throw new IllegalArgumentException("authentication.error.requiredVerificationCode");
 		}
 		
 		boolean isValidCode = verifyCode(temporarySavedSecret, rawCode.toString());
 		if (!isValidCode) {
-			throw new IllegalArgumentException("Invalid code Entered");
+			throw new IllegalArgumentException("authentication.error.invalidCodeEntered");
 		}
 		
 		saveSecret(user, temporarySavedSecret);
