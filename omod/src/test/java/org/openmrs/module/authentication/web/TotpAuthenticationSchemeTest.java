@@ -14,7 +14,6 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.TestAuthenticationCredentials;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
-import org.openmrs.module.authentication.web.BasicWebAuthenticationScheme;
 import org.openmrs.module.authentication.web.controller.TwoFactorEnrollmentController;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
