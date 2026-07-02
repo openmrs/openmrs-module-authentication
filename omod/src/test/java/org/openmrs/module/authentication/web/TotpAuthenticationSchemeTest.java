@@ -207,11 +207,9 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		org.openmrs.module.authentication.web.controller.TwoFactorEnrollmentController controller =
 				new org.openmrs.module.authentication.web.controller.TwoFactorEnrollmentController();
 		
-		UnsupportedOperationException exception = new UnsupportedOperationException("Enrollment not supported");
-		SimpleObject error = controller.handleUnsupportedException(exception);
-		
-		assertThat(error, notNullValue());
-		assertThat(error.get("message"), equalTo("Enrollment not supported"));
+		assertThrows(org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException.class, () -> {
+			controller.initiateEnrollment("basic2", request);
+		});
 	}
 	
 	@Test

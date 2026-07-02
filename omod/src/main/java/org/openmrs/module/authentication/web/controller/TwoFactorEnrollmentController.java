@@ -4,6 +4,7 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.web.WebAuthenticationScheme;
 import org.openmrs.module.webservices.rest.SimpleObject;
+import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.openmrs.module.webservices.rest.web.v1_0.controller.BaseRestController;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -27,24 +28,23 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 	@RequestMapping(method = RequestMethod.POST, value = "/enrollment")
 	@ResponseBody
 	public SimpleObject initiateEnrollment(@PathVariable("schemeId") String schemeId, HttpServletRequest request) {
-		WebAuthenticationScheme authScheme = getWebAuthenticationScheme(schemeId);
-		return authScheme.initiateEnrollment(request);
+		try {
+			WebAuthenticationScheme authScheme = getWebAuthenticationScheme(schemeId);
+			return authScheme.initiateEnrollment(request);
+		} catch (UnsupportedOperationException e) {
+			throw new ResourceDoesNotSupportOperationException(e.getMessage());
+		}
 	}
 	
 	@RequestMapping(method = RequestMethod.POST, value = "/enrollment/verify")
 	@ResponseBody
 	public SimpleObject verifyEnrollment(@PathVariable("schemeId") String schemeId, @RequestBody SimpleObject payload, HttpServletRequest request) {
-		WebAuthenticationScheme authScheme = getWebAuthenticationScheme(schemeId);
-		return authScheme.verifyEnrollment(payload, request);
-	}
-	
-	@ExceptionHandler(UnsupportedOperationException.class)
-	@ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-	@ResponseBody
-	public SimpleObject handleUnsupportedException(UnsupportedOperationException exception) {
-		SimpleObject error = new SimpleObject();
-		error.put("message", exception.getMessage());
-		return error;
+		try {
+			WebAuthenticationScheme authScheme = getWebAuthenticationScheme(schemeId);
+			return authScheme.verifyEnrollment(payload, request);
+		} catch (UnsupportedOperationException e) {
+			throw new ResourceDoesNotSupportOperationException(e.getMessage());
+		}
 	}
 	
 	@ExceptionHandler(IllegalArgumentException.class)
