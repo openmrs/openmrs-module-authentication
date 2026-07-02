@@ -261,9 +261,12 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			throw new IllegalArgumentException("No pending enrollment totp secret found");
 		}
 		
-		String code = payload.get("code");
+		Object rawCode = payload.get("code");
+		if (rawCode == null || StringUtils.isBlank(rawCode.toString())) {
+			throw new IllegalArgumentException("Required a verification code");
+		}
 		
-		boolean isValidCode = verifyCode(temporarySavedSecret, code);
+		boolean isValidCode = verifyCode(temporarySavedSecret, rawCode.toString());
 		if (!isValidCode) {
 			throw new IllegalArgumentException("Invalid code Entered");
 		}
