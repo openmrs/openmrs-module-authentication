@@ -268,13 +268,17 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 			throw new IllegalArgumentException("Invalid code Entered");
 		}
 		
-		String encryptedSecret = Security.encrypt(temporarySavedSecret);
-		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
+		saveSecret(user, temporarySavedSecret);
 		
 		request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
 		
 		SimpleObject response = new SimpleObject();
 		response.put("isValidCode", isValidCode);
 		return response;
+	}
+	
+	protected void saveSecret(User user, String secret) {
+		String encryptedSecret = Security.encrypt(secret);
+		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 	}
 }
