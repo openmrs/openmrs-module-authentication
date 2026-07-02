@@ -47,6 +47,15 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 		return error;
 	}
 	
+	@ExceptionHandler(IllegalArgumentException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	@ResponseBody
+	public SimpleObject handleIllegalArgumentException(IllegalArgumentException exception) {
+		SimpleObject error = new SimpleObject();
+		error.put("message", exception.getMessage());
+		return error;
+	}
+	
 	private WebAuthenticationScheme getWebAuthenticationScheme(String schemeId) {
 		AuthenticationScheme authScheme = AuthenticationConfig.getAuthenticationScheme(schemeId);
 		if (authScheme instanceof WebAuthenticationScheme) {
