@@ -23,6 +23,7 @@ import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -287,7 +288,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		String secret = "OMRS12345678";
 		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
 		
-		long expiredTime = System.currentTimeMillis() - (3 * 60 * 1000);
+		long expiredTime = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(3);
 		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, expiredTime);
 		
 		SimpleObject payload = new SimpleObject();

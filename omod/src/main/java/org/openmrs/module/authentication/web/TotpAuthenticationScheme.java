@@ -42,6 +42,7 @@ import org.openmrs.util.Security;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This supports configuring and validating against a TOTP provider using something like Google Authenticator
@@ -275,7 +276,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		
 		Long initiationTime = (Long) request.getSession().getAttribute(PENDING_ENROLLMENT_TIME);
-		long maxLifetimeForSecret = 2 * 60 * 1000;
+		long maxLifetimeForSecret = TimeUnit.MINUTES.toMillis(2);
 		boolean isExpired = (initiationTime == null || (System.currentTimeMillis() - initiationTime) > maxLifetimeForSecret);
 		
 		if (isExpired) {
