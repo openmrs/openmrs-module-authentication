@@ -17,7 +17,9 @@ import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.controller.TwoFactorEnrollmentController;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
+import org.openmrs.module.authentication.web.mocks.MockTwoFactorAuthenticationScheme;
 import org.openmrs.module.webservices.rest.SimpleObject;
+import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
@@ -138,10 +140,15 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	
 	@Test
 	public void shouldVerifyEnrollmentSuccessfully() {
+		AuthenticationConfig.setProperty("authentication.scheme.twofactor.type",
+				MockTwoFactorAuthenticationScheme.class.getName());
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		
 		Context.setUserContext(new MockUserContext(candidateUser));
 		
 		String secret = "OMRS12345678";
 		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
 		
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", secret);
@@ -153,6 +160,9 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		String savedSecret = candidateUser.getUserProperty(authenticationScheme.getSecretUserPropertyName());
 		assertThat(savedSecret, notNullValue());
+		
+		String secondaryTypes = candidateUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE);
+		assertThat(secondaryTypes, equalTo("totp"));
 	}
 	
 	@Test
@@ -182,11 +192,12 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		String secret = "OMRS12345678";
 		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
 		
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", "invalid_code");
 		
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(IllegalRequestException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}
@@ -198,7 +209,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", "123456");
 		
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(IllegalRequestException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}
@@ -216,11 +227,11 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 	
 	@Test
-	public void shouldHandleIllegalArgumentExceptionInController() {
+	public void shouldHandleIllegalRequestExceptionInController() {
 		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
 		
-		IllegalArgumentException exception = new IllegalArgumentException("Invalid code");
-		SimpleObject error = controller.handleIllegalArgumentException(exception);
+		IllegalRequestException exception = new IllegalRequestException("Invalid code");
+		SimpleObject error = controller.handleIllegalRequestException(exception);
 		
 		assertThat(error, notNullValue());
 		assertThat(error.get("message"), equalTo("Invalid code"));
@@ -232,10 +243,11 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		String secret = "OMRS12345678";
 		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
 		
 		SimpleObject payload = new SimpleObject();
 		
-		assertThrows(IllegalArgumentException.class, () -> {
+		assertThrows(IllegalRequestException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}
@@ -246,6 +258,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		String secret = "123456";
 		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
 		
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", 123456);
@@ -254,6 +267,35 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		assertThat(result, notNullValue());
 		assertThat(result.get("isValidCode"), equalTo(true));
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfUserAlreadyConfiguredWithSecret() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		candidateUser.setUserProperty(authenticationScheme.getSecretUserPropertyName(), "EXISTING_SECRET");
+		
+		assertThrows(IllegalRequestException.class, () -> {
+			authenticationScheme.initiateEnrollment(request);
+		});
+	}
+	
+	@Test
+	public void ShouldThrowExceptionIfSessionIsExpired() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		String secret = "OMRS12345678";
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		
+		long expiredTime = System.currentTimeMillis() - (3 * 60 * 1000);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, expiredTime);
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", secret);
+		
+		assertThrows(IllegalRequestException.class, () -> {
+			authenticationScheme.verifyEnrollment(payload, request);
+		});
 	}
 	
 	private static class MockUserContext extends UserContext {

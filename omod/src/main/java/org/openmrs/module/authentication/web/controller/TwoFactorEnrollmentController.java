@@ -4,6 +4,7 @@ import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.web.WebAuthenticationScheme;
 import org.openmrs.module.webservices.rest.SimpleObject;
+import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.openmrs.module.webservices.rest.web.v1_0.controller.BaseRestController;
 import org.springframework.http.HttpStatus;
@@ -47,10 +48,10 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 		}
 	}
 	
-	@ExceptionHandler(IllegalArgumentException.class)
+	@ExceptionHandler(IllegalRequestException.class)
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	@ResponseBody
-	public SimpleObject handleIllegalArgumentException(IllegalArgumentException exception) {
+	public SimpleObject handleIllegalRequestException(IllegalRequestException exception) {
 		SimpleObject error = new SimpleObject();
 		error.put("message", exception.getMessage());
 		return error;
@@ -61,6 +62,6 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 		if (authScheme instanceof WebAuthenticationScheme) {
 			return (WebAuthenticationScheme) authScheme;
 		}
-		throw new IllegalArgumentException("Unsupported scheme type: " + schemeId);
+		throw new IllegalRequestException("Unsupported scheme type: " + schemeId);
 	}
 }
