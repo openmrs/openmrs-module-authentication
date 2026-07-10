@@ -28,11 +28,12 @@ public class MockTotpAuthenticationScheme extends TotpAuthenticationScheme {
     @Override
     protected void saveSecret(User user, String secret) {
         String encryptedSecret = org.openmrs.util.Security.encrypt(secret);
-        user.setUserProperty(getSecretUserPropertyName(), encryptedSecret);
         
-        AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme("twofactor");
+        AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme();
         if (twoFactor instanceof TwoFactorAuthenticationScheme) {
             ((TwoFactorAuthenticationScheme) twoFactor).addSecondaryAuthenticationSchemeForUser(user, getSchemeId());
         }
+        
+        user.setUserProperty(getSecretUserPropertyName(), encryptedSecret);
     }
 }

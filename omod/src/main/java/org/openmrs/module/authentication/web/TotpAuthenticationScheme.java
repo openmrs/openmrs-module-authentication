@@ -306,12 +306,12 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	
 	protected void saveSecret(User user, String secret) {
 		String encryptedSecret = Security.encrypt(secret);
-		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 		
-		AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme("twofactor");
+		AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme();
 		if (twoFactor instanceof TwoFactorAuthenticationScheme) {
 			((TwoFactorAuthenticationScheme) twoFactor).addSecondaryAuthenticationSchemeForUser(user, getSchemeId());
-			Context.getUserService().saveUser(user);
 		}
+		
+		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 	}
 }

@@ -141,6 +141,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	
 	@Test
 	public void shouldVerifyEnrollmentSuccessfully() {
+		AuthenticationConfig.setProperty("authentication.scheme", "twofactor");
 		AuthenticationConfig.setProperty("authentication.scheme.twofactor.type",
 				MockTwoFactorAuthenticationScheme.class.getName());
 		setRuntimeProperties(AuthenticationConfig.getConfig());
@@ -225,17 +226,6 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		assertThrows(ResourceDoesNotSupportOperationException.class, () -> {
 			controller.initiateEnrollment("basic2", request);
 		});
-	}
-	
-	@Test
-	public void shouldHandleIllegalRequestExceptionInController() {
-		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
-		
-		IllegalRequestException exception = new IllegalRequestException("Invalid code");
-		SimpleObject error = controller.handleIllegalRequestException(exception);
-		
-		assertThat(error, notNullValue());
-		assertThat(error.get("message"), equalTo("Invalid code"));
 	}
 	
 	@Test
