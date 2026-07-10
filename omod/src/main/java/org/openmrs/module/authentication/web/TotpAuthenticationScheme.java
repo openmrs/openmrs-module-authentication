@@ -57,6 +57,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String CODE_LENGTH = "codeLength";
 	public static final String CODE_VALIDITY_PERIOD = "codeValidityPeriod";
 	public static final String ALLOWED_DISCREPANCY = "allowedDiscrepancy";
+	public static final String ENROLLMENT_WINDOW_SECONDS = "enrollmentWindowSeconds";
 
 	// Configuration properties for login page
 	public static final String LOGIN_PAGE = "loginPage";
@@ -76,6 +77,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	private String loginPage;
 	private String codeParam;
 	private String codeHeader;
+	private int enrollmentWindowSeconds;
 
 	@Override
 	public void configure(String schemeId, Properties config) {
@@ -89,6 +91,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		loginPage = config.getProperty(LOGIN_PAGE, "/loginTotp.page");
 		codeParam = config.getProperty(CODE_PARAM, "code");
 		codeHeader = config.getProperty(CODE_HEADER, "X-Totp-Code");
+		enrollmentWindowSeconds = AuthenticationUtil.getInteger(config.getProperty(ENROLLMENT_WINDOW_SECONDS), 120);
 	}
 
 	@Override
@@ -276,7 +279,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		
 		Long initiationTime = (Long) request.getSession().getAttribute(PENDING_ENROLLMENT_TIME);
-		long maxLifetimeForSecret = TimeUnit.MINUTES.toMillis(2);
+		long maxLifetimeForSecret = TimeUnit.SECONDS.toMillis(enrollmentWindowSeconds);
 		boolean isExpired = (initiationTime == null || (System.currentTimeMillis() - initiationTime) > maxLifetimeForSecret);
 		
 		if (isExpired) {

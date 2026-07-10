@@ -272,7 +272,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 	
 	@Test
-	public void ShouldThrowExceptionIfSessionIsExpired() {
+	public void shouldThrowExceptionIfSessionIsExpired() {
 		Context.setUserContext(new MockUserContext(candidateUser));
 		
 		String secret = "OMRS12345678";
