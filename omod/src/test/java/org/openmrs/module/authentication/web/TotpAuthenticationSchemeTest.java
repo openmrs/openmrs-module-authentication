@@ -244,7 +244,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 	
 	@Test
-	public void shouldVerifyEnrollmentSuccessfulWithNumericCode () {
+	public void shouldVerifyEnrollmentSuccessfulWithNumericCode() {
 		Context.setUserContext(new MockUserContext(candidateUser));
 		
 		String secret = "123456";
