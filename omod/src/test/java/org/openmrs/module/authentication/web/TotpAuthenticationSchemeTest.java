@@ -5,12 +5,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
+import org.openmrs.api.UserService;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ServiceContext;
 import org.openmrs.api.context.UserContext;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.EnrollmentException;
 import org.openmrs.module.authentication.TestAuthenticationCredentials;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
@@ -19,10 +22,12 @@ import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
 import org.openmrs.module.authentication.web.mocks.MockTwoFactorAuthenticationScheme;
 import org.openmrs.module.webservices.rest.SimpleObject;
-import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+
+import java.lang.reflect.Proxy;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -43,6 +48,21 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@BeforeEach
 	@Override
 	public void setup() {
+		UserService mockUserService = (UserService) Proxy.newProxyInstance(
+				UserService.class.getClassLoader(),
+				new Class[] { UserService.class },
+				(proxy, method, args) -> {
+					if ("setUserProperty".equals(method.getName())) {
+						User u = (User) args[0];
+						String k = (String) args[1];
+						String v = (String) args[2];
+						u.setUserProperty(k, v);
+					}
+					return null;
+				}
+		);
+		ServiceContext.getInstance().setUserService(mockUserService);
+		
 		super.setup();
 		AuthenticationConfig.setProperty("authentication.scheme", "totp");
 		AuthenticationConfig.setProperty("authentication.scheme.totp.type", MockTotpAuthenticationScheme.class.getName());
@@ -129,7 +149,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	public void shouldInitiateEnrollmentSuccessfully() {
 		Context.setUserContext(new MockUserContext(candidateUser));
 		
-		SimpleObject result = authenticationScheme.initiateEnrollment(request);
+		Map<String, Object> result = authenticationScheme.initiateEnrollment(request);
 		
 		assertThat(result, notNullValue());
 		assertThat(result.get("secret"), notNullValue());
@@ -155,7 +175,9 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", secret);
 		
-		SimpleObject result = authenticationScheme.verifyEnrollment(payload, request);
+		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
+		SimpleObject result = controller.verifyEnrollment("totp", payload, request);
+		
 		assertThat(result, notNullValue());
 		assertThat(result.get("isValidCode"), equalTo(true));
 		assertThat(request.getSession().getAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET), nullValue());
@@ -199,7 +221,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", "invalid_code");
 		
-		assertThrows(IllegalRequestException.class, () -> {
+		assertThrows(EnrollmentException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}
@@ -211,7 +233,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", "123456");
 		
-		assertThrows(IllegalRequestException.class, () -> {
+		assertThrows(EnrollmentException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}
@@ -238,7 +260,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		SimpleObject payload = new SimpleObject();
 		
-		assertThrows(IllegalRequestException.class, () -> {
+		assertThrows(EnrollmentException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}
@@ -254,10 +276,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", 123456);
 		
-		SimpleObject result = authenticationScheme.verifyEnrollment(payload, request);
-		
-		assertThat(result, notNullValue());
-		assertThat(result.get("isValidCode"), equalTo(true));
+		authenticationScheme.verifyEnrollment(payload, request);
 	}
 	
 	@Test
@@ -266,7 +285,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		
 		candidateUser.setUserProperty(authenticationScheme.getSecretUserPropertyName(), "EXISTING_SECRET");
 		
-		assertThrows(IllegalRequestException.class, () -> {
+		assertThrows(EnrollmentException.class, () -> {
 			authenticationScheme.initiateEnrollment(request);
 		});
 	}
@@ -284,7 +303,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		SimpleObject payload = new SimpleObject();
 		payload.put("code", secret);
 		
-		assertThrows(IllegalRequestException.class, () -> {
+		assertThrows(EnrollmentException.class, () -> {
 			authenticationScheme.verifyEnrollment(payload, request);
 		});
 	}

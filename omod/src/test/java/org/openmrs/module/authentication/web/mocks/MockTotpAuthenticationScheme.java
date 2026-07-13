@@ -10,10 +10,7 @@
 package org.openmrs.module.authentication.web.mocks;
 
 import org.openmrs.User;
-import org.openmrs.api.context.AuthenticationScheme;
-import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.web.TotpAuthenticationScheme;
-import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
 
 /**
  * Represents a particular method of authentication.
@@ -28,12 +25,6 @@ public class MockTotpAuthenticationScheme extends TotpAuthenticationScheme {
     @Override
     protected void saveSecret(User user, String secret) {
         String encryptedSecret = org.openmrs.util.Security.encrypt(secret);
-        
-        AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme();
-        if (twoFactor instanceof TwoFactorAuthenticationScheme) {
-            ((TwoFactorAuthenticationScheme) twoFactor).addSecondaryAuthenticationSchemeForUser(user, getSchemeId());
-        }
-        
         user.setUserProperty(getSecretUserPropertyName(), encryptedSecret);
     }
 }

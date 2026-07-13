@@ -152,23 +152,4 @@ public abstract class WebAuthenticationScheme extends DaoAuthenticationScheme im
      */
     public void afterAuthenticationFailure(AuthenticationSession session) {
     }
-    
-    /**
-     * @param request the current HTTP request
-     * @return a SimpleObject containing initiation details (e.g. secret, QR code)
-     * @throws UnsupportedOperationException if enrollment is not supported by the scheme
-     */
-    public SimpleObject initiateEnrollment(HttpServletRequest request) {
-        throw new UnsupportedOperationException("Enrollment not supported for " + getSchemeId());
-    }
-    
-    /**
-     * @param payload the JSON body containing verification details
-     * @param request the current HTTP request
-     * @return a SimpleObject confirming the verification status
-     * @throws UnsupportedOperationException if verification is not supported by the scheme
-     */
-    public SimpleObject verifyEnrollment(SimpleObject payload, HttpServletRequest request) {
-        throw new UnsupportedOperationException("Enrollment verification not supported for " + getSchemeId());
-    }
 }

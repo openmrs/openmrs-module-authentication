@@ -28,19 +28,18 @@ import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.context.Authenticated;
-import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
-import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
+import org.openmrs.module.authentication.EnrollmentException;
 import org.openmrs.module.authentication.UserLogin;
-import org.openmrs.module.webservices.rest.SimpleObject;
-import org.openmrs.module.webservices.rest.web.response.IllegalRequestException;
 import org.openmrs.util.Security;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -48,7 +47,7 @@ import java.util.concurrent.TimeUnit;
  * This supports configuring and validating against a TOTP provider using something like Google Authenticator
  * See: <a href="https://github.com/samdjstevens/java-totp">https://github.com/samdjstevens/java-totp</a>
  */
-public class TotpAuthenticationScheme extends WebAuthenticationScheme {
+public class TotpAuthenticationScheme extends WebAuthenticationScheme implements EnrollableAuthenticationScheme {
 
 	// Configuration properties for secret and code
 	public static final String SECRET_LENGTH = "secretLength";
@@ -233,7 +232,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	 * Generates a new TOTP secret and a QR code URI, then stashes the secret in the HTTP session for verification.
 	 */
 	@Override
-	public SimpleObject initiateEnrollment(HttpServletRequest request) {
+	public Map<String, Object> initiateEnrollment(HttpServletRequest request) {
 		User user = Context.getAuthenticatedUser();
 		
 		if (user == null) {
@@ -241,7 +240,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		
 		if (!isUserConfigurationRequired(user)){
-			throw new IllegalRequestException("authentication.error.secretAlreadyConfigured");
+			throw new EnrollmentException("authentication.error.secretAlreadyConfigured");
 		}
 		
 		String secret = generateSecret();
@@ -250,7 +249,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		request.getSession().setAttribute(PENDING_ENROLLMENT_SECRET, secret);
 		request.getSession().setAttribute(PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
 		
-		SimpleObject response = new SimpleObject();
+		Map<String, Object> response = new HashMap<>();
 		response.put("secret", secret);
 		response.put("qrCodeUri", qrCodeUri);
 		return response;
@@ -261,7 +260,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	 * encrypts and saves the secret permanently to the user properties.
 	 */
 	@Override
-	public SimpleObject verifyEnrollment(SimpleObject payload, HttpServletRequest request) {
+	public void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request) {
 		User user = Context.getAuthenticatedUser();
 		
 		if (user == null) {
@@ -269,13 +268,13 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		}
 		
 		if (!isUserConfigurationRequired(user)){
-			throw new IllegalRequestException("authentication.error.secretAlreadyConfigured");
+			throw new EnrollmentException("authentication.error.secretAlreadyConfigured");
 		}
 		
 		String temporarySavedSecret = (String) request.getSession().getAttribute(PENDING_ENROLLMENT_SECRET);
 		
 		if (temporarySavedSecret == null) {
-			throw new IllegalRequestException("authentication.error.noPendingEnrollmentTotpSecretFound");
+			throw new EnrollmentException("authentication.error.noPendingEnrollmentTotpSecretFound");
 		}
 		
 		Long initiationTime = (Long) request.getSession().getAttribute(PENDING_ENROLLMENT_TIME);
@@ -285,36 +284,27 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		if (isExpired) {
 			request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
 			request.getSession().removeAttribute(PENDING_ENROLLMENT_TIME);
-			throw new IllegalRequestException("authentication.error.secretAlreadyExpired");
+			throw new EnrollmentException("authentication.error.secretAlreadyExpired");
 		}
 		
 		Object rawCode = payload.get("code");
 		if (rawCode == null || StringUtils.isBlank(rawCode.toString())) {
-			throw new IllegalRequestException("authentication.error.requiredVerificationCode");
+			throw new EnrollmentException("authentication.error.requiredVerificationCode");
 		}
 		
 		boolean isValidCode = verifyCode(temporarySavedSecret, rawCode.toString());
 		if (!isValidCode) {
-			throw new IllegalRequestException("authentication.error.invalidCodeEntered");
+			throw new EnrollmentException("authentication.error.invalidCodeEntered");
 		}
 		
 		saveSecret(user, temporarySavedSecret);
 		
 		request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
-		
-		SimpleObject response = new SimpleObject();
-		response.put("isValidCode", isValidCode);
-		return response;
+		request.getSession().removeAttribute(PENDING_ENROLLMENT_TIME);
 	}
 	
 	protected void saveSecret(User user, String secret) {
 		String encryptedSecret = Security.encrypt(secret);
-		
-		AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme();
-		if (twoFactor instanceof TwoFactorAuthenticationScheme) {
-			((TwoFactorAuthenticationScheme) twoFactor).addSecondaryAuthenticationSchemeForUser(user, getSchemeId());
-		}
-		
 		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 	}
 }
