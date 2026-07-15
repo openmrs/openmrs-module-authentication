@@ -232,7 +232,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 	 * Generates a new TOTP secret and a QR code URI, then stashes the secret in the HTTP session for verification.
 	 */
 	@Override
-	public Map<String, Object> initiateEnrollment(HttpServletRequest request) {
+	public Map<String, Object> initiateEnrollment(HttpServletRequest request) throws EnrollmentException {
 		User user = Context.getAuthenticatedUser();
 		
 		if (user == null) {
@@ -260,7 +260,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 	 * encrypts and saves the secret permanently to the user properties.
 	 */
 	@Override
-	public void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request) {
+	public void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request) throws EnrollmentException {
 		User user = Context.getAuthenticatedUser();
 		
 		if (user == null) {

@@ -29,10 +29,11 @@ public interface EnrollableAuthenticationScheme {
 	 * Initiates the enrollment process by generating the required setup data.
 	 * For example, a TOTP scheme will generate the secret key and the QR code URI
 	 *
-	 * @param request the current HTTP request
-	 * @return a map containing initiation enrollment details (e.g. secret, QR code)
+	 * @param request the current HTTP request.
+	 * @return a map containing initiation enrollment details (e.g., secret, QR code)
+	 * @throws EnrollmentException if enrollment cannot be initiated.
 	 */
-	Map<String, Object> initiateEnrollment(HttpServletRequest request);
+	Map<String, Object> initiateEnrollment(HttpServletRequest request) throws EnrollmentException;
 	
 	/**
 	 * Verifies the credentials submitted by the user to finalize enrollment.
@@ -41,5 +42,5 @@ public interface EnrollableAuthenticationScheme {
 	 * @param request the current HTTP request
 	 * @throws EnrollmentException if validation fails (e.g., expired session or incorrect code)
 	 */
-	void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request);
+	void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request) throws EnrollmentException;
 }

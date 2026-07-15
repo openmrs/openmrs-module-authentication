@@ -146,7 +146,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 	
 	@Test
-	public void shouldInitiateEnrollmentSuccessfully() {
+	public void shouldInitiateEnrollmentSuccessfully() throws EnrollmentException {
 		Context.setUserContext(new MockUserContext(candidateUser));
 		
 		Map<String, Object> result = authenticationScheme.initiateEnrollment(request);
@@ -266,7 +266,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 	
 	@Test
-	public void shouldVerifyEnrollmentSuccessfulWithNumericCode() {
+	public void shouldVerifyEnrollmentSuccessfulWithNumericCode() throws EnrollmentException {
 		Context.setUserContext(new MockUserContext(candidateUser));
 		
 		String secret = "123456";

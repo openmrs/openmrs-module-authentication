@@ -48,13 +48,14 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 	public SimpleObject initiateEnrollment(@PathVariable("schemeId") String schemeId, HttpServletRequest request) {
 		EnrollableAuthenticationScheme enrollableScheme = getEnrollableAuthenticationScheme(schemeId);
 		try {
-			Map<String, Object> challenge = enrollableScheme.initiateEnrollment(request);
-			SimpleObject response = new SimpleObject();
-			response.putAll(challenge);
-			return response;
-		} catch (EnrollmentException e) {
+			challenge = enrollableScheme.initiateEnrollment(request);
+		}
+		catch (EnrollmentException e) {
 			throw new IllegalRequestException(e.getMessage());
 		}
+		SimpleObject response = new SimpleObject();
+		response.putAll(challenge);
+		return response;
 	}
 	
 	@RequestMapping(method = RequestMethod.POST, value = "/enrollment/verify")
@@ -83,9 +84,10 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 	
 	private EnrollableAuthenticationScheme getEnrollableAuthenticationScheme(String schemeId) {
 		AuthenticationScheme authScheme = AuthenticationConfig.getAuthenticationScheme(schemeId);
-		if (authScheme instanceof EnrollableAuthenticationScheme) {
-			return (EnrollableAuthenticationScheme) authScheme;
+		
+		if (!(authScheme instanceof EnrollableAuthenticationScheme)) {
+			throw new ResourceDoesNotSupportOperationException("authentication.error.unsupportedSchemeType");
 		}
-		throw new ResourceDoesNotSupportOperationException("Unsupported scheme type: " + schemeId);
+		return (EnrollableAuthenticationScheme) authScheme;
 	}
 }
