@@ -299,6 +299,8 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 		
 		saveSecret(user, temporarySavedSecret);
 		
+		// Remove temporary enrollment data from the session once the secret has been verified
+		// and persisted, preventing the same enrollment attempt from being reused.
 		request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
 		request.getSession().removeAttribute(PENDING_ENROLLMENT_TIME);
 	}

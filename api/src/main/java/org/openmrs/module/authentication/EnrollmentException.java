@@ -14,7 +14,7 @@
 
 package org.openmrs.module.authentication;
 
-public class EnrollmentException extends RuntimeException {
+public class EnrollmentException extends Exception {
 	private static final long serialVersionUID = 1L;
 	
 	public EnrollmentException(String messageKey) {

@@ -47,6 +47,7 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 	@ResponseBody
 	public SimpleObject initiateEnrollment(@PathVariable("schemeId") String schemeId, HttpServletRequest request) {
 		EnrollableAuthenticationScheme enrollableScheme = getEnrollableAuthenticationScheme(schemeId);
+		Map<String, Object> challenge;
 		try {
 			challenge = enrollableScheme.initiateEnrollment(request);
 		}
@@ -63,23 +64,25 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 	public SimpleObject verifyEnrollment(@PathVariable("schemeId") String schemeId, @RequestBody SimpleObject payload,
 			HttpServletRequest request) {
 		EnrollableAuthenticationScheme enrollableScheme = getEnrollableAuthenticationScheme(schemeId);
+		AuthenticationScheme configuredAuthScheme = AuthenticationConfig.getAuthenticationScheme();
+		
+		if (!(configuredAuthScheme instanceof TwoFactorAuthenticationScheme)) {
+			throw new IllegalRequestException("authentication.error.twoFactorNotConfigured");
+		}
+		TwoFactorAuthenticationScheme twoFactorAuthScheme = (TwoFactorAuthenticationScheme) configuredAuthScheme;
+		
 		try {
 			enrollableScheme.verifyEnrollment(payload, request);
-			AuthenticationScheme twoFactor = AuthenticationConfig.getAuthenticationScheme();
-			
-			if (twoFactor instanceof TwoFactorAuthenticationScheme) {
-				User user = Context.getAuthenticatedUser();
-				((TwoFactorAuthenticationScheme) twoFactor).addSecondaryAuthenticationSchemeForUser(user, schemeId);
-				String key = TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE;
-				Context.getUserService().setUserProperty(user, key, user.getUserProperty(key));
-			}
-			
-			SimpleObject response = new SimpleObject();
-			response.put("isValidCode", true);
-			return response;
-		} catch (EnrollmentException e) {
+		}
+		catch (EnrollmentException e) {
 			throw new IllegalRequestException(e.getMessage());
 		}
+		User user = Context.getAuthenticatedUser();
+		twoFactorAuthScheme.addSecondaryAuthenticationSchemeForUser(user, schemeId);
+		
+		SimpleObject response = new SimpleObject();
+		response.put("isValidCode", true);
+		return response;
 	}
 	
 	private EnrollableAuthenticationScheme getEnrollableAuthenticationScheme(String schemeId) {
