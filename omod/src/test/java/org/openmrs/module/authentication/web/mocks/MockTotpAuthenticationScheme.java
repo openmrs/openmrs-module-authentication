@@ -23,8 +23,7 @@ public class MockTotpAuthenticationScheme extends TotpAuthenticationScheme {
     }
     
     @Override
-    protected void saveSecret(User user, String secret) {
-        String encryptedSecret = org.openmrs.util.Security.encrypt(secret);
+    protected void saveSecretToUserProperties(User user, String encryptedSecret) {
         user.setUserProperty(getSecretUserPropertyName(), encryptedSecret);
     }
 }

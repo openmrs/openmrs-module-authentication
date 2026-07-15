@@ -307,6 +307,10 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 	
 	protected void saveSecret(User user, String secret) {
 		String encryptedSecret = Security.encrypt(secret);
+		saveSecretToUserProperties(user, encryptedSecret);
+	}
+	
+	protected void saveSecretToUserProperties(User user, String encryptedSecret) {
 		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 	}
 }
