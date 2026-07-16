@@ -11,6 +11,9 @@
 	<activator>org.openmrs.module.authentication.AuthenticationModuleActivator</activator>
 
 	<require_version>${openmrsVersion}</require_version>
+	<require_modules>
+		<require_module>org.openmrs.module.webservices.rest</require_module>
+	</require_modules>
 
 	<!--
 		In OpenMRS 2.6+, module filter execution is based on module loading order

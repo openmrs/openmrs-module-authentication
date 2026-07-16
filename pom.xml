@@ -24,6 +24,7 @@
 	<properties>
 		<openmrsVersion>2.7.0</openmrsVersion>
 		<totpVersion>1.7.1</totpVersion>
+		<webservices.restVersion>2.36.0</webservices.restVersion>
 		<!-- Other configuration -->
 		<MODULE_ID>${project.artifactId}</MODULE_ID>
 		<MODULE_NAME>${project.name}</MODULE_NAME>

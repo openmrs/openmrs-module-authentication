@@ -26,22 +26,28 @@ import dev.samstevens.totp.time.TimeProvider;
 import dev.samstevens.totp.util.Utils;
 import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
+import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.api.context.ContextAuthenticationException;
 import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.AuthenticationUtil;
+import org.openmrs.module.authentication.EnrollmentException;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.util.Security;
 
+import javax.servlet.http.HttpServletRequest;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This supports configuring and validating against a TOTP provider using something like Google Authenticator
  * See: <a href="https://github.com/samdjstevens/java-totp">https://github.com/samdjstevens/java-totp</a>
  */
-public class TotpAuthenticationScheme extends WebAuthenticationScheme {
+public class TotpAuthenticationScheme extends WebAuthenticationScheme implements EnrollableAuthenticationScheme {
 
 	// Configuration properties for secret and code
 	public static final String SECRET_LENGTH = "secretLength";
@@ -50,12 +56,17 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	public static final String CODE_LENGTH = "codeLength";
 	public static final String CODE_VALIDITY_PERIOD = "codeValidityPeriod";
 	public static final String ALLOWED_DISCREPANCY = "allowedDiscrepancy";
+	public static final String ENROLLMENT_WINDOW_SECONDS = "enrollmentWindowSeconds";
 
 	// Configuration properties for login page
 	public static final String LOGIN_PAGE = "loginPage";
 	public static final String CODE_PARAM = "codeParam";
 	public static final String CODE_HEADER = "codeHeader";
-
+	
+	// Session attribute key to temporarily store the secret during enrollment
+	public static final String PENDING_ENROLLMENT_SECRET = "pending_enrollment_totp_secret";
+	public static final String PENDING_ENROLLMENT_TIME = "pending_enrollment_totp_time";
+	
 	private int secretLength;
 	private HashingAlgorithm hashingAlgorithm;
 	private String qrCodeIssuer;
@@ -65,6 +76,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 	private String loginPage;
 	private String codeParam;
 	private String codeHeader;
+	private int enrollmentWindowSeconds;
 
 	@Override
 	public void configure(String schemeId, Properties config) {
@@ -78,6 +90,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		loginPage = config.getProperty(LOGIN_PAGE, "/loginTotp.page");
 		codeParam = config.getProperty(CODE_PARAM, "code");
 		codeHeader = config.getProperty(CODE_HEADER, "X-Totp-Code");
+		enrollmentWindowSeconds = AuthenticationUtil.getInteger(config.getProperty(ENROLLMENT_WINDOW_SECONDS), 120);
 	}
 
 	@Override
@@ -213,5 +226,91 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme {
 		public String getClientName() {
 			return user == null ? null : user.getUsername();
 		}
+	}
+	
+	/**
+	 * Generates a new TOTP secret and a QR code URI, then stashes the secret in the HTTP session for verification.
+	 */
+	@Override
+	public Map<String, Object> initiateEnrollment(HttpServletRequest request) throws EnrollmentException {
+		User user = Context.getAuthenticatedUser();
+		
+		if (user == null) {
+			throw new APIAuthenticationException("authentication.error.mustBeAuthenticatedToEnroll");
+		}
+		
+		if (!isUserConfigurationRequired(user)){
+			throw new EnrollmentException("authentication.error.secretAlreadyConfigured");
+		}
+		
+		String secret = generateSecret();
+		String qrCodeUri = generateQrCodeUriForSecret(secret, user.getUsername());
+		
+		request.getSession().setAttribute(PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
+		
+		Map<String, Object> response = new HashMap<>();
+		response.put("secret", secret);
+		response.put("qrCodeUri", qrCodeUri);
+		return response;
+	}
+	
+	/**
+	 * Verifies the submitted TOTP code against the stashed session secret, and on success,
+	 * encrypts and saves the secret permanently to the user properties.
+	 */
+	@Override
+	public void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request) throws EnrollmentException {
+		User user = Context.getAuthenticatedUser();
+		
+		if (user == null) {
+			throw new APIAuthenticationException("authentication.error.mustBeAuthenticatedToEnroll");
+		}
+		
+		if (!isUserConfigurationRequired(user)){
+			throw new EnrollmentException("authentication.error.secretAlreadyConfigured");
+		}
+		
+		String temporarySavedSecret = (String) request.getSession().getAttribute(PENDING_ENROLLMENT_SECRET);
+		
+		if (temporarySavedSecret == null) {
+			throw new EnrollmentException("authentication.error.noPendingEnrollmentTotpSecretFound");
+		}
+		
+		Long initiationTime = (Long) request.getSession().getAttribute(PENDING_ENROLLMENT_TIME);
+		long maxLifetimeForSecret = TimeUnit.SECONDS.toMillis(enrollmentWindowSeconds);
+		boolean isExpired = (initiationTime == null || (System.currentTimeMillis() - initiationTime) > maxLifetimeForSecret);
+		
+		if (isExpired) {
+			request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
+			request.getSession().removeAttribute(PENDING_ENROLLMENT_TIME);
+			throw new EnrollmentException("authentication.error.secretAlreadyExpired");
+		}
+		
+		Object rawCode = payload.get("code");
+		if (rawCode == null || StringUtils.isBlank(rawCode.toString())) {
+			throw new EnrollmentException("authentication.error.requiredVerificationCode");
+		}
+		
+		boolean isValidCode = verifyCode(temporarySavedSecret, rawCode.toString());
+		if (!isValidCode) {
+			throw new EnrollmentException("authentication.error.invalidCodeEntered");
+		}
+		
+		saveSecret(user, temporarySavedSecret);
+		
+		// Remove temporary enrollment data from the session once the secret has been verified
+		// and persisted, preventing the same enrollment attempt from being reused.
+		request.getSession().removeAttribute(PENDING_ENROLLMENT_SECRET);
+		request.getSession().removeAttribute(PENDING_ENROLLMENT_TIME);
+	}
+	
+	protected void saveSecret(User user, String secret) {
+		String encryptedSecret = Security.encrypt(secret);
+		saveSecretToUserProperties(user, encryptedSecret);
+	}
+	
+	protected void saveSecretToUserProperties(User user, String encryptedSecret) {
+		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
 	}
 }

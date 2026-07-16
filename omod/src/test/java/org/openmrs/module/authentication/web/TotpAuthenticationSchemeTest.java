@@ -4,22 +4,37 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
+import org.openmrs.api.APIAuthenticationException;
+import org.openmrs.api.UserService;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
+import org.openmrs.api.context.Context;
+import org.openmrs.api.context.ServiceContext;
+import org.openmrs.api.context.UserContext;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationCredentials;
+import org.openmrs.module.authentication.EnrollmentException;
 import org.openmrs.module.authentication.TestAuthenticationCredentials;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
+import org.openmrs.module.authentication.web.controller.TwoFactorEnrollmentController;
 import org.openmrs.module.authentication.web.mocks.MockAuthenticationSession;
 import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
+import org.openmrs.module.authentication.web.mocks.MockTwoFactorAuthenticationScheme;
+import org.openmrs.module.webservices.rest.SimpleObject;
+import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
+
+import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 
@@ -33,6 +48,21 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@BeforeEach
 	@Override
 	public void setup() {
+		UserService mockUserService = (UserService) Proxy.newProxyInstance(
+				UserService.class.getClassLoader(),
+				new Class[] { UserService.class },
+				(proxy, method, args) -> {
+					if ("setUserProperty".equals(method.getName())) {
+						User u = (User) args[0];
+						String k = (String) args[1];
+						String v = (String) args[2];
+						u.setUserProperty(k, v);
+					}
+					return null;
+				}
+		);
+		ServiceContext.getInstance().setUserService(mockUserService);
+		
 		super.setup();
 		AuthenticationConfig.setProperty("authentication.scheme", "totp");
 		AuthenticationConfig.setProperty("authentication.scheme.totp.type", MockTotpAuthenticationScheme.class.getName());
@@ -113,5 +143,181 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		AuthenticationCredentials credentials = customScheme.getCredentials(new MockAuthenticationSession(req, newResponse()));
 		assertThat(credentials, notNullValue());
 		assertThat(credentials.getClientName(), equalTo("testing"));
+	}
+	
+	@Test
+	public void shouldInitiateEnrollmentSuccessfully() throws EnrollmentException {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		Map<String, Object> result = authenticationScheme.initiateEnrollment(request);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.get("secret"), notNullValue());
+		assertThat(result.get("qrCodeUri"), notNullValue());
+		
+		String sessionSecret = (String) request.getSession().getAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET);
+		assertThat(sessionSecret, equalTo(result.get("secret")));
+	}
+	
+	@Test
+	public void shouldVerifyEnrollmentSuccessfully() {
+		AuthenticationConfig.setProperty("authentication.scheme", "twofactor");
+		AuthenticationConfig.setProperty("authentication.scheme.twofactor.type",
+				MockTwoFactorAuthenticationScheme.class.getName());
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		String secret = "OMRS12345678";
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", secret);
+		
+		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
+		SimpleObject result = controller.verifyEnrollment("totp", payload, request);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.get("isValidCode"), equalTo(true));
+		assertThat(request.getSession().getAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET), nullValue());
+		
+		String savedSecret = candidateUser.getUserProperty(authenticationScheme.getSecretUserPropertyName());
+		assertThat(savedSecret, notNullValue());
+		
+		String secondaryTypes = candidateUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE);
+		assertThat(secondaryTypes, equalTo("totp"));
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfUnauthenticatedInInitiateEnrollment() {
+		Context.setUserContext(new UserContext(null));
+		
+		assertThrows(APIAuthenticationException.class, () -> {
+			authenticationScheme.initiateEnrollment(request);
+		});
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfUnauthenticatedInVerifyEnrollment() {
+		Context.setUserContext(new UserContext(null));
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", "123456");
+		
+		assertThrows(APIAuthenticationException.class, () -> {
+			authenticationScheme.verifyEnrollment(payload, request);
+		});
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfCodeIsInvalidInVerifyEnrollment() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		String secret = "OMRS12345678";
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", "invalid_code");
+		
+		assertThrows(EnrollmentException.class, () -> {
+			authenticationScheme.verifyEnrollment(payload, request);
+		});
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfNoStashedSecretInVerifyEnrollment() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", "123456");
+		
+		assertThrows(EnrollmentException.class, () -> {
+			authenticationScheme.verifyEnrollment(payload, request);
+		});
+	}
+	
+	@Test
+	public void shouldHandleUnsupportedSchemeInController() {
+		AuthenticationConfig.setProperty("authentication.scheme.basic2.type", BasicWebAuthenticationScheme.class.getName());
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		
+		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
+		
+		assertThrows(ResourceDoesNotSupportOperationException.class, () -> {
+			controller.initiateEnrollment("basic2", request);
+		});
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfCodeIsMissing() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		String secret = "OMRS12345678";
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
+		
+		SimpleObject payload = new SimpleObject();
+		
+		assertThrows(EnrollmentException.class, () -> {
+			authenticationScheme.verifyEnrollment(payload, request);
+		});
+	}
+	
+	@Test
+	public void shouldVerifyEnrollmentSuccessfulWithNumericCode() throws EnrollmentException {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		String secret = "123456";
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", 123456);
+		
+		authenticationScheme.verifyEnrollment(payload, request);
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfUserAlreadyConfiguredWithSecret() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		candidateUser.setUserProperty(authenticationScheme.getSecretUserPropertyName(), "EXISTING_SECRET");
+		
+		assertThrows(EnrollmentException.class, () -> {
+			authenticationScheme.initiateEnrollment(request);
+		});
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfSessionIsExpired() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		String secret = "OMRS12345678";
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, secret);
+		
+		long expiredTime = System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(3);
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, expiredTime);
+		
+		SimpleObject payload = new SimpleObject();
+		payload.put("code", secret);
+		
+		assertThrows(EnrollmentException.class, () -> {
+			authenticationScheme.verifyEnrollment(payload, request);
+		});
+	}
+	
+	private static class MockUserContext extends UserContext {
+		private final User user;
+		public MockUserContext(User user) {
+			super(null);
+			this.user = user;
+		}
+		
+		@Override
+		public User getAuthenticatedUser() {
+			return user;
+		}
 	}
 }
