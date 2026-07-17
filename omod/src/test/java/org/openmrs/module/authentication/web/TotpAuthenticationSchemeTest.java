@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.UserService;
-import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
@@ -24,7 +23,6 @@ import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
 import org.openmrs.module.authentication.web.mocks.MockTwoFactorAuthenticationScheme;
 import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
-import org.openmrs.util.Security;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 
