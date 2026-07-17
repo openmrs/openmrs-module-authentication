@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.APIAuthenticationException;
 import org.openmrs.api.UserService;
+import org.openmrs.api.context.Authenticated;
 import org.openmrs.api.context.AuthenticationScheme;
 import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
@@ -23,6 +24,7 @@ import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
 import org.openmrs.module.authentication.web.mocks.MockTwoFactorAuthenticationScheme;
 import org.openmrs.module.webservices.rest.SimpleObject;
 import org.openmrs.module.webservices.rest.web.response.ResourceDoesNotSupportOperationException;
+import org.openmrs.util.Security;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpSession;
 
@@ -319,5 +321,11 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		public User getAuthenticatedUser() {
 			return user;
 		}
+	}
+	
+	@Test
+	public void shouldRemoveSpacesFromTotpVerificationCode() {
+		boolean isValid = authenticationScheme.verifyCode("123456", " 123 456 ");
+		assertThat(isValid, equalTo(true));
 	}
 }
