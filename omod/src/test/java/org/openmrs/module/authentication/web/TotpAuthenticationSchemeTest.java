@@ -320,4 +320,10 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 			return user;
 		}
 	}
+	
+	@Test
+	public void shouldAcceptVerificationCodeContainingSpaces() {
+		boolean isValid = authenticationScheme.verifyCode("123456", " 123 456 ");
+		assertThat(isValid, equalTo(true));
+	}
 }

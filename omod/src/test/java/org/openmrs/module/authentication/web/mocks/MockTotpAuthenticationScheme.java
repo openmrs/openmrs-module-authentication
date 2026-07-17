@@ -9,6 +9,7 @@
  */
 package org.openmrs.module.authentication.web.mocks;
 
+import org.apache.commons.lang.StringUtils;
 import org.openmrs.User;
 import org.openmrs.module.authentication.web.TotpAuthenticationScheme;
 
@@ -19,6 +20,9 @@ public class MockTotpAuthenticationScheme extends TotpAuthenticationScheme {
 
     @Override
     public boolean verifyCode(String secret, String code) {
+        if (code != null) {
+            code = StringUtils.deleteWhitespace(code);
+        }
         return code != null && code.equals(secret);
     }
     

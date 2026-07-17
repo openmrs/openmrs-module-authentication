@@ -196,6 +196,9 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 	 * @return true if the entered code is valid for the given secret
 	 */
 	public boolean verifyCode(String secret, String code) {
+		if (code != null) {
+			code = StringUtils.deleteWhitespace(code);
+		}
 		TimeProvider timeProvider = new SystemTimeProvider();
 		CodeGenerator codeGenerator = new DefaultCodeGenerator(hashingAlgorithm, codeLength);
 		DefaultCodeVerifier verifier = new DefaultCodeVerifier(codeGenerator, timeProvider);
