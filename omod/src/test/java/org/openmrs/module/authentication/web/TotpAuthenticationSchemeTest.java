@@ -322,7 +322,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	}
 	
 	@Test
-	public void shouldRemoveSpacesFromTotpVerificationCode() {
+	public void shouldAcceptVerificationCodeContainingSpaces() {
 		boolean isValid = authenticationScheme.verifyCode("123456", " 123 456 ");
 		assertThat(isValid, equalTo(true));
 	}
