@@ -247,7 +247,7 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 		}
 		
 		String secret = generateSecret();
-		String qrCodeUri = generateQrCodeUriForSecret(secret, user.getUsername());
+		String qrCodeUri = generateQrCodeUriForSecret(secret, user.toString());
 		
 		request.getSession().setAttribute(PENDING_ENROLLMENT_SECRET, secret);
 		request.getSession().setAttribute(PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
