@@ -191,7 +191,7 @@ public class UserLogin implements Serializable {
         setUser(authenticated.getUser());
         validatedCredentials.add(schemeId);
         unvalidatedCredentials.remove(schemeId);
-        recordEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, schemeId);
+        recordEvent(AuthenticationEvent.AUTHENTICATION_SUCCEEDED, schemeId, false);
     }
 
     /**
@@ -203,7 +203,7 @@ public class UserLogin implements Serializable {
         if (validatedCredentials.isEmpty()) {
             setUser(null);
         }
-        recordEvent(AuthenticationEvent.AUTHENTICATION_FAILED, schemeId);
+        recordEvent(AuthenticationEvent.AUTHENTICATION_FAILED, schemeId, true);
     }
 
     /**
@@ -212,7 +212,7 @@ public class UserLogin implements Serializable {
     public synchronized void loginSuccessful() {
         this.loginDate = new Date();
         UserLoginTracker.addActiveLogin(this);
-        recordEvent(AuthenticationEvent.LOGIN_SUCCEEDED, null);
+        recordEvent(AuthenticationEvent.LOGIN_SUCCEEDED, null, false);
     }
 
     /**
@@ -221,7 +221,7 @@ public class UserLogin implements Serializable {
     public synchronized void loginFailed() {
         setUsername(null);
         setUser(null);
-        recordEvent(AuthenticationEvent.LOGIN_FAILED, null);
+        recordEvent(AuthenticationEvent.LOGIN_FAILED, null, true);
     }
 
     /**
@@ -229,7 +229,7 @@ public class UserLogin implements Serializable {
      */
     public synchronized void loginExpired() {
         UserLoginTracker.removeActiveLogin(this);
-        recordEvent(AuthenticationEvent.LOGIN_EXPIRED, null);
+        recordEvent(AuthenticationEvent.LOGIN_EXPIRED, null, true);
     }
 
     /**
@@ -238,14 +238,14 @@ public class UserLogin implements Serializable {
     public synchronized void logoutSucceeded() {
         this.logoutDate = new Date();
         UserLoginTracker.removeActiveLogin(this);
-        recordEvent(AuthenticationEvent.LOGOUT_SUCCEEDED, null);
+        recordEvent(AuthenticationEvent.LOGOUT_SUCCEEDED, null, false);
     }
 
     /**
      * Records a failed logout from the system
      */
     public synchronized void logoutFailed() {
-        recordEvent(AuthenticationEvent.LOGOUT_FAILED, null);
+        recordEvent(AuthenticationEvent.LOGOUT_FAILED, null, true);
     }
 
     /**
@@ -269,7 +269,7 @@ public class UserLogin implements Serializable {
      * @param event the event to log
      * @param schemeId the schemeId that the event refers to, if this corresponds to a specific authentication scheme
      */
-    public synchronized void recordEvent(String event, String schemeId) {
+    public synchronized void recordEvent(String event, String schemeId, boolean isWarning) {
         events.add(new AuthenticationEvent(event));
         if (log.isInfoEnabled()) {
             try {
@@ -281,7 +281,12 @@ public class UserLogin implements Serializable {
                 ThreadContext.put("username", getUsername());
                 ThreadContext.put("userId", getUserId() == null ? null : getUserId().toString());
                 ThreadContext.put("lastActivityDate", AuthenticationUtil.formatIsoDate(getLastActivityDate()));
-                log.info(EVENT_MARKER, ThreadContext.getContext().toString());
+                if (isWarning) {
+                    log.warn(EVENT_MARKER, ThreadContext.getContext().toString());
+                }
+                else {
+                    log.info(EVENT_MARKER, ThreadContext.getContext().toString());
+                }
             }
             finally {
                 ThreadContext.clearAll();
