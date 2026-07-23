@@ -91,7 +91,7 @@ public class BasicWithLocationAuthenticationScheme extends BasicWebAuthenticatio
 		if (StringUtils.isNotBlank(locationIdStr)) {
 			loginLocation = getLocation(locationIdStr);
 			if (loginLocation == null || !isValidLocation(loginLocation)) {
-				throw new IllegalArgumentException("authentication.error.invalidLocation");
+				throw new ContextAuthenticationException("au thentication.error.invalidLocation");
 			}
 		}
 		if (loginLocation == null) {
