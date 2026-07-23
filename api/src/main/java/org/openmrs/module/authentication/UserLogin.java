@@ -203,7 +203,7 @@ public class UserLogin implements Serializable {
         if (validatedCredentials.isEmpty()) {
             setUser(null);
         }
-        recordEvent(AuthenticationEvent.AUTHENTICATION_FAILED, schemeId);
+        recordEvent(AuthenticationEvent.AUTHENTICATION_FAILED, schemeId, true);
     }
 
     /**
@@ -221,7 +221,7 @@ public class UserLogin implements Serializable {
     public synchronized void loginFailed() {
         setUsername(null);
         setUser(null);
-        recordEvent(AuthenticationEvent.LOGIN_FAILED, null);
+        recordEvent(AuthenticationEvent.LOGIN_FAILED, null, true);
     }
 
     /**
@@ -229,7 +229,7 @@ public class UserLogin implements Serializable {
      */
     public synchronized void loginExpired() {
         UserLoginTracker.removeActiveLogin(this);
-        recordEvent(AuthenticationEvent.LOGIN_EXPIRED, null);
+        recordEvent(AuthenticationEvent.LOGIN_EXPIRED, null, true);
     }
 
     /**
@@ -245,7 +245,7 @@ public class UserLogin implements Serializable {
      * Records a failed logout from the system
      */
     public synchronized void logoutFailed() {
-        recordEvent(AuthenticationEvent.LOGOUT_FAILED, null);
+        recordEvent(AuthenticationEvent.LOGOUT_FAILED, null, true);
     }
 
     /**
@@ -270,21 +270,38 @@ public class UserLogin implements Serializable {
      * @param schemeId the schemeId that the event refers to, if this corresponds to a specific authentication scheme
      */
     public synchronized void recordEvent(String event, String schemeId) {
+        recordEvent(event, schemeId, false);
+    }
+
+    public synchronized void recordEvent(String event, String schemeId, boolean isWarning) {
         events.add(new AuthenticationEvent(event));
-        if (log.isInfoEnabled()) {
-            try {
-                ThreadContext.put("event", event);
-                ThreadContext.put("schemeId", schemeId);
-                ThreadContext.put("loginId", getLoginId());
-                ThreadContext.put("httpSessionId", getHttpSessionId());
-                ThreadContext.put("ipAddress", getIpAddress());
-                ThreadContext.put("username", getUsername());
-                ThreadContext.put("userId", getUserId() == null ? null : getUserId().toString());
-                ThreadContext.put("lastActivityDate", AuthenticationUtil.formatIsoDate(getLastActivityDate()));
-                log.info(EVENT_MARKER, ThreadContext.getContext().toString());
+        if (isWarning) {
+            if (log.isWarnEnabled()) {
+                try {
+                    ThreadContext.put("loginId", getLoginId());
+                    ThreadContext.put("ipAddress", getIpAddress());
+                    ThreadContext.put("username", getUsername());
+                    ThreadContext.put("userId", getUserId() == null ? null : getUserId().toString());
+                    ThreadContext.put("lastActivityDate", AuthenticationUtil.formatIsoDate(getLastActivityDate()));
+                    log.warn(EVENT_MARKER, ThreadContext.getContext().toString());
+                }
+                finally {
+                    ThreadContext.clearAll();
+                }
             }
-            finally {
-                ThreadContext.clearAll();
+        } else {
+            if (log.isInfoEnabled()) {
+                try {
+                    ThreadContext.put("loginId", getLoginId());
+                    ThreadContext.put("ipAddress", getIpAddress());
+                    ThreadContext.put("username", getUsername());
+                    ThreadContext.put("userId", getUserId() == null ? null : getUserId().toString());
+                    ThreadContext.put("lastActivityDate", AuthenticationUtil.formatIsoDate(getLastActivityDate()));
+                    log.info(EVENT_MARKER, ThreadContext.getContext().toString());
+                }
+                finally {
+                    ThreadContext.clearAll();
+                }
             }
         }
     }

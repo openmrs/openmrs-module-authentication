@@ -2,6 +2,9 @@ package org.openmrs.module.authentication.web;
 
 import org.springframework.util.AntPathMatcher;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
@@ -63,5 +66,39 @@ public class WebUtil {
             url = request.getContextPath() + (url.startsWith("/") ? "" : "/") + url;
         }
         return url;
+    }
+
+    /**
+     * Checks whether a URL is local (relative) and safe for redirection.
+     * Rejects absolute URLs, protocol-relative URLs, and javascript: URLs.
+     * Uses URI parsing to handle encoded and edge-case URLs safely.
+     *
+     * @param url The URL to check.
+     * @return true if the URL is safe for redirection.
+     */
+    public static boolean isLocalUrl(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            return false;
+        }
+        // Reject protocol-relative URLs like //evil.com
+        if (url.startsWith("//")) {
+            return false;
+        }
+        try {
+            URI uri = new URI(url);
+            // If a scheme is present (http, https, javascript, etc.) reject it
+            if (uri.getScheme() != null) {
+                return false;
+            }
+            // If a host is present, it's absolute - reject it
+            if (uri.getHost() != null) {
+                return false;
+            }
+        }
+        catch (URISyntaxException e) {
+            // If URL can't be parsed, reject it to be safe
+            return false;
+        }
+        return true;
     }
 }
