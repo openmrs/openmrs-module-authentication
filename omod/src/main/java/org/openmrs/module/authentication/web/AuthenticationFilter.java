@@ -19,7 +19,6 @@ import org.openmrs.module.authentication.AuthenticationCredentials;
 import org.openmrs.module.authentication.DelegatingAuthenticationScheme;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
-import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
 
@@ -210,7 +209,7 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isBlank(redirect)) {
 			redirect = request.getParameter("refererURL");
 		}
-		if (StringUtils.isNotBlank(redirect)) {
+		if (StringUtils.isNotBlank(redirect) && WebUtil.isLocalUrl(redirect)) {
 			return WebUtil.contextualizeUrl(request, redirect);
 		}
 		
