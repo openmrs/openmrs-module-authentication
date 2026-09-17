@@ -219,8 +219,10 @@ public class UserLogin implements Serializable {
      * Records a failed login into the system
      */
     public synchronized void loginFailed() {
-        setUsername(null);
-        setUser(null);
+        if (validatedCredentials.isEmpty()) {
+            setUsername(null);
+            setUser(null);
+        }
         recordEvent(AuthenticationEvent.LOGIN_FAILED, null);
     }
 

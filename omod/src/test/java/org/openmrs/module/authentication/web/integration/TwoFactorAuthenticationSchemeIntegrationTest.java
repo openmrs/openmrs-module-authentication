@@ -15,14 +15,11 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
 import org.openmrs.web.test.jupiter.BaseModuleWebContextSensitiveTest;
-import org.junit.jupiter.api.BeforeAll;
-import org.openmrs.api.context.UsernamePasswordAuthenticationScheme;
-import org.openmrs.module.authentication.AuthenticationConfig;
 
-import java.util.Properties;
-import java.lang.reflect.Field;
 import java.util.Collections;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,19 +32,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 	 * configuration causes OpenMRS to attempt to open a Swing UI credentials dialog. On a server
 	 * without a display (like our CI pipelines), this crashes the build with a confusing java.awt.HeadlessException.
 	 * This block resets the Context so this test can run safely.
-	 *
-	 * TODO: Move this logic into BaseAuthenticationTest.teardown() so it automatically protects all future
-	 * context-sensitive tests without needing to copy-paste this block.
 	 */
-	@BeforeAll
-	static void resetAuthenticationScheme() throws Exception {
-		AuthenticationConfig.setConfig(new Properties());
-		Field field = Context.class.getDeclaredField("authenticationScheme");
-		field.setAccessible(true);
-		field.set(null, new UsernamePasswordAuthenticationScheme());
-		Context.clearUserContext();
-	}
-
 	private TwoFactorAuthenticationScheme scheme;
 	
 	@BeforeEach
@@ -96,6 +81,54 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			User savedUser = Context.getUserService().getUser(1);
 			String savedProperty = savedUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE);
 			assertEquals("totp", savedProperty);
+		}
+	}
+	
+	@Nested
+	@DisplayName("secondaryAuthenticationFailure")
+	class SecondaryAuthenticationFailure {
+		@Test
+		@DisplayName("should retain candidate user if primary authentication succeeds but secondary fails")
+		void shouldRetainCandidateUser() {
+			User user = Context.getUserService().getUser(1);
+			
+			UserLogin login = new UserLogin();
+			login.setUser(user);
+			login.setUsername(user.getUsername());
+			login.getValidatedCredentials().add("basic");
+			UserLoginTracker.setLoginOnThread(login);
+			
+			org.openmrs.module.authentication.AuthenticationUserSessionListener listener =
+					new org.openmrs.module.authentication.AuthenticationUserSessionListener();
+			listener.loggedInOrOut(user, org.openmrs.UserSessionListener.Event.LOGIN, org.openmrs.UserSessionListener.Status.FAIL);
+			
+			assertEquals(user, login.getUser());
+			assertEquals(user.getUsername(), login.getUsername());
+			
+			UserLoginTracker.removeLoginFromThread();
+		}
+	}
+
+	@Nested
+	@DisplayName("primaryAuthenticationFailure")
+	class PrimaryAuthenticationFailure {
+		@Test
+		@DisplayName("should drop candidate user if primary authentication fails")
+		void shouldDropCandidateUser() {
+			User user = Context.getUserService().getUser(1);
+			
+			UserLogin login = new UserLogin();
+			login.setUser(user);
+			login.setUsername(user.getUsername());
+			UserLoginTracker.setLoginOnThread(login);
+			
+			org.openmrs.module.authentication.AuthenticationUserSessionListener listener =
+					new org.openmrs.module.authentication.AuthenticationUserSessionListener();
+			listener.loggedInOrOut(user, org.openmrs.UserSessionListener.Event.LOGIN, org.openmrs.UserSessionListener.Status.FAIL);
+			
+			org.junit.jupiter.api.Assertions.assertNull(login.getUser());
+			org.junit.jupiter.api.Assertions.assertNull(login.getUsername());
+			UserLoginTracker.removeLoginFromThread();
 		}
 	}
 }
