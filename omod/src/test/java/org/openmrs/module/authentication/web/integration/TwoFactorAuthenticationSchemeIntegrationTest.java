@@ -9,18 +9,28 @@
  */
 package org.openmrs.module.authentication.web.integration;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
-import org.openmrs.module.authentication.UserLogin;
-import org.openmrs.module.authentication.UserLoginTracker;
+import org.openmrs.module.authentication.AuthenticationConfig;
+import org.openmrs.module.authentication.web.AuthenticationFilter;
+import org.openmrs.module.authentication.web.BasicWebAuthenticationScheme;
 import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
+import org.openmrs.module.authentication.web.mocks.MockTotpAuthenticationScheme;
+import org.openmrs.util.Security;
 import org.openmrs.web.test.jupiter.BaseModuleWebContextSensitiveTest;
+import org.springframework.mock.web.MockFilterChain;
+import org.springframework.mock.web.MockFilterConfig;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpSession;
 
 import java.util.Collections;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -85,50 +95,89 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 	}
 	
 	@Nested
-	@DisplayName("secondaryAuthenticationFailure")
-	class SecondaryAuthenticationFailure {
+	@DisplayName("authenticationWebFlowIntegration")
+	class AuthenticationWebFlowIntegration {
+		
 		@Test
-		@DisplayName("should retain candidate user if primary authentication succeeds but secondary fails")
-		void shouldRetainCandidateUser() {
-			User user = Context.getUserService().getUser(1);
+		@DisplayName("should keep user on 2FA page after a wrong TOTP code and allow a successful retry")
+		void shouldTestWebFlow() throws Exception {
+			User user = Context.getUserService().getUserByUsername("admin");
+			scheme.addSecondaryAuthenticationSchemeForUser(user, "totp");
 			
-			UserLogin login = new UserLogin();
-			login.setUser(user);
-			login.setUsername(user.getUsername());
-			login.getValidatedCredentials().add("basic");
-			UserLoginTracker.setLoginOnThread(login);
+			// TotpAuthenticationScheme expects the secret to be encrypted in the database.
+			// When validating, it will call Security.decrypt() on this property.
+			user.setUserProperty("authentication.totp.secret", Security.encrypt("valid_secret"));
+			Context.getUserService().saveUser(user);
 			
-			org.openmrs.module.authentication.AuthenticationUserSessionListener listener =
-					new org.openmrs.module.authentication.AuthenticationUserSessionListener();
-			listener.loggedInOrOut(user, org.openmrs.UserSessionListener.Event.LOGIN, org.openmrs.UserSessionListener.Status.FAIL);
+			// BaseModuleWebContextSensitiveTest automatically authenticates as 'admin' before each test.
+			// Explicitly log out here so the AuthenticationFilter intercepts our HTTP requests,
+			// otherwise it would bypass the filter thinking the user is already fully authenticated.
+			Context.logout();
 			
-			assertEquals(user, login.getUser());
-			assertEquals(user.getUsername(), login.getUsername());
-			
-			UserLoginTracker.removeLoginFromThread();
-		}
-	}
-
-	@Nested
-	@DisplayName("primaryAuthenticationFailure")
-	class PrimaryAuthenticationFailure {
-		@Test
-		@DisplayName("should drop candidate user if primary authentication fails")
-		void shouldDropCandidateUser() {
-			User user = Context.getUserService().getUser(1);
-			
-			UserLogin login = new UserLogin();
-			login.setUser(user);
-			login.setUsername(user.getUsername());
-			UserLoginTracker.setLoginOnThread(login);
-			
-			org.openmrs.module.authentication.AuthenticationUserSessionListener listener =
-					new org.openmrs.module.authentication.AuthenticationUserSessionListener();
-			listener.loggedInOrOut(user, org.openmrs.UserSessionListener.Event.LOGIN, org.openmrs.UserSessionListener.Status.FAIL);
-			
-			org.junit.jupiter.api.Assertions.assertNull(login.getUser());
-			org.junit.jupiter.api.Assertions.assertNull(login.getUsername());
-			UserLoginTracker.removeLoginFromThread();
+			Properties originalProps = Context.getRuntimeProperties();
+			// Wrapping the test in a try-finally block to ensure that the mocked Context properties
+			// are cleaned up. Otherwise, they leak into other integration tests and cause failures.
+			try {
+				Properties properties = new Properties();
+				properties.putAll(originalProps);
+				properties.setProperty("authentication.scheme", "2fa");
+				properties.setProperty("authentication.scheme.2fa.type", TwoFactorAuthenticationScheme.class.getName());
+				properties.setProperty("authentication.scheme.2fa.config.primaryOptions", "basic");
+				properties.setProperty("authentication.scheme.2fa.config.secondaryOptions", "totp");
+				
+				properties.setProperty("authentication.scheme.basic.type", BasicWebAuthenticationScheme.class.getName());
+				properties.setProperty("authentication.scheme.basic.config.loginPage", "/login.htm");
+				properties.setProperty("authentication.scheme.basic.config.usernameParam", "username");
+				properties.setProperty("authentication.scheme.basic.config.passwordParam", "password");
+				
+				properties.setProperty("authentication.scheme.totp.type", MockTotpAuthenticationScheme.class.getName());
+				properties.setProperty("authentication.scheme.totp.config.loginPage", "/totpLogin.htm");
+				properties.setProperty("authentication.scheme.totp.config.codeParam", "code");
+				
+				AuthenticationConfig.setConfig(properties);
+				Context.setRuntimeProperties(properties);
+				
+				AuthenticationFilter filter = new AuthenticationFilter();
+				filter.init(new MockFilterConfig());
+				MockHttpSession session = new MockHttpSession();
+				MockFilterChain chain;
+				
+				// Requesting a protected URL (patientDashboard.htm) instead of /login.htm because
+				// /login.htm is whitelisted by default. If we POST to a whitelisted URL, the AuthenticationFilter
+				// won't redirect us to the secondary challenge URL (/totpLogin.htm).
+				MockHttpServletRequest request1 = new MockHttpServletRequest("POST", "/patientDashboard.htm");
+				request1.setSession(session);
+				request1.setParameter("username", "admin");
+				request1.setParameter("password", "test");
+				MockHttpServletResponse response1 = new MockHttpServletResponse();
+				chain = new MockFilterChain();
+				
+				filter.doFilter(request1, response1, chain);
+				Assertions.assertEquals("/totpLogin.htm", response1.getRedirectedUrl(), "Should redirect to 2FA page after primary success");
+				
+				MockHttpServletRequest request2 = new MockHttpServletRequest("POST", "/patientDashboard.htm");
+				request2.setSession(session);
+				request2.setParameter("code", "Invalid Code");
+				MockHttpServletResponse response2 = new MockHttpServletResponse();
+				chain = new MockFilterChain();
+				
+				filter.doFilter(request2, response2, chain);
+				Assertions.assertEquals("/totpLogin.htm", response2.getRedirectedUrl(), "Should redirect back to 2FA page on failure");
+				Assertions.assertFalse(Context.isAuthenticated(), "User should not be fully authenticated yet");
+				
+				MockHttpServletRequest request3 = new MockHttpServletRequest("POST", "/patientDashboard.htm");
+				request3.setSession(session);
+				request3.setParameter("code", "valid_secret");
+				MockHttpServletResponse response3 = new MockHttpServletResponse();
+				chain = new MockFilterChain();
+				
+				filter.doFilter(request3, response3, chain);
+				Assertions.assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+				Assertions.assertEquals(user, Context.getAuthenticatedUser(), "Authenticated user should match candidate");
+			} finally {
+				AuthenticationConfig.setConfig(originalProps);
+				Context.setRuntimeProperties(originalProps);
+			}
 		}
 	}
 }
