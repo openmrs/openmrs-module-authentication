@@ -106,7 +106,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			
 			// TotpAuthenticationScheme expects the secret to be encrypted in the database.
 			// When validating, it will call Security.decrypt() on this property.
-			user.setUserProperty("authentication.totp.secret", Security.encrypt("valid_secret"));
+			user.setUserProperty("authentication.totp.secret", Security.encrypt("valid_secret_code"));
 			Context.getUserService().saveUser(user);
 			
 			// BaseModuleWebContextSensitiveTest automatically authenticates as 'admin' before each test.
@@ -157,7 +157,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 				
 				MockHttpServletRequest request2 = new MockHttpServletRequest("POST", "/patientDashboard.htm");
 				request2.setSession(session);
-				request2.setParameter("code", "Invalid Code");
+				request2.setParameter("code", "invalid_secret_code");
 				MockHttpServletResponse response2 = new MockHttpServletResponse();
 				chain = new MockFilterChain();
 				
@@ -167,7 +167,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 				
 				MockHttpServletRequest request3 = new MockHttpServletRequest("POST", "/patientDashboard.htm");
 				request3.setSession(session);
-				request3.setParameter("code", "valid_secret");
+				request3.setParameter("code", "valid_secret_code");
 				MockHttpServletResponse response3 = new MockHttpServletResponse();
 				chain = new MockFilterChain();
 				
