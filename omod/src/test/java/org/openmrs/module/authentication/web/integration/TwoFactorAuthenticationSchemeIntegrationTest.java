@@ -15,8 +15,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
+import org.openmrs.UserSessionListener;
+import org.openmrs.api.context.BasicAuthenticated;
 import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
+import org.openmrs.module.authentication.AuthenticationUserSessionListener;
+import org.openmrs.module.authentication.UserLogin;
+import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.authentication.web.AuthenticationFilter;
 import org.openmrs.module.authentication.web.BasicWebAuthenticationScheme;
 import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
@@ -93,7 +98,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			assertEquals("totp", savedProperty);
 		}
 	}
-	
+
 	@Nested
 	@DisplayName("authenticationWebFlowIntegration")
 	class AuthenticationWebFlowIntegration {
@@ -177,6 +182,35 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			} finally {
 				AuthenticationConfig.setConfig(originalProps);
 				Context.setRuntimeProperties(originalProps);
+			}
+		}
+	}
+
+	@Nested
+	@DisplayName("loginFailureEventIntegration")
+	class LoginFailureEventIntegration {
+		
+		AuthenticationUserSessionListener listener = new AuthenticationUserSessionListener();
+		
+		@Test
+		@DisplayName("should not drop candidate user on secondary auth failure")
+		void shouldNotDropCandidateUserOnSecondaryAuthFailure() {
+			try {
+				User user = Context.getUserService().getUserByUsername("admin");
+				
+				UserLogin login = new UserLogin();
+				login.setUser(user);
+				login.authenticationSuccessful("basic", new BasicAuthenticated(user, "basic"));
+				UserLoginTracker.setLoginOnThread(login);
+				
+				// Since session listeners disabled during tests, should manually trigger the login failure event.
+				// This simulates what happens when Context.authenticate() fails in the real application.
+				listener.loggedInOrOut(user, UserSessionListener.Event.LOGIN, UserSessionListener.Status.FAIL);
+				
+				// The candidate user should still be retained because primary auth was successful
+				Assertions.assertNotNull(login.getUser(), "Candidate user should not be dropped on authentication failure");
+			} finally {
+				UserLoginTracker.removeLoginFromThread();
 			}
 		}
 	}
