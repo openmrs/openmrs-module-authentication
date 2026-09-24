@@ -113,7 +113,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 	 * Drives {@link AuthenticationFilter} over a sequence of real requests and asserts on the
 	 * {@link UserLogin} that the filter carries across them.
 	 * <p>
-	 * Credentials are submitted the way a client actually submits them: a GET of /ws/rest/v1/session
+	 * Credentials are submitted the way the O3 actually submits them: a GET of /ws/rest/v1/session
 	 * carrying the factor in a header - Basic for the primary factor, X-Totp-Code for the second.  That
 	 * endpoint has its own branch in the filter, and /ws/**&#47;* is a non-redirect url by default, so an
 	 * unsatisfied login is answered with a Location header rather than a 3xx to a login page.
