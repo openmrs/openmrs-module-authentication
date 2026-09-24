@@ -87,4 +87,25 @@ public class UserLoginTest extends BaseAuthenticationTest {
 		ctx.authenticationFailed(c1.getAuthenticationScheme());
 		assertThat(ctx.getUnvalidatedCredentials("scheme1"), nullValue());
 	}
+	
+	@Test
+	public void shouldClearCandidateUserOnLoginFailedIfNoValidatedCredentials() {
+		UserLogin ctx = new UserLogin();
+		User u = newUser("admin");
+		ctx.setUser(u);
+		ctx.setUsername(u.getUsername());
+		ctx.loginFailed();
+		assertThat(ctx.getUser(), nullValue());
+		assertThat(ctx.getUsername(), nullValue());
+	}
+	@Test
+	public void shouldRetainCandidateUserOnLoginFailedIfValidatedCredentialsExist() {
+		UserLogin ctx = new UserLogin();
+		User u = newUser("admin");
+		ctx.addUnvalidatedCredentials(new TestAuthenticationCredentials("test1", u));
+		ctx.authenticationSuccessful("test1", new BasicAuthenticated(u, "test1"));
+		ctx.loginFailed();
+		assertThat(ctx.getUser(), equalTo(u));
+		assertThat(ctx.getUsername(), equalTo("admin"));
+	}
 }

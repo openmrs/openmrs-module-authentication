@@ -216,11 +216,17 @@ public class UserLogin implements Serializable {
     }
 
     /**
-     * Records a failed login into the system
+     * Records a failed login into the system.
+     * If no credentials have been validated yet (e.g., failed primary authentication),
+     * this will also clear the candidate user and username from the session state.
+     * If the user has already validated some credentials (e.g., passed primary but failed secondary),
+     * the candidate user is retained so they can retry the remaining authentication steps.
      */
     public synchronized void loginFailed() {
-        setUsername(null);
-        setUser(null);
+        if (validatedCredentials.isEmpty()) {
+            setUsername(null);
+            setUser(null);
+        }
         recordEvent(AuthenticationEvent.LOGIN_FAILED, null);
     }
 

@@ -100,6 +100,16 @@ public abstract class BaseAuthenticationTest {
 		if (appDataDir != null && appDataDir.exists()) {
 			appDataDir.delete();
 		}
+		
+		AuthenticationConfig.setConfig(new Properties());
+		try {
+			Field field = Context.class.getDeclaredField("authenticationScheme");
+			field.setAccessible(true);
+			field.set(null, new org.openmrs.api.context.UsernamePasswordAuthenticationScheme());
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		Context.clearUserContext();
 	}
 
 	/**
