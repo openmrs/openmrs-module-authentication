@@ -171,6 +171,23 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
+	 * Validates redirect URL to prevent open redirect vulnerabilities
+	 */
+	protected boolean isValidRedirectUrl(HttpServletRequest request, String url) {
+		if (StringUtils.isBlank(url)) {
+			return false;
+		}
+
+		// Prevent protocol-based redirects like http:// or https://
+		if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("//")) {
+			return false;
+		}
+
+		// Allow only relative URLs
+		return url.startsWith("/");
+	}
+
+	/**
 	 * Upon authentication failure, this either issues a 3xx redirect or a 401 unauthenticated, depending on the url
 	 * @param request the request to handle
 	 * @param challengeUrl the challengeUrl to direct the response to
@@ -210,7 +227,10 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isBlank(redirect)) {
 			redirect = request.getParameter("refererURL");
 		}
-		if (StringUtils.isNotBlank(redirect)) {
+		if (StringUtils.isNotBlank(redirect) && !isValidRedirectUrl(request, redirect)) {
+			log.warn("Blocked invalid redirect URL: " + redirect);
+		}
+		if (StringUtils.isNotBlank(redirect) && isValidRedirectUrl(request, redirect)) {
 			return WebUtil.contextualizeUrl(request, redirect);
 		}
 		
