@@ -48,6 +48,7 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@BeforeEach
 	@Override
 	public void setup() {
+		super.setup();
 		UserService mockUserService = (UserService) Proxy.newProxyInstance(
 				UserService.class.getClassLoader(),
 				new Class[] { UserService.class },
@@ -63,7 +64,6 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 		);
 		ServiceContext.getInstance().setUserService(mockUserService);
 		
-		super.setup();
 		AuthenticationConfig.setProperty("authentication.scheme", "totp");
 		AuthenticationConfig.setProperty("authentication.scheme.totp.type", MockTotpAuthenticationScheme.class.getName());
 		AuthenticationConfig.setProperty("authentication.scheme.totp.config.loginPage", "/loginTotp.page");
