@@ -31,7 +31,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * An AuthenticationSession is typically constructed in the servlet filter via the incoming request, but may also
@@ -53,7 +52,6 @@ public class AuthenticationSession {
 
     public static final String AUTHENTICATION_USER_LOGIN = "__authentication_user_login";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
-    public static final String AUTHENTICATION_SESSION_REGENERATING = "__authentication_session_regenerating";
 
     private HttpSession session;
     private HttpServletRequest request;
@@ -179,52 +177,19 @@ public class AuthenticationSession {
     }
 
     /**
-     * This regenerates the underlying HTTP Session, by invalidating existing session, and creating a new
-     * session that contains the same attributes as the existing session.
-     * See:  <a href="https://stackoverflow.com/questions/8162646/how-to-refresh-jsessionid-cookie-after-login">SO</a>
-     * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
+     * Rotates the session id in place using {@code changeSessionId()} to securely guard against session fixation.
+     * <p>
+     * Note: We specifically do not invalidate and recreate the session here. 
+     * Doing so causes the {@code webservices.rest} {@code AuthorizationFilter} 
+     * (which runs after this filter on the same request) to answer with a 
+     * 401 "Session timed out" because the requested session id would no longer resolve.
      */
     public void regenerateHttpSession() {
         if (request != null) {
-            try {
-                String newSessionId = request.changeSessionId();
-                if (session != null) {
-                    getUserLogin().setHttpSessionId(newSessionId);
-                    UserLoginTracker.setLoginOnThread(getUserLogin());
-                }
-            } catch (Exception e) {
-                Properties sessionAttributes = new Properties();
-                if (session != null) {
-                    session.setAttribute(AUTHENTICATION_SESSION_REGENERATING, true);
-                    Enumeration<?> attrNames = session.getAttributeNames();
-                    if (attrNames != null) {
-                        while (attrNames.hasMoreElements()) {
-                            String attribute = (String) attrNames.nextElement();
-                            sessionAttributes.put(attribute, session.getAttribute(attribute));
-                        }
-                    }
-                    session.invalidate();
-                }
-                session = request.getSession(true);
-                Enumeration<Object> attrNames = sessionAttributes.keys();
-                if (attrNames != null) {
-                    while (attrNames.hasMoreElements()) {
-                        String attribute = (String) attrNames.nextElement();
-                        session.setAttribute(attribute, sessionAttributes.get(attribute));
-                    }
-                }
-                session.removeAttribute(AUTHENTICATION_SESSION_REGENERATING);
-                getUserLogin().setHttpSessionId(session.getId());
-                UserLoginTracker.setLoginOnThread(getUserLogin());
-            }
+            String newSessionId = request.changeSessionId();
+            getUserLogin().setHttpSessionId(newSessionId);
+            UserLoginTracker.setLoginOnThread(getUserLogin());
         }
-    }
-
-    /**
-     * @return true if the underlying HTTP Session is currently being regenerated
-     */
-    public boolean isSessionRegenerating() {
-        return session.getAttribute(AUTHENTICATION_SESSION_REGENERATING) == Boolean.TRUE;
     }
 
     /**

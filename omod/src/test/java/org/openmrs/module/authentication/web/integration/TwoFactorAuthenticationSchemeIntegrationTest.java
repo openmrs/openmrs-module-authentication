@@ -350,11 +350,11 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 
 			submit(primaryRequest("admin", "test"));
 			
-			MockHttpServletRequest request = secondaryRequest(VALID_CODE);
-			submit(request);
+			MockHttpSession sessionBeforeLogin = httpSession;
+			submit(secondaryRequest(VALID_CODE));
 
 			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
-			assertFalse(httpSession.isInvalid(), "The session object must NOT be invalidated. Destroying it causes mid-login 401s on the frontend.");
+			assertFalse(sessionBeforeLogin.isInvalid(), "The session object must NOT be invalidated. Destroying it causes mid-login 401s on the frontend.");
 		}
 
 		@Test
