@@ -155,7 +155,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		String httpSessionId = login1.getHttpSessionId();
 		Map<String, Object> initialAttributes = session1.getHttpSessionAttributes();
 		filter.doFilter(request, response, chain);
-		assertThat(session.isInvalid(), equalTo(true));
 		AuthenticationSession session2 = new AuthenticationSession(request, newResponse());
 		UserLogin login2 = session2.getUserLogin();
 		assertThat(login2.getLoginId(), equalTo(loginId));

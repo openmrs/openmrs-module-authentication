@@ -344,6 +344,20 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 		}
 
 		@Test
+		@DisplayName("should not invalidate the session object during 2FA to prevent frontend 401s")
+		void shouldNotInvalidateSessionDuring2fa() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(primaryRequest("admin", "test"));
+			
+			MockHttpServletRequest request = secondaryRequest(VALID_CODE);
+			submit(request);
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertFalse(httpSession.isInvalid(), "The session object must NOT be invalidated. Destroying it causes mid-login 401s on the frontend.");
+		}
+
+		@Test
 		@DisplayName("should block a protected resource until both factors are satisfied")
 		void shouldBlockProtectedResourceUntilAuthenticated() throws Exception {
 			applyConfig(twoFactorProperties());

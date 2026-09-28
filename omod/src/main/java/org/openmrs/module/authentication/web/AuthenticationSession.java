@@ -185,29 +185,39 @@ public class AuthenticationSession {
      * See:  <a href="https://owasp.org/www-community/attacks/Session_fixation">Session Fixation</a>
      */
     public void regenerateHttpSession() {
-        Properties sessionAttributes = new Properties();
-        if (session != null) {
-            session.setAttribute(AUTHENTICATION_SESSION_REGENERATING, true);
-            Enumeration<?> attrNames = session.getAttributeNames();
-            if (attrNames != null) {
-                while (attrNames.hasMoreElements()) {
-                    String attribute = (String) attrNames.nextElement();
-                    sessionAttributes.put(attribute, session.getAttribute(attribute));
+        if (request != null) {
+            try {
+                String newSessionId = request.changeSessionId();
+                if (session != null) {
+                    getUserLogin().setHttpSessionId(newSessionId);
+                    UserLoginTracker.setLoginOnThread(getUserLogin());
                 }
+            } catch (Exception e) {
+                Properties sessionAttributes = new Properties();
+                if (session != null) {
+                    session.setAttribute(AUTHENTICATION_SESSION_REGENERATING, true);
+                    Enumeration<?> attrNames = session.getAttributeNames();
+                    if (attrNames != null) {
+                        while (attrNames.hasMoreElements()) {
+                            String attribute = (String) attrNames.nextElement();
+                            sessionAttributes.put(attribute, session.getAttribute(attribute));
+                        }
+                    }
+                    session.invalidate();
+                }
+                session = request.getSession(true);
+                Enumeration<Object> attrNames = sessionAttributes.keys();
+                if (attrNames != null) {
+                    while (attrNames.hasMoreElements()) {
+                        String attribute = (String) attrNames.nextElement();
+                        session.setAttribute(attribute, sessionAttributes.get(attribute));
+                    }
+                }
+                session.removeAttribute(AUTHENTICATION_SESSION_REGENERATING);
+                getUserLogin().setHttpSessionId(session.getId());
+                UserLoginTracker.setLoginOnThread(getUserLogin());
             }
-            session.invalidate();
         }
-        session = request.getSession(true);
-        Enumeration<Object> attrNames = sessionAttributes.keys();
-        if (attrNames != null) {
-            while (attrNames.hasMoreElements()) {
-                String attribute = (String) attrNames.nextElement();
-                session.setAttribute(attribute, sessionAttributes.get(attribute));
-            }
-        }
-        session.removeAttribute(AUTHENTICATION_SESSION_REGENERATING);
-        getUserLogin().setHttpSessionId(session.getId());
-        UserLoginTracker.setLoginOnThread(getUserLogin());
     }
 
     /**
