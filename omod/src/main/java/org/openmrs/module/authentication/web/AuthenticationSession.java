@@ -185,11 +185,12 @@ public class AuthenticationSession {
      * 401 "Session timed out" because the requested session id would no longer resolve.
      */
     public void regenerateHttpSession() {
-        if (request != null) {
-            String newSessionId = request.changeSessionId();
-            getUserLogin().setHttpSessionId(newSessionId);
-            UserLoginTracker.setLoginOnThread(getUserLogin());
+        if (request == null) {
+            throw new IllegalStateException("Cannot rotate session id without an HttpServletRequest");
         }
+        String newSessionId = request.changeSessionId();
+        getUserLogin().setHttpSessionId(newSessionId);
+        UserLoginTracker.setLoginOnThread(getUserLogin());
     }
 
     /**
