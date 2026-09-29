@@ -327,24 +327,24 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 		@DisplayName("should rotate the http session id on successful login and carry the login across without recreating the session")
 		void shouldRotateHttpSessionIdOnSuccess() throws Exception {
 			applyConfig(twoFactorProperties());
-
+			
+			MockHttpSession sessionBeforeLogin = httpSession;
 			String originalSessionId = httpSession.getId();
 			submit(primaryRequest("admin", "test"));
 			assertEquals(originalSessionId, httpSession.getId(),
 					"The session should not be regenerated before the login completes");
-
-			MockHttpSession sessionBeforeLogin = httpSession;
+			
 			MockHttpServletRequest request = secondaryRequest(VALID_CODE);
 			submit(request);
 
-			HttpSession regenerated = request.getSession(false);
-			assertNotNull(regenerated, "A session should be present");
-			assertNotEquals(originalSessionId, regenerated.getId(),
+			HttpSession sessionAfterLogin = request.getSession(false);
+			assertNotNull(sessionAfterLogin, "A session should be present");
+			assertNotEquals(originalSessionId, sessionAfterLogin.getId(),
 					"The session id should change on login to guard against session fixation");
-			assertSame(sessionBeforeLogin, regenerated, 
+			assertSame(sessionBeforeLogin, sessionAfterLogin,
 					"The session object must be the exact same instance (not invalidated and recreated) to prevent frontend 401s");
-			assertNotNull(regenerated.getAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN),
-					"The UserLogin should be carried over to the regenerated session");
+			assertNotNull(sessionAfterLogin.getAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN),
+					"The UserLogin should be carried over to the session after login");
 		}
 
 		@Test
