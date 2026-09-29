@@ -53,6 +53,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebContextSensitiveTest {
@@ -317,30 +318,33 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 		}
 
 		/**
-		 * {@link AuthenticationSession#regenerateHttpSession()} replaces the HTTP session on success to guard
-		 * against session fixation.  MockHttpServletRequest honours this, but only for the request that
-		 * triggered it, so the new session has to be read back off that request rather than from the session
-		 * the test handed in.
+		 * {@link AuthenticationSession#regenerateHttpSession()} rotates the session id on success to guard
+		 * against session fixation without destroying the session object. MockHttpServletRequest honours this, 
+		 * but the rotated session details must be read back off the request rather than from the original
+		 * httpSession variable, as submit() swaps the variable references.
 		 */
 		@Test
-		@DisplayName("should regenerate the http session on successful login and carry the login across")
-		void shouldRegenerateHttpSessionOnSuccess() throws Exception {
+		@DisplayName("should rotate the http session id on successful login and carry the login across without recreating the session")
+		void shouldRotateHttpSessionIdOnSuccess() throws Exception {
 			applyConfig(twoFactorProperties());
-
+			
+			MockHttpSession sessionBeforeLogin = httpSession;
 			String originalSessionId = httpSession.getId();
 			submit(primaryRequest("admin", "test"));
 			assertEquals(originalSessionId, httpSession.getId(),
 					"The session should not be regenerated before the login completes");
-
+			
 			MockHttpServletRequest request = secondaryRequest(VALID_CODE);
 			submit(request);
 
-			HttpSession regenerated = request.getSession(false);
-			assertNotNull(regenerated, "A new session should have been created");
-			assertNotEquals(originalSessionId, regenerated.getId(),
+			HttpSession sessionAfterLogin = request.getSession(false);
+			assertNotNull(sessionAfterLogin, "A session should be present");
+			assertNotEquals(originalSessionId, sessionAfterLogin.getId(),
 					"The session id should change on login to guard against session fixation");
-			assertNotNull(regenerated.getAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN),
-					"The UserLogin should be carried over to the regenerated session");
+			assertSame(sessionBeforeLogin, sessionAfterLogin,
+					"The session object must be the exact same instance (not invalidated and recreated) to prevent frontend 401s");
+			assertNotNull(sessionAfterLogin.getAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN),
+					"The UserLogin should be carried over to the session after login");
 		}
 
 		@Test

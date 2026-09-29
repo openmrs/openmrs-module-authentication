@@ -50,7 +50,7 @@ public class AuthenticationHttpSessionListener implements HttpSessionListener {
 		AuthenticationSession session = new AuthenticationSession(httpSessionEvent.getSession());
 		log.debug("Http Session Destroyed: " + session);
 		UserLogin login = session.getUserLogin();
-		if (!session.isSessionRegenerating() && login.getLoginDate() != null && login.getLogoutDate() == null) {
+		if (login.getLoginDate() != null && login.getLogoutDate() == null) {
 			login.loginExpired();
 		}
 		UserLoginTracker.removeLoginFromThread();
