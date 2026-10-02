@@ -20,7 +20,7 @@ import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.module.webservices.rest.SimpleObject;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Properties;
 
 /**

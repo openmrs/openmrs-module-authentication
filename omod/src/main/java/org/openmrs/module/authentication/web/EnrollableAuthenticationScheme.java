@@ -16,7 +16,7 @@ package org.openmrs.module.authentication.web;
 
 import org.openmrs.module.authentication.EnrollmentException;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 
 /**
