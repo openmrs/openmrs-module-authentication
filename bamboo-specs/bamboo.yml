@@ -10,10 +10,6 @@ stages:
     final: false
     jobs:
     - Build and Test JDK 21
-    - Build and Test JDK 17
-    - Build and Test JDK 8
-    - Build and Test JDK 24
-    - Build and Test JDK 11
 - Deploy:
     manual: false
     final: false
@@ -39,74 +35,6 @@ Build and Test JDK 21:
         set -x
 
         docker run -v m2-repo:/root/.m2/repository -v ${PWD}:/module --rm -w="/module" maven:3.9.9-amazoncorretto-21 bash -c 'mvn clean package && chmod -R 777 .'
-      description: Build and test
-  artifact-subscriptions: []
-Build and Test JDK 17:
-  key: BTJ17
-  tasks:
-  - checkout:
-      force-clean-build: false
-      description: Checkout default repository
-  - script:
-      interpreter: SHELL
-      scripts:
-      - |-
-        #!/bin/bash -eu
-
-        set -x
-
-        docker run -v m2-repo:/root/.m2/repository -v ${PWD}:/module --rm -w="/module" maven:3.9.9-amazoncorretto-17 bash -c 'mvn clean package && chmod -R 777 .'
-      description: Build and test
-  artifact-subscriptions: []
-Build and Test JDK 8:
-  key: BTJ8
-  tasks:
-  - checkout:
-      force-clean-build: false
-      description: Checkout default repository
-  - script:
-      interpreter: SHELL
-      scripts:
-      - |-
-        #!/bin/bash -eu
-
-        set -x
-
-        docker run -v m2-repo:/root/.m2/repository -v ${PWD}:/module --rm -w="/module" maven:3.9.9-amazoncorretto-8 bash -c 'mvn clean package -B && chmod -R 777 .'
-      description: Build and test
-  artifact-subscriptions: []
-Build and Test JDK 24:
-  key: BTJ24
-  tasks:
-  - checkout:
-      force-clean-build: false
-      description: Checkout default repository
-  - script:
-      interpreter: SHELL
-      scripts:
-      - |-
-        #!/bin/bash -eu
-
-        set -x
-
-        docker run -v m2-repo:/root/.m2/repository -v ${PWD}:/module --rm -w="/module" maven:3.9.9-amazoncorretto-11 bash -c 'mvn clean package && chmod -R 777 .'
-      description: Build and test
-  artifact-subscriptions: []
-Build and Test JDK 11:
-  key: BTJ11
-  tasks:
-  - checkout:
-      force-clean-build: false
-      description: Checkout default repository
-  - script:
-      interpreter: SHELL
-      scripts:
-      - |-
-        #!/bin/bash -eu
-
-        set -x
-
-        docker run -v m2-repo:/root/.m2/repository -v ${PWD}:/module --rm -w="/module" maven:3.9.9-amazoncorretto-11 bash -c 'mvn clean package && chmod -R 777 .'
       description: Build and test
   artifact-subscriptions: []
 Deploy to Maven:
@@ -188,7 +116,7 @@ Release to Maven:
       description: Retrieve next snaphot version
   artifact-subscriptions: []
 variables:
-  build.docker.image.id: maven:3.9.9-amazoncorretto-8
+  build.docker.image.id: maven:3.9.9-amazoncorretto-21
   maven.development.version: 2.1.0-SNAPSHOT
   maven.release.version: 2.0.0
 repositories:

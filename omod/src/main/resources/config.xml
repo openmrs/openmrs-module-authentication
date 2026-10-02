@@ -10,7 +10,7 @@
 
 	<activator>org.openmrs.module.authentication.AuthenticationModuleActivator</activator>
 
-	<require_version>${openmrsVersion}</require_version>
+	<require_version>3.0.0</require_version>
 	<require_modules>
 		<require_module>org.openmrs.module.webservices.rest</require_module>
 	</require_modules>

@@ -12,9 +12,9 @@ package org.openmrs.module.authentication.web.mocks;
 import org.openmrs.module.authentication.web.AuthenticationFilter;
 import org.openmrs.module.authentication.web.AuthenticationSession;
 
-import javax.servlet.FilterConfig;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterConfig;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Mock Authentication Filter, primarily used to mock the authentication session
