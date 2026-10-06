@@ -162,7 +162,7 @@ public class UserLogin implements Serializable {
      * @return the url requested, via a `redirect` or `refererURL` parameter, during this login, which the user
      * should be sent to once authentication succeeds.  This is retained across each step of a multi-step login.
      */
-    public String getRedirectUrl() {
+    public synchronized String getRedirectUrl() {
         return redirectUrl;
     }
 
