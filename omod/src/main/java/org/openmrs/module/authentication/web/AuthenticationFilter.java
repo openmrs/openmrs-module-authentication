@@ -117,6 +117,12 @@ public class AuthenticationFilter implements Filter {
 
 			if (!session.isUserAuthenticated()) {
 
+				// Retain any requested redirect on the login, so that it survives each step of a multi-step login
+				String requestedRedirectUrl = getRequestedRedirectUrl(request);
+				if (StringUtils.isNotBlank(requestedRedirectUrl)) {
+					userLogin.setRedirectUrl(requestedRedirectUrl);
+				}
+
 				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
@@ -136,7 +142,8 @@ public class AuthenticationFilter implements Filter {
 							session.authenticate(webScheme, credentials);
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
-							String successUrl = determineSuccessRedirectUrl(request);
+							String successUrl = determineSuccessRedirectUrl(request, userLogin);
+							userLogin.setRedirectUrl(null);
 							if (successUrl != null) {
 								response.sendRedirect(successUrl);
 							}
@@ -206,15 +213,38 @@ public class AuthenticationFilter implements Filter {
 	 */
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
 		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
-		String redirect = request.getParameter("redirect");
-		if (StringUtils.isBlank(redirect)) {
-			redirect = request.getParameter("refererURL");
-		}
+		String redirect = getRequestedRedirectUrl(request);
 		if (StringUtils.isNotBlank(redirect)) {
 			return WebUtil.contextualizeUrl(request, redirect);
 		}
 		
 		return null;
+	}
+
+	/**
+	 * This returns an appropriate redirect URL following successful authentication
+	 * This first checks the request, as {@link #determineSuccessRedirectUrl(HttpServletRequest)}, followed by any
+	 * redirect url requested in an earlier step of the given login.  If neither is found, returns null
+	 * @param request the request to use to determine url redirection
+	 * @param userLogin the login in progress
+	 */
+	protected String determineSuccessRedirectUrl(HttpServletRequest request, UserLogin userLogin) {
+		String redirect = determineSuccessRedirectUrl(request);
+		if (redirect == null && StringUtils.isNotBlank(userLogin.getRedirectUrl())) {
+			redirect = WebUtil.contextualizeUrl(request, userLogin.getRedirectUrl());
+		}
+		return redirect;
+	}
+
+	/**
+	 * @return the value of the "redirect" parameter in the request, or if not found, the "refererURL" parameter
+	 */
+	protected String getRequestedRedirectUrl(HttpServletRequest request) {
+		String redirect = request.getParameter("redirect");
+		if (StringUtils.isBlank(redirect)) {
+			redirect = request.getParameter("refererURL");
+		}
+		return redirect;
 	}
 
 	/**
