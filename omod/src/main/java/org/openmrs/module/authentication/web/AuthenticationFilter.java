@@ -187,11 +187,13 @@ public class AuthenticationFilter implements Filter {
 	/**
 	 * When an unauthenticated user requests a page, and is redirected to the challenge url, this records that page
 	 * on the session, so that the user can be returned to it once authentication succeeds.
-	 * Only browser page loads are recorded:  GET requests that accept html, and that are redirected rather than
-	 * answered with a 401.  A page already recorded is not replaced until authentication succeeds, nor is one
-	 * recorded while a login is in progress (a candidate user has been identified, and further factors are
-	 * outstanding), as login pages may themselves send the user through protected pages, such as the home page after
-	 * a failed attempt, or on the way to the next factor.
+	 * Only pages the browser navigates to are recorded, as it reports them in its fetch metadata headers, not
+	 * background requests or resources, and only those redirected rather than answered with a 401.  Logout urls,
+	 * which would log the user out again, and paths a redirect would treat as another host, are never recorded.
+	 * A page already recorded is not replaced until authentication succeeds or it expires, nor is one recorded while a
+	 * login is in progress (a candidate user has been identified, and further factors are outstanding), as login
+	 * pages may themselves send the user through protected pages, such as the home page after a failed attempt, or on
+	 * the way to the next factor.
 	 * @param request the request for a protected page
 	 * @param session the authentication session
 	 */
@@ -199,17 +201,17 @@ public class AuthenticationFilter implements Filter {
 		if (StringUtils.isNotBlank(session.getRequestedPage()) || session.getUserLogin().getUser() != null) {
 			return;
 		}
-		if (!"GET".equalsIgnoreCase(request.getMethod())) {
-			return;
-		}
-		String accept = request.getHeader("Accept");
-		if (accept == null || !accept.contains("text/html")) {
+		if (!"GET".equalsIgnoreCase(request.getMethod()) || !"navigate".equals(request.getHeader("Sec-Fetch-Mode"))
+				|| !"document".equals(request.getHeader("Sec-Fetch-Dest"))) {
 			return;
 		}
 		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			return;
 		}
 		String page = request.getRequestURI();
+		if (page.toLowerCase().contains("logout") || page.startsWith("//") || page.startsWith("/\\")) {
+			return;
+		}
 		if (StringUtils.isNotBlank(request.getQueryString())) {
 			page = page + "?" + request.getQueryString();
 		}

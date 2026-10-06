@@ -486,7 +486,8 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 		private MockHttpServletRequest pageRequest(String uri, String query) {
 			MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
 			request.setQueryString(query);
-			request.addHeader("Accept", "text/html,application/xhtml+xml,*/*;q=0.8");
+			request.addHeader("Sec-Fetch-Mode", "navigate");
+			request.addHeader("Sec-Fetch-Dest", "document");
 			request.setSession(httpSession);
 			return request;
 		}

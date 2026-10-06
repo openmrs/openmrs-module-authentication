@@ -53,6 +53,8 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_USER_LOGIN = "__authentication_user_login";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
     public static final String AUTHENTICATION_REQUESTED_PAGE = "__authentication_requested_page";
+    public static final String AUTHENTICATION_REQUESTED_PAGE_TIME = "__authentication_requested_page_time";
+    public static final long REQUESTED_PAGE_MAX_AGE_MILLIS = 5 * 60 * 1000;
 
     private HttpSession session;
     private HttpServletRequest request;
@@ -295,6 +297,7 @@ public class AuthenticationSession {
      */
     public void setRequestedPage(String requestedPage) {
         session.setAttribute(AUTHENTICATION_REQUESTED_PAGE, requestedPage);
+        session.setAttribute(AUTHENTICATION_REQUESTED_PAGE_TIME, System.currentTimeMillis());
     }
 
     /**
@@ -302,12 +305,19 @@ public class AuthenticationSession {
      */
     public void removeRequestedPage() {
         session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE);
+        session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE_TIME);
     }
 
     /**
-     * @return the page previously recorded as requested before login
+     * @return the page previously recorded as requested before login, unless it was recorded more than
+     * REQUESTED_PAGE_MAX_AGE_MILLIS ago, so that an abandoned login doesn't send a later one (perhaps by someone else
+     * on a shared computer) to that page
      */
     public String getRequestedPage() {
+        Long time = (Long) session.getAttribute(AUTHENTICATION_REQUESTED_PAGE_TIME);
+        if (time == null || System.currentTimeMillis() - time > REQUESTED_PAGE_MAX_AGE_MILLIS) {
+            return null;
+        }
         return (String) session.getAttribute(AUTHENTICATION_REQUESTED_PAGE);
     }
 
