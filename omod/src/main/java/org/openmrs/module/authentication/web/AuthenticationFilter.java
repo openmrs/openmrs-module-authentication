@@ -207,13 +207,6 @@ public class AuthenticationFilter implements Filter {
 			return;
 		}
 		String page = request.getRequestURI();
-		String contextPath = request.getContextPath();
-		if (StringUtils.isNotEmpty(contextPath) && page.startsWith(contextPath)) {
-			page = page.substring(contextPath.length());
-		}
-		if (!page.startsWith("/")) {
-			page = "/" + page;
-		}
 		if (StringUtils.isNotBlank(request.getQueryString())) {
 			page = page + "?" + request.getQueryString();
 		}

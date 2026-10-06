@@ -291,7 +291,7 @@ public class AuthenticationSession {
     /**
      * Records the page an unauthenticated user requested before being sent to log in.  This is kept on the
      * session rather than the UserLogin, as login pages may start a new UserLogin when they are displayed.
-     * @param requestedPage the requested page, relative to the context path
+     * @param requestedPage the requested page, as its request uri and any query string
      */
     public void setRequestedPage(String requestedPage) {
         session.setAttribute(AUTHENTICATION_REQUESTED_PAGE, requestedPage);
