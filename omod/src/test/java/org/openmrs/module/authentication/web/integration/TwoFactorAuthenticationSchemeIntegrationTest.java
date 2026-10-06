@@ -446,6 +446,28 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			assertNull(response.getRedirectedUrl(), "The session endpoint should answer the login, not redirect it");
 		}
 
+		@Test
+		@DisplayName("should return to the protected page that sent the user to log in, after a failed attempt")
+		void shouldReturnToProtectedPageAfterFailedPrimaryFactor() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			// authenticationui answers a mistyped password by sending the user to the home page, and from there to log in
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "a_wrong_password"));
+			submit(pageRequest("/index.htm", null));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "test"));
+			submit(pageRequest("/index.htm", null));
+			MockHttpServletResponse response = submit(formPost(SECONDARY_LOGIN_PAGE, "code", VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
+					"A failed attempt should not lose the page that sent the user to log in");
+		}
+
 		/**
 		 * @return a form post to a login page, with the given parameter names and values
 		 */

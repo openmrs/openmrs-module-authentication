@@ -188,14 +188,15 @@ public class AuthenticationFilter implements Filter {
 	 * When an unauthenticated user requests a page, and is redirected to the challenge url, this records that page
 	 * on the session, so that the user can be returned to it once authentication succeeds.
 	 * Only browser page loads are recorded:  GET requests that accept html, and that are redirected rather than
-	 * answered with a 401.  The most recently requested page replaces any recorded earlier, except while a login is
-	 * in progress (a candidate user has been identified, and further factors are outstanding), as login pages may
-	 * themselves send the user through protected pages on the way to the next factor.
+	 * answered with a 401.  A page already recorded is not replaced until authentication succeeds, nor is one
+	 * recorded while a login is in progress (a candidate user has been identified, and further factors are
+	 * outstanding), as login pages may themselves send the user through protected pages, such as the home page after
+	 * a failed attempt, or on the way to the next factor.
 	 * @param request the request for a protected page
 	 * @param session the authentication session
 	 */
 	protected void saveRequestedPage(HttpServletRequest request, AuthenticationSession session) {
-		if (session.getUserLogin().getUser() != null) {
+		if (StringUtils.isNotBlank(session.getRequestedPage()) || session.getUserLogin().getUser() != null) {
 			return;
 		}
 		if (!"GET".equalsIgnoreCase(request.getMethod())) {

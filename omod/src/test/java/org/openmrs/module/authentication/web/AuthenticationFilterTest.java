@@ -333,11 +333,11 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldReplaceSavedPageWithLaterProtectedPage() throws Exception {
+	public void shouldNotReplaceSavedPageWithLaterProtectedPage() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", BROWSER_ACCEPT), response, chain);
 		filter.doFilter(pageRequest("GET", "/findPatient.htm", null, BROWSER_ACCEPT), new MockHttpServletResponse(), chain);
-		assertThat(authenticationSession.getRequestedPage(), equalTo("/findPatient.htm"));
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
 	}
 
 	@Test
