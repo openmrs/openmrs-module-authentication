@@ -381,6 +381,29 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 					"A successful login should return the user to the page they asked for");
 		}
 
+		/**
+		 * Regression test for AUT-34.  The redirect is requested along with the primary factor, as a login page
+		 * that posts back to its own url does, and the request that completes the login doesn't repeat it.
+		 */
+		@Test
+		@DisplayName("should redirect to the page requested with the primary factor after the second factor")
+		void shouldRedirectToPageRequestedWithPrimaryFactorAfterSecondFactor() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			MockHttpServletRequest primary = primaryRequest("admin", "test");
+			primary.setParameter("redirect", "/patientDashboard.htm?patientId=2");
+			submit(primary);
+			assertEquals("/patientDashboard.htm?patientId=2", userLogin().getRedirectUrl(),
+					"The requested page should be retained while the second factor is outstanding");
+
+			MockHttpServletResponse response = submit(secondaryRequest(VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
+					"A successful login should return the user to the page they asked for at the start");
+			assertNull(userLogin().getRedirectUrl(), "The requested page should be cleared once used");
+		}
+
 		private Properties twoFactorProperties() {
 			Properties properties = new Properties();
 			properties.putAll(originalProperties);

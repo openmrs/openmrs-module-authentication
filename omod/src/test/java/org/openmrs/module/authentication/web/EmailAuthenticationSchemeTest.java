@@ -69,6 +69,7 @@ public class EmailAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	@Override
 	public void teardown() {
 		UserLoginTracker.removeLoginFromThread();
+		super.teardown();
 	}
 
 	protected AuthenticationCredentials getCredentials(String code, String resend) {

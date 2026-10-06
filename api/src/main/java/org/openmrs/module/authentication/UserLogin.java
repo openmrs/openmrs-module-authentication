@@ -52,6 +52,7 @@ public class UserLogin implements Serializable {
     private String httpSessionId;
     private String ipAddress;
     private String username;
+    private String redirectUrl;
     private List<AuthenticationEvent> events = new ArrayList<>();
     protected User user;
     private final Map<String, AuthenticationCredentials> unvalidatedCredentials = Collections.synchronizedMap(new HashMap<>());
@@ -155,6 +156,21 @@ public class UserLogin implements Serializable {
      */
     public synchronized void setUsername(String username) {
         this.username = username;
+    }
+
+    /**
+     * @return the url requested, via a `redirect` or `refererURL` parameter, during this login, which the user
+     * should be sent to once authentication succeeds.  This is retained across each step of a multi-step login.
+     */
+    public String getRedirectUrl() {
+        return redirectUrl;
+    }
+
+    /**
+     * @param redirectUrl the url to send the user to once authentication succeeds
+     */
+    public synchronized void setRedirectUrl(String redirectUrl) {
+        this.redirectUrl = redirectUrl;
     }
 
     /**
