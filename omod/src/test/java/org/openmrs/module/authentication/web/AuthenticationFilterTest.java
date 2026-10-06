@@ -416,7 +416,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
 		session.setAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE_TIME,
-				System.currentTimeMillis() - 6 * 60 * 1000);
+				System.currentTimeMillis() - 6L * 60 * 1000);
 		assertThat(authenticationSession.getRequestedPage(), nullValue());
 		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE), nullValue());
 

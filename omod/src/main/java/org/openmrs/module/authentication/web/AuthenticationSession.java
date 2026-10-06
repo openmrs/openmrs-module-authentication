@@ -54,7 +54,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
     public static final String AUTHENTICATION_REQUESTED_PAGE = "__authentication_requested_page";
     public static final String AUTHENTICATION_REQUESTED_PAGE_TIME = "__authentication_requested_page_time";
-    public static final long REQUESTED_PAGE_MAX_AGE_MILLIS = 5 * 60 * 1000;
+    public static final long REQUESTED_PAGE_MAX_AGE_MILLIS = 5L * 60 * 1000;
 
     private HttpSession session;
     private HttpServletRequest request;
