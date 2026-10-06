@@ -144,9 +144,10 @@ public class AuthenticationFilter implements Filter {
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
 							String successUrl = determineSuccessRedirectUrl(request, userLogin);
 							// A url answered with a 401 rather than a redirect on failure (eg. REST) is not redirected on success
-							if (successUrl == null && StringUtils.isNotBlank(session.getRequestedPage())
+							String requestedPage = session.getRequestedPage();
+							if (successUrl == null && StringUtils.isNotBlank(requestedPage)
 									&& !WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
-								successUrl = WebUtil.contextualizeUrl(request, session.getRequestedPage());
+								successUrl = WebUtil.contextualizeUrl(request, requestedPage);
 							}
 							userLogin.setRedirectUrl(null);
 							session.removeRequestedPage();
@@ -185,37 +186,45 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
-	 * When an unauthenticated user requests a page, and is redirected to the challenge url, this records that page
-	 * on the session, so that the user can be returned to it once authentication succeeds.
-	 * Only pages the browser navigates to are recorded, as it reports them in its fetch metadata headers, not
-	 * background requests or resources, and only those redirected rather than answered with a 401.  Logout urls,
-	 * which would log the user out again, and paths a redirect would treat as another host, are never recorded.
-	 * A page already recorded is not replaced until authentication succeeds or it expires, nor is one recorded while a
-	 * login is in progress (a candidate user has been identified, and further factors are outstanding), as login
-	 * pages may themselves send the user through protected pages, such as the home page after a failed attempt, or on
-	 * the way to the next factor.
-	 * @param request the request for a protected page
-	 * @param session the authentication session
+	 * Records a page that an unauthenticated user loads in the browser, so they can be returned to it after login.
+	 * The first one is kept, and none is recorded once a login is under way, as login pages send the user through
+	 * protected pages themselves (eg. the home page after a failed attempt).
 	 */
 	protected void saveRequestedPage(HttpServletRequest request, AuthenticationSession session) {
-		if (StringUtils.isNotBlank(session.getRequestedPage()) || session.getUserLogin().getUser() != null) {
+		UserLogin userLogin = session.getUserLogin();
+		boolean loginInProgress = userLogin.getUser() != null && userLogin.getLoginDate() == null;
+		if (StringUtils.isNotBlank(session.getRequestedPage()) || loginInProgress) {
 			return;
 		}
-		if (!"GET".equalsIgnoreCase(request.getMethod()) || !"navigate".equals(request.getHeader("Sec-Fetch-Mode"))
-				|| !"document".equals(request.getHeader("Sec-Fetch-Dest"))) {
+		if (!"GET".equalsIgnoreCase(request.getMethod()) || !isPageNavigation(request)) {
 			return;
 		}
 		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 			return;
 		}
 		String page = request.getRequestURI();
-		if (page.toLowerCase().contains("logout") || page.startsWith("//") || page.startsWith("/\\")) {
+		String decodedPath = request.getServletPath() + StringUtils.defaultString(request.getPathInfo());
+		boolean logout = (page + decodedPath).toLowerCase().contains("logout");
+		if (logout || page.startsWith("//") || page.startsWith("/\\")) {
 			return;
 		}
 		if (StringUtils.isNotBlank(request.getQueryString())) {
 			page = page + "?" + request.getQueryString();
 		}
 		session.setRequestedPage(page);
+	}
+
+	/**
+	 * Browsers report page loads in fetch metadata headers, but only over https and to localhost, so otherwise fall
+	 * back to a request for html that isn't marked as ajax
+	 */
+	private boolean isPageNavigation(HttpServletRequest request) {
+		String fetchMode = request.getHeader("Sec-Fetch-Mode");
+		if (fetchMode != null) {
+			return "navigate".equals(fetchMode) && "document".equals(request.getHeader("Sec-Fetch-Dest"));
+		}
+		String accept = request.getHeader("Accept");
+		return accept != null && accept.contains("text/html") && request.getHeader("X-Requested-With") == null;
 	}
 
 	/**

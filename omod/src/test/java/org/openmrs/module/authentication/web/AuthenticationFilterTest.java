@@ -418,9 +418,56 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		session.setAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE_TIME,
 				System.currentTimeMillis() - 6 * 60 * 1000);
 		assertThat(authenticationSession.getRequestedPage(), nullValue());
+		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE), nullValue());
 
 		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/findPatient.htm", null), new MockHttpServletResponse(), chain);
 		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/findPatient.htm"));
+	}
+
+	/**
+	 * @return a browser page load without fetch metadata, as browsers make over plain http
+	 */
+	private MockHttpServletRequest pageRequestOverHttp(String uri, String query) {
+		MockHttpServletRequest pageRequest = new MockHttpServletRequest("GET", uri);
+		pageRequest.setContextPath("/openmrs");
+		pageRequest.setQueryString(query);
+		pageRequest.setSession(session);
+		pageRequest.addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+		return pageRequest;
+	}
+
+	@Test
+	public void shouldSaveBrowserPageLoadsWithoutFetchMetadata() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequestOverHttp("/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldNotSaveAjaxRequestsWithoutFetchMetadata() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		MockHttpServletRequest ajax = pageRequestOverHttp("/openmrs/patientDashboard.htm", "fragment=1");
+		ajax.addHeader("X-Requested-With", "XMLHttpRequest");
+		filter.doFilter(ajax, response, chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSaveEncodedLogoutUrls() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		MockHttpServletRequest encodedLogout = pageRequestAt("/openmrs", "/openmrs/ms/%6Cogout", null);
+		encodedLogout.setServletPath("/ms/logout");
+		filter.doFilter(encodedLogout, response, chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldSaveRequestedPageIfAnEarlierLoginInThisSessionCompleted() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		userLogin.setUser(user);
+		userLogin.loginSuccessful();
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/patientDashboard.htm?patientId=2"));
 	}
 
 	@AfterEach

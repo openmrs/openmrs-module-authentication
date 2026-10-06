@@ -316,6 +316,7 @@ public class AuthenticationSession {
     public String getRequestedPage() {
         Long time = (Long) session.getAttribute(AUTHENTICATION_REQUESTED_PAGE_TIME);
         if (time == null || System.currentTimeMillis() - time > REQUESTED_PAGE_MAX_AGE_MILLIS) {
+            removeRequestedPage();
             return null;
         }
         return (String) session.getAttribute(AUTHENTICATION_REQUESTED_PAGE);
