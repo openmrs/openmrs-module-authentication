@@ -419,18 +419,43 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			// Login pages may start a new login when displayed, as authenticationui's login page does
 			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
 
-			submit(primaryRequest("admin", "test"));
+			// Each factor is posted to its login page, as authenticationui does
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "test"));
 
 			// Login pages may also send the user to the home page once the primary factor is accepted, from which
 			// they are sent on to the second factor.  This must not replace the page they originally requested.
 			MockHttpServletResponse home = submit(pageRequest("/index.htm", null));
 			assertEquals(SECONDARY_LOGIN_PAGE, home.getRedirectedUrl(), "The user should be sent to the second factor");
 
-			MockHttpServletResponse response = submit(secondaryRequest(VALID_CODE));
+			MockHttpServletResponse response = submit(formPost(SECONDARY_LOGIN_PAGE, "code", VALID_CODE));
 
 			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
 			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
 					"A successful login should return the user to the page that sent them to log in");
+		}
+
+		@Test
+		@DisplayName("should answer a login on the session endpoint rather than redirect it to a saved page")
+		void shouldNotRedirectSessionEndpointLoginToSavedPage() throws Exception {
+			applyConfig(basicOnlyProperties());
+			submit(pageRequest("/", null));
+
+			MockHttpServletResponse response = submit(primaryRequest("admin", "test"));
+
+			assertTrue(Context.isAuthenticated(), "User should be authenticated");
+			assertNull(response.getRedirectedUrl(), "The session endpoint should answer the login, not redirect it");
+		}
+
+		/**
+		 * @return a form post to a login page, with the given parameter names and values
+		 */
+		private MockHttpServletRequest formPost(String uri, String... namesAndValues) {
+			MockHttpServletRequest request = new MockHttpServletRequest("POST", uri);
+			for (int i = 0; i < namesAndValues.length; i += 2) {
+				request.setParameter(namesAndValues[i], namesAndValues[i + 1]);
+			}
+			request.setSession(httpSession);
+			return request;
 		}
 
 		/**

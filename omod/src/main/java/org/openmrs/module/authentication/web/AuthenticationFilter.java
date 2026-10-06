@@ -143,7 +143,9 @@ public class AuthenticationFilter implements Filter {
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
 							String successUrl = determineSuccessRedirectUrl(request, userLogin);
-							if (successUrl == null && StringUtils.isNotBlank(session.getRequestedPage())) {
+							// A url answered with a 401 rather than a redirect on failure (eg. REST) is not redirected on success
+							if (successUrl == null && StringUtils.isNotBlank(session.getRequestedPage())
+									&& !WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 								successUrl = WebUtil.contextualizeUrl(request, session.getRequestedPage());
 							}
 							userLogin.setRedirectUrl(null);
