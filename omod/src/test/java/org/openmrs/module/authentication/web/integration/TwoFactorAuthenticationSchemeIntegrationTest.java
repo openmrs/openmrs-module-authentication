@@ -404,6 +404,46 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			assertNull(userLogin().getRedirectUrl(), "The requested page should be cleared once used");
 		}
 
+		/**
+		 * Regression test for AUT-35.  An unauthenticated user loads a protected page in the browser and is sent to
+		 * the login page, with nothing in the request to say where to go afterwards.
+		 */
+		@Test
+		@DisplayName("should return to the protected page that sent the user to log in, after the second factor")
+		void shouldReturnToProtectedPageThatSentUserToLoginAfterSecondFactor() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			MockHttpServletResponse challenge = submit(pageRequest("/patientDashboard.htm", "patientId=2"));
+			assertEquals(PRIMARY_LOGIN_PAGE, challenge.getRedirectedUrl(), "The user should be sent to log in");
+
+			// Login pages may start a new login when displayed, as authenticationui's login page does
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			submit(primaryRequest("admin", "test"));
+
+			// Login pages may also send the user to the home page once the primary factor is accepted, from which
+			// they are sent on to the second factor.  This must not replace the page they originally requested.
+			MockHttpServletResponse home = submit(pageRequest("/index.htm", null));
+			assertEquals(SECONDARY_LOGIN_PAGE, home.getRedirectedUrl(), "The user should be sent to the second factor");
+
+			MockHttpServletResponse response = submit(secondaryRequest(VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
+					"A successful login should return the user to the page that sent them to log in");
+		}
+
+		/**
+		 * @return a browser page load of a protected page, which is redirected rather than answered with a 401
+		 */
+		private MockHttpServletRequest pageRequest(String uri, String query) {
+			MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
+			request.setQueryString(query);
+			request.addHeader("Accept", "text/html,application/xhtml+xml,*/*;q=0.8");
+			request.setSession(httpSession);
+			return request;
+		}
+
 		private Properties twoFactorProperties() {
 			Properties properties = new Properties();
 			properties.putAll(originalProperties);

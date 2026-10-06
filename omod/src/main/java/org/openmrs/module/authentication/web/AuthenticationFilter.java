@@ -143,7 +143,11 @@ public class AuthenticationFilter implements Filter {
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
 							String successUrl = determineSuccessRedirectUrl(request, userLogin);
+							if (successUrl == null && StringUtils.isNotBlank(session.getRequestedPage())) {
+								successUrl = WebUtil.contextualizeUrl(request, session.getRequestedPage());
+							}
 							userLogin.setRedirectUrl(null);
+							session.removeRequestedPage();
 							if (successUrl != null) {
 								response.sendRedirect(successUrl);
 							}
@@ -162,6 +166,7 @@ public class AuthenticationFilter implements Filter {
 						}
 						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
+							saveRequestedPage(request, session);
 							handleAuthenticationFailure(request, response, challengeUrl);
 						}
 					}
@@ -175,6 +180,44 @@ public class AuthenticationFilter implements Filter {
 		finally {
 			UserLoginTracker.removeLoginFromThread();
 		}
+	}
+
+	/**
+	 * When an unauthenticated user requests a page, and is redirected to the challenge url, this records that page
+	 * on the session, so that the user can be returned to it once authentication succeeds.
+	 * Only browser page loads are recorded:  GET requests that accept html, and that are redirected rather than
+	 * answered with a 401.  The most recently requested page replaces any recorded earlier, except while a login is
+	 * in progress (a candidate user has been identified, and further factors are outstanding), as login pages may
+	 * themselves send the user through protected pages on the way to the next factor.
+	 * @param request the request for a protected page
+	 * @param session the authentication session
+	 */
+	protected void saveRequestedPage(HttpServletRequest request, AuthenticationSession session) {
+		if (session.getUserLogin().getUser() != null) {
+			return;
+		}
+		if (!"GET".equalsIgnoreCase(request.getMethod())) {
+			return;
+		}
+		String accept = request.getHeader("Accept");
+		if (accept == null || !accept.contains("text/html")) {
+			return;
+		}
+		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+			return;
+		}
+		String page = request.getRequestURI();
+		String contextPath = request.getContextPath();
+		if (StringUtils.isNotEmpty(contextPath) && page.startsWith(contextPath)) {
+			page = page.substring(contextPath.length());
+		}
+		if (!page.startsWith("/")) {
+			page = "/" + page;
+		}
+		if (StringUtils.isNotBlank(request.getQueryString())) {
+			page = page + "?" + request.getQueryString();
+		}
+		session.setRequestedPage(page);
 	}
 
 	/**

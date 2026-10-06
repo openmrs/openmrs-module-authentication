@@ -282,6 +282,88 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
 
+	/**
+	 * @return a request for a protected page, as an unauthenticated user would make it
+	 */
+	private MockHttpServletRequest pageRequest(String method, String uri, String query, String accept) {
+		MockHttpServletRequest pageRequest = new MockHttpServletRequest(method, uri);
+		pageRequest.setContextPath("/");
+		pageRequest.setQueryString(query);
+		pageRequest.setSession(session);
+		if (accept != null) {
+			pageRequest.addHeader("Accept", accept);
+		}
+		return pageRequest;
+	}
+
+	private static final String BROWSER_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+
+	@Test
+	public void shouldSaveRequestedPageWhenRedirectingToChallengeUrl() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", BROWSER_ACCEPT), response, chain);
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldRedirectToSavedPageAfterAuthenticationSucceeds() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", BROWSER_ACCEPT), response, chain);
+
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+		filter.doFilter(request, loginResponse, chain);
+		assertThat(loginResponse.getRedirectedUrl(), equalTo("/patientDashboard.htm?patientId=2"));
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldPreferRedirectParameterOverSavedPage() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", BROWSER_ACCEPT), response, chain);
+
+		request.addParameter("redirect", "/home.htm");
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+		filter.doFilter(request, loginResponse, chain);
+		assertThat(loginResponse.getRedirectedUrl(), equalTo("/home.htm"));
+	}
+
+	@Test
+	public void shouldReplaceSavedPageWithLaterProtectedPage() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", BROWSER_ACCEPT), response, chain);
+		filter.doFilter(pageRequest("GET", "/findPatient.htm", null, BROWSER_ACCEPT), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/findPatient.htm"));
+	}
+
+	@Test
+	public void shouldNotSaveRequestedPageForNonGetRequests() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("POST", "/patientDashboard.htm", null, BROWSER_ACCEPT), response, chain);
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSaveRequestedPageForRequestsThatDoNotAcceptHtml() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", null, "application/json"), response, chain);
+		filter.doFilter(pageRequest("GET", "/favicon.ico", null, null), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSaveRequestedPageForNonRedirectUrls() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/ws/rest/v1/patient", null, BROWSER_ACCEPT), response, chain);
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
 	@AfterEach
 	@Override
 	public void teardown() {

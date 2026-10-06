@@ -52,6 +52,7 @@ public class AuthenticationSession {
 
     public static final String AUTHENTICATION_USER_LOGIN = "__authentication_user_login";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
+    public static final String AUTHENTICATION_REQUESTED_PAGE = "__authentication_requested_page";
 
     private HttpSession session;
     private HttpServletRequest request;
@@ -285,6 +286,29 @@ public class AuthenticationSession {
      */
     public String getErrorMessage() {
         return (String) session.getAttribute(AUTHENTICATION_ERROR_MESSAGE);
+    }
+
+    /**
+     * Records the page an unauthenticated user requested before being sent to log in.  This is kept on the
+     * session rather than the UserLogin, as login pages may start a new UserLogin when they are displayed.
+     * @param requestedPage the requested page, relative to the context path
+     */
+    public void setRequestedPage(String requestedPage) {
+        session.setAttribute(AUTHENTICATION_REQUESTED_PAGE, requestedPage);
+    }
+
+    /**
+     * Removes any previously recorded requested page from the session
+     */
+    public void removeRequestedPage() {
+        session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE);
+    }
+
+    /**
+     * @return the page previously recorded as requested before login
+     */
+    public String getRequestedPage() {
+        return (String) session.getAttribute(AUTHENTICATION_REQUESTED_PAGE);
     }
 
     /**
