@@ -22,6 +22,7 @@ import org.openmrs.module.authentication.UserLoginTracker;
 import org.openmrs.util.OpenmrsConstants;
 import org.openmrs.web.WebConstants;
 import org.springframework.util.AntPathMatcher;
+import org.springframework.web.util.UriUtils;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -127,10 +128,14 @@ public class AuthenticationFilter implements Filter {
 
 					WebAuthenticationScheme webScheme = (WebAuthenticationScheme) authenticationScheme;
 
+					// A login page, as it was before getting credentials moves a multi-step login on to its next page
+					String loginPage = StringUtils.substringBefore(webScheme.getChallengeUrl(session), "?");
+					boolean loginPageRequest = WebUtil.matchesPath(request, WebUtil.contextualizeUrl(request, loginPage));
+
 					// If any credentials were passed in the request or session attempt to authentication with them
 					AuthenticationCredentials credentials = webScheme.getCredentials(session);
 					String challengeUrl = WebUtil.contextualizeUrl(request, webScheme.getChallengeUrl(session));
-					if (credentials != null || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+					if (credentials != null || loginPageRequest) {
 						saveRequestedRedirect(request, session);
 					}
 					if (credentials != null) {
@@ -188,7 +193,7 @@ public class AuthenticationFilter implements Filter {
 	 */
 	protected void saveRequestedRedirect(HttpServletRequest request, AuthenticationSession session) {
 		String redirect = getRequestedRedirectUrl(request);
-		if (StringUtils.isNotBlank(redirect) && isPathOnThisServer(redirect)) {
+		if (StringUtils.isNotBlank(redirect) && isValidReturnUrl(request, redirect)) {
 			session.setRequestedPage(redirect);
 		}
 	}
@@ -205,13 +210,8 @@ public class AuthenticationFilter implements Filter {
 		if (!"GET".equalsIgnoreCase(request.getMethod()) || !isPageNavigation(request)) {
 			return;
 		}
-		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
-			return;
-		}
 		String page = request.getRequestURI();
-		String decodedPath = request.getServletPath() + StringUtils.defaultString(request.getPathInfo());
-		boolean logout = (page + decodedPath).toLowerCase().contains("logout");
-		if (logout || !isPathOnThisServer(page)) {
+		if (!isValidReturnUrl(request, page)) {
 			return;
 		}
 		if (StringUtils.isNotBlank(request.getQueryString())) {
@@ -225,6 +225,9 @@ public class AuthenticationFilter implements Filter {
 	 * back to a request for html that isn't marked as ajax
 	 */
 	private boolean isPageNavigation(HttpServletRequest request) {
+		if (request.getHeader("Sec-Purpose") != null || request.getHeader("Purpose") != null) {
+			return false;  // A prefetch or prerender, which the user may never see
+		}
 		String fetchMode = request.getHeader("Sec-Fetch-Mode");
 		if (fetchMode != null) {
 			return "navigate".equals(fetchMode) && "document".equals(request.getHeader("Sec-Fetch-Dest"));
@@ -270,7 +273,7 @@ public class AuthenticationFilter implements Filter {
 	protected String determineSuccessRedirectUrl(HttpServletRequest request) {
 		// First check for any "redirect" or "refererURL" parameters in the request, default to context path
 		String redirect = getRequestedRedirectUrl(request);
-		if (StringUtils.isNotBlank(redirect)) {
+		if (StringUtils.isNotBlank(redirect) && isValidReturnUrl(request, redirect)) {
 			return WebUtil.contextualizeUrl(request, redirect);
 		}
 		
@@ -278,12 +281,31 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
+	 * @return true for a url that a user can be returned to after login: a path on this server, other than a logout url
+	 * or a url that isn't redirected to login (eg. REST)
+	 */
+	protected boolean isValidReturnUrl(HttpServletRequest request, String url) {
+		if (!isPathOnThisServer(url)) {
+			return false;
+		}
+		String path;
+		try {
+			path = org.springframework.util.StringUtils.cleanPath(UriUtils.decode(url.split("[?#]", 2)[0], "UTF-8"));
+		}
+		catch (Exception e) {
+			return false;
+		}
+		return !path.toLowerCase().contains("logout")
+				&& !WebUtil.pathMatchesAnyPattern(request, path, AuthenticationConfig.getNonRedirectUrls());
+	}
+
+	/**
 	 * @return false for a url that a redirect would take to another host: one with a scheme (eg. http:), or starting //
-	 * or /\ (which browsers treat as //)
+	 * or /\ (which browsers treat as //), or with whitespace or control characters (which browsers remove)
 	 */
 	protected boolean isPathOnThisServer(String url) {
 		return !url.matches("^[a-zA-Z][a-zA-Z0-9+.-]*:.*") && !url.startsWith("//") && !url.startsWith("/\\")
-				&& !url.startsWith("\\");
+				&& !url.startsWith("\\") && !url.matches("(?s).*[\\s\\p{Cntrl}].*");
 	}
 
 	/**

@@ -498,6 +498,59 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		}
 	}
 
+	@Test
+	public void shouldNotSaveRedirectThatBrowsersWouldTakeToAnotherHost() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		for (String redirect : new String[] { "/\t/evil.example.com/phish", " //evil.example.com/phish",
+				"/\n/evil.example.com/phish", "\u0001//evil.example.com/phish" }) {
+			MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", null, true);
+			loginPage.setParameter("redirect", redirect);
+			filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
+			assertThat(redirect, authenticationSession.getRequestedPage(), nullValue());
+		}
+	}
+
+	@Test
+	public void shouldNotSaveRedirectToLogoutOrNonRedirectUrls() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		for (String redirect : new String[] { "/logout", "/ms/%6Cogout", "/ws/rest/v1/session", "ws/rest/v1/patient",
+				"/%77s/rest/v1/session", "/foo/../ws/rest/v1/session" }) {
+			MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", null, true);
+			loginPage.setParameter("redirect", redirect);
+			filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
+			assertThat(redirect, authenticationSession.getRequestedPage(), nullValue());
+		}
+	}
+
+	@Test
+	public void shouldNotRedirectToLogoutRequestedWithCredentials() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		request.addParameter("redirect", "/logout");
+		filter.doFilter(request, response, chain);
+		assertThat(response.getRedirectedUrl(), nullValue());
+	}
+
+	@Test
+	public void shouldOnlyTakeRedirectFromTheLoginPage() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		MockHttpServletRequest otherWhitelisted = pageRequest("GET", "/spa/home", "redirect=/findPatient.htm", true);
+		otherWhitelisted.setParameter("redirect", "/findPatient.htm");
+		filter.doFilter(otherWhitelisted, new MockHttpServletResponse(), new MockFilterChain());
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldNotSavePagesThatBrowsersPrefetch() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		MockHttpServletRequest prefetch = pageRequest("GET", "/patientDashboard.htm", "patientId=2", true);
+		prefetch.addHeader("Sec-Purpose", "prefetch;prerender");
+		filter.doFilter(prefetch, response, chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
 	@AfterEach
 	@Override
 	public void teardown() {
