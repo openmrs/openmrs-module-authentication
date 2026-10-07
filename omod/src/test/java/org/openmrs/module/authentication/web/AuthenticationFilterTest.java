@@ -467,6 +467,37 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(authenticationSession.getRequestedPage(), nullValue());
 	}
 
+	@Test
+	public void shouldNotTakeAProtectedPagesOwnRedirectParameterAsTheLoginRedirect() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		MockHttpServletRequest page = pageRequest("GET", "/patientDashboard.htm", "refererURL=/findPatient.htm", true);
+		page.setParameter("refererURL", "/findPatient.htm");
+		filter.doFilter(page, response, chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?refererURL=/findPatient.htm"));
+	}
+
+	@Test
+	public void shouldSaveRedirectRequestedOfTheLoginPageInPlaceOfAPageSavedEarlier() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", "redirect=/findPatient.htm", true);
+		loginPage.setParameter("redirect", "/findPatient.htm");
+		filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/findPatient.htm"));
+	}
+
+	@Test
+	public void shouldNotSaveRedirectToAnotherHost() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		for (String redirect : new String[] { "//evil.example.com/phish", "/\\evil.example.com/phish",
+				"\\\\evil.example.com/phish", "https://evil.example.com/phish", "javascript:alert(1)" }) {
+			MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", null, true);
+			loginPage.setParameter("redirect", redirect);
+			filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
+			assertThat(redirect, authenticationSession.getRequestedPage(), nullValue());
+		}
+	}
+
 	@AfterEach
 	@Override
 	public void teardown() {

@@ -117,13 +117,6 @@ public class AuthenticationFilter implements Filter {
 
 			if (!session.isUserAuthenticated()) {
 
-				// Retain any requested redirect on the session, so that it survives each step of a multi-step login, and
-				// failed attempts after which login pages start a new login without it
-				String requestedRedirectUrl = getRequestedRedirectUrl(request);
-				if (StringUtils.isNotBlank(requestedRedirectUrl)) {
-					session.setRedirectUrl(requestedRedirectUrl);
-				}
-
 				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
 					AuthenticationConfig.reloadConfigFromRuntimeProperties(WebConstants.WEBAPP_NAME);
 				}
@@ -137,20 +130,22 @@ public class AuthenticationFilter implements Filter {
 					// If any credentials were passed in the request or session attempt to authentication with them
 					AuthenticationCredentials credentials = webScheme.getCredentials(session);
 					String challengeUrl = WebUtil.contextualizeUrl(request, webScheme.getChallengeUrl(session));
+					if (credentials != null || WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
+						saveRequestedRedirect(request, session);
+					}
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
 							session.authenticate(webScheme, credentials);
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
-							String successUrl = determineSuccessRedirectUrl(request, session);
+							String successUrl = determineSuccessRedirectUrl(request);
 							// A url answered with a 401 rather than a redirect on failure (eg. REST) is not redirected on success
 							String requestedPage = session.getRequestedPage();
 							if (successUrl == null && StringUtils.isNotBlank(requestedPage)
 									&& !WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 								successUrl = WebUtil.contextualizeUrl(request, requestedPage);
 							}
-							session.removeRedirectUrl();
 							session.removeRequestedPage();
 							if (successUrl != null) {
 								response.sendRedirect(successUrl);
@@ -187,6 +182,18 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
+	 * Records a redirect requested during a login (to a login page, or with credentials) as the page to return the user
+	 * to after login, in place of any page saved earlier.  Kept on the session, it survives each step of a multi-step
+	 * login, and failed attempts after which login pages start a new login without it.
+	 */
+	protected void saveRequestedRedirect(HttpServletRequest request, AuthenticationSession session) {
+		String redirect = getRequestedRedirectUrl(request);
+		if (StringUtils.isNotBlank(redirect) && isPathOnThisServer(redirect)) {
+			session.setRequestedPage(redirect);
+		}
+	}
+
+	/**
 	 * Records a page that an unauthenticated user loads in the browser, so they can be returned to it after login.
 	 * The first one is kept, as login pages send the user through protected pages themselves (eg. the home page after
 	 * a failed attempt).
@@ -204,7 +211,7 @@ public class AuthenticationFilter implements Filter {
 		String page = request.getRequestURI();
 		String decodedPath = request.getServletPath() + StringUtils.defaultString(request.getPathInfo());
 		boolean logout = (page + decodedPath).toLowerCase().contains("logout");
-		if (logout || page.startsWith("//") || page.startsWith("/\\")) {
+		if (logout || !isPathOnThisServer(page)) {
 			return;
 		}
 		if (StringUtils.isNotBlank(request.getQueryString())) {
@@ -271,18 +278,12 @@ public class AuthenticationFilter implements Filter {
 	}
 
 	/**
-	 * This returns an appropriate redirect URL following successful authentication
-	 * This first checks the request, as {@link #determineSuccessRedirectUrl(HttpServletRequest)}, followed by any
-	 * redirect url requested earlier in the login.  If neither is found, returns null
-	 * @param request the request to use to determine url redirection
-	 * @param session the authentication session
+	 * @return false for a url that a redirect would take to another host: one with a scheme (eg. http:), or starting //
+	 * or /\ (which browsers treat as //)
 	 */
-	protected String determineSuccessRedirectUrl(HttpServletRequest request, AuthenticationSession session) {
-		String redirect = determineSuccessRedirectUrl(request);
-		if (redirect == null && StringUtils.isNotBlank(session.getRedirectUrl())) {
-			redirect = WebUtil.contextualizeUrl(request, session.getRedirectUrl());
-		}
-		return redirect;
+	protected boolean isPathOnThisServer(String url) {
+		return !url.matches("^[a-zA-Z][a-zA-Z0-9+.-]*:.*") && !url.startsWith("//") && !url.startsWith("/\\")
+				&& !url.startsWith("\\");
 	}
 
 	/**
