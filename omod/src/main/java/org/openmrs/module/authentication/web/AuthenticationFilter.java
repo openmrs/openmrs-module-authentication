@@ -297,7 +297,7 @@ public class AuthenticationFilter implements Filter {
 		catch (Exception e) {
 			return false;
 		}
-		return !path.contains("..") && !path.toLowerCase().contains("logout")
+		return path != null && !path.contains("..") && !path.toLowerCase().contains("logout")
 				&& !WebUtil.pathMatchesAnyPattern(request, path, AuthenticationConfig.getNonRedirectUrls());
 	}
 
