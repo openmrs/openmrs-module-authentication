@@ -282,6 +282,191 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
 
+	/**
+	 * @return a request for a protected page, as an unauthenticated user would make it.  If navigation, it carries the
+	 * headers a browser sends when loading a page, otherwise those it sends for a background (fetch or XHR) request
+	 */
+	private MockHttpServletRequest pageRequest(String method, String uri, String query, boolean navigation) {
+		MockHttpServletRequest pageRequest = new MockHttpServletRequest(method, uri);
+		pageRequest.setContextPath("/");
+		pageRequest.setQueryString(query);
+		pageRequest.setSession(session);
+		pageRequest.addHeader("Sec-Fetch-Mode", navigation ? "navigate" : "cors");
+		pageRequest.addHeader("Sec-Fetch-Dest", navigation ? "document" : "empty");
+		return pageRequest;
+	}
+
+	/**
+	 * @return a browser page load of a protected page, in a webapp deployed at the given context path
+	 */
+	private MockHttpServletRequest pageRequestAt(String contextPath, String uri, String query) {
+		MockHttpServletRequest pageRequest = pageRequest("GET", uri, query, true);
+		pageRequest.setContextPath(contextPath);
+		return pageRequest;
+	}
+
+	@Test
+	public void shouldSaveRequestedPageWhenRedirectingToChallengeUrl() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldRedirectToSavedPageAfterAuthenticationSucceeds() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+		filter.doFilter(request, loginResponse, chain);
+		assertThat(loginResponse.getRedirectedUrl(), equalTo("/patientDashboard.htm?patientId=2"));
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldPreferRedirectParameterOverSavedPage() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+
+		request.addParameter("redirect", "/home.htm");
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+		filter.doFilter(request, loginResponse, chain);
+		assertThat(loginResponse.getRedirectedUrl(), equalTo("/home.htm"));
+	}
+
+	@Test
+	public void shouldNotReplaceSavedPageWithLaterProtectedPage() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		filter.doFilter(pageRequest("GET", "/findPatient.htm", null, true), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldNotSaveRequestedPageForNonGetRequests() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("POST", "/patientDashboard.htm", null, true), response, chain);
+		assertThat(response.getRedirectedUrl(), equalTo("/login.htm"));
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSaveRequestedPageForRequestsThatAreNotPageNavigations() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "fragment=1", false), response, chain);
+		MockHttpServletRequest image = new MockHttpServletRequest("GET", "/favicon.ico");
+		image.setContextPath("/");
+		image.setSession(session);
+		image.addHeader("Sec-Fetch-Mode", "no-cors");
+		image.addHeader("Sec-Fetch-Dest", "image");
+		filter.doFilter(image, new MockHttpServletResponse(), chain);
+		MockHttpServletRequest frame = new MockHttpServletRequest("GET", "/patientDashboard.htm");
+		frame.setContextPath("/");
+		frame.setSession(session);
+		frame.addHeader("Sec-Fetch-Mode", "navigate");
+		frame.addHeader("Sec-Fetch-Dest", "iframe");
+		filter.doFilter(frame, new MockHttpServletResponse(), chain);
+		MockHttpServletRequest withoutFetchMetadata = new MockHttpServletRequest("GET", "/patientDashboard.htm");
+		withoutFetchMetadata.setContextPath("/");
+		withoutFetchMetadata.setSession(session);
+		filter.doFilter(withoutFetchMetadata, new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSaveRequestedPageForNonRedirectUrls() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/ws/rest/v1/patient", null, true), response, chain);
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldSaveAndRedirectToRequestedPageWithContextPath() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/patientDashboard.htm?patientId=2"));
+
+		request.setContextPath("/openmrs");
+		request.addParameter("username", "admin");
+		request.addParameter("password", "adminPassword");
+		MockHttpServletResponse loginResponse = new MockHttpServletResponse();
+		filter.doFilter(request, loginResponse, chain);
+		assertThat(loginResponse.getRedirectedUrl(), equalTo("/openmrs/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldNotSaveLogoutUrls() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/ms/logout", null), response, chain);
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/logout", null), new MockHttpServletResponse(), chain);
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/appui/header/logout.action", null), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSavePathsThatWouldRedirectToAnotherHost() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequestAt("", "//evil.example.com/phish", null), response, chain);
+		filter.doFilter(pageRequestAt("", "/\\evil.example.com/phish", null), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldIgnoreSavedPageOlderThanFiveMinutes() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
+		session.setAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE_TIME,
+				System.currentTimeMillis() - 6L * 60 * 1000);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+		assertThat(session.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE), nullValue());
+
+		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/findPatient.htm", null), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/findPatient.htm"));
+	}
+
+	/**
+	 * @return a browser page load without fetch metadata, as browsers make over plain http
+	 */
+	private MockHttpServletRequest pageRequestOverHttp(String uri, String query) {
+		MockHttpServletRequest pageRequest = new MockHttpServletRequest("GET", uri);
+		pageRequest.setContextPath("/openmrs");
+		pageRequest.setQueryString(query);
+		pageRequest.setSession(session);
+		pageRequest.addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+		return pageRequest;
+	}
+
+	@Test
+	public void shouldSaveBrowserPageLoadsWithoutFetchMetadata() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequestOverHttp("/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldNotSaveAjaxRequestsWithoutFetchMetadata() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		MockHttpServletRequest ajax = pageRequestOverHttp("/openmrs/patientDashboard.htm", "fragment=1");
+		ajax.addHeader("X-Requested-With", "XMLHttpRequest");
+		filter.doFilter(ajax, response, chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
+	@Test
+	public void shouldNotSaveEncodedLogoutUrls() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		MockHttpServletRequest encodedLogout = pageRequestAt("/openmrs", "/openmrs/ms/%6Cogout", null);
+		encodedLogout.setServletPath("/ms/logout");
+		filter.doFilter(encodedLogout, response, chain);
+		assertThat(authenticationSession.getRequestedPage(), nullValue());
+	}
+
 	@AfterEach
 	@Override
 	public void teardown() {

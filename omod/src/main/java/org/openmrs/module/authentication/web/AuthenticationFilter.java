@@ -143,7 +143,14 @@ public class AuthenticationFilter implements Filter {
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
 							String successUrl = determineSuccessRedirectUrl(request, userLogin);
+							// A url answered with a 401 rather than a redirect on failure (eg. REST) is not redirected on success
+							String requestedPage = session.getRequestedPage();
+							if (successUrl == null && StringUtils.isNotBlank(requestedPage)
+									&& !WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+								successUrl = WebUtil.contextualizeUrl(request, requestedPage);
+							}
 							userLogin.setRedirectUrl(null);
+							session.removeRequestedPage();
 							if (successUrl != null) {
 								response.sendRedirect(successUrl);
 							}
@@ -162,6 +169,7 @@ public class AuthenticationFilter implements Filter {
 						}
 						else if (!WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getWhiteList())) {
 							log.trace("Authentication required: " + request.getRequestURI());
+							saveRequestedPage(request, session);
 							handleAuthenticationFailure(request, response, challengeUrl);
 						}
 					}
@@ -175,6 +183,46 @@ public class AuthenticationFilter implements Filter {
 		finally {
 			UserLoginTracker.removeLoginFromThread();
 		}
+	}
+
+	/**
+	 * Records a page that an unauthenticated user loads in the browser, so they can be returned to it after login.
+	 * The first one is kept, as login pages send the user through protected pages themselves (eg. the home page after
+	 * a failed attempt).
+	 */
+	protected void saveRequestedPage(HttpServletRequest request, AuthenticationSession session) {
+		if (StringUtils.isNotBlank(session.getRequestedPage())) {
+			return;
+		}
+		if (!"GET".equalsIgnoreCase(request.getMethod()) || !isPageNavigation(request)) {
+			return;
+		}
+		if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+			return;
+		}
+		String page = request.getRequestURI();
+		String decodedPath = request.getServletPath() + StringUtils.defaultString(request.getPathInfo());
+		boolean logout = (page + decodedPath).toLowerCase().contains("logout");
+		if (logout || page.startsWith("//") || page.startsWith("/\\")) {
+			return;
+		}
+		if (StringUtils.isNotBlank(request.getQueryString())) {
+			page = page + "?" + request.getQueryString();
+		}
+		session.setRequestedPage(page);
+	}
+
+	/**
+	 * Browsers report page loads in fetch metadata headers, but only over https and to localhost, so otherwise fall
+	 * back to a request for html that isn't marked as ajax
+	 */
+	private boolean isPageNavigation(HttpServletRequest request) {
+		String fetchMode = request.getHeader("Sec-Fetch-Mode");
+		if (fetchMode != null) {
+			return "navigate".equals(fetchMode) && "document".equals(request.getHeader("Sec-Fetch-Dest"));
+		}
+		String accept = request.getHeader("Accept");
+		return accept != null && accept.contains("text/html") && request.getHeader("X-Requested-With") == null;
 	}
 
 	/**
