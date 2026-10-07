@@ -31,6 +31,27 @@ public class WebUtil {
     }
 
     /**
+     * Checks if the given path, within this webapp, matches at least one of the given patterns.
+     *
+     * @param request the HttpServletRequest containing the context path
+     * @param path the path to check, with or without the context path
+     * @param patterns the list of URL patterns to check against
+     * @return true if the path matches at least one of the given patterns
+     */
+    public static boolean pathMatchesAnyPattern(HttpServletRequest request, String path, List<String> patterns) {
+        String pathWithContext = contextualizeUrl(request, path);
+        for (String pattern : patterns) {
+            if (pattern.startsWith("*")) {
+                pattern = "/**/" + pattern;
+            }
+            if (matcher.match(contextualizeUrl(request, pattern), pathWithContext)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Checks the request servlet path and requestURI against the given pattern.
      * 
      * @param request the HttpServletRequest to check
