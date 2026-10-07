@@ -290,12 +290,14 @@ public class AuthenticationFilter implements Filter {
 		}
 		String path;
 		try {
-			path = org.springframework.util.StringUtils.cleanPath(UriUtils.decode(url.split("[?#]", 2)[0], "UTF-8"));
+			// Without path parameters (eg. ;jsessionid=), which the server ignores in routing a request
+			String decoded = UriUtils.decode(url.split("[?#]", 2)[0], "UTF-8").replaceAll(";[^/]*", "");
+			path = org.springframework.util.StringUtils.cleanPath(decoded);
 		}
 		catch (Exception e) {
 			return false;
 		}
-		return !path.toLowerCase().contains("logout")
+		return !path.contains("..") && !path.toLowerCase().contains("logout")
 				&& !WebUtil.pathMatchesAnyPattern(request, path, AuthenticationConfig.getNonRedirectUrls());
 	}
 

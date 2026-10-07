@@ -514,7 +514,7 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void shouldNotSaveRedirectToLogoutOrNonRedirectUrls() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		for (String redirect : new String[] { "/logout", "/ms/%6Cogout", "/ws/rest/v1/session", "ws/rest/v1/patient",
-				"/%77s/rest/v1/session", "/foo/../ws/rest/v1/session" }) {
+				"/%77s/rest/v1/session", "/foo/../ws/rest/v1/session", "/ws;x/rest/v1/session", "/../ws/rest/v1/session" }) {
 			MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", null, true);
 			loginPage.setParameter("redirect", redirect);
 			filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
