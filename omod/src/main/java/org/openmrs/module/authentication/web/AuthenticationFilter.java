@@ -117,10 +117,11 @@ public class AuthenticationFilter implements Filter {
 
 			if (!session.isUserAuthenticated()) {
 
-				// Retain any requested redirect on the login, so that it survives each step of a multi-step login
+				// Retain any requested redirect on the session, so that it survives each step of a multi-step login, and
+				// failed attempts after which login pages start a new login without it
 				String requestedRedirectUrl = getRequestedRedirectUrl(request);
 				if (StringUtils.isNotBlank(requestedRedirectUrl)) {
-					userLogin.setRedirectUrl(requestedRedirectUrl);
+					session.setRedirectUrl(requestedRedirectUrl);
 				}
 
 				if (!AuthenticationConfig.isConfigurationCacheEnabled()) {
@@ -142,14 +143,14 @@ public class AuthenticationFilter implements Filter {
 							session.authenticate(webScheme, credentials);
 							session.regenerateHttpSession();  // Guard against session fixation attacks
 							session.refreshDefaultLocale(); // Refresh context locale after authentication
-							String successUrl = determineSuccessRedirectUrl(request, userLogin);
+							String successUrl = determineSuccessRedirectUrl(request, session);
 							// A url answered with a 401 rather than a redirect on failure (eg. REST) is not redirected on success
 							String requestedPage = session.getRequestedPage();
 							if (successUrl == null && StringUtils.isNotBlank(requestedPage)
 									&& !WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
 								successUrl = WebUtil.contextualizeUrl(request, requestedPage);
 							}
-							userLogin.setRedirectUrl(null);
+							session.removeRedirectUrl();
 							session.removeRequestedPage();
 							if (successUrl != null) {
 								response.sendRedirect(successUrl);
@@ -272,14 +273,14 @@ public class AuthenticationFilter implements Filter {
 	/**
 	 * This returns an appropriate redirect URL following successful authentication
 	 * This first checks the request, as {@link #determineSuccessRedirectUrl(HttpServletRequest)}, followed by any
-	 * redirect url requested in an earlier step of the given login.  If neither is found, returns null
+	 * redirect url requested earlier in the login.  If neither is found, returns null
 	 * @param request the request to use to determine url redirection
-	 * @param userLogin the login in progress
+	 * @param session the authentication session
 	 */
-	protected String determineSuccessRedirectUrl(HttpServletRequest request, UserLogin userLogin) {
+	protected String determineSuccessRedirectUrl(HttpServletRequest request, AuthenticationSession session) {
 		String redirect = determineSuccessRedirectUrl(request);
-		if (redirect == null && StringUtils.isNotBlank(userLogin.getRedirectUrl())) {
-			redirect = WebUtil.contextualizeUrl(request, userLogin.getRedirectUrl());
+		if (redirect == null && StringUtils.isNotBlank(session.getRedirectUrl())) {
+			redirect = WebUtil.contextualizeUrl(request, session.getRedirectUrl());
 		}
 		return redirect;
 	}

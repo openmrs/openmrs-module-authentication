@@ -53,6 +53,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_USER_LOGIN = "__authentication_user_login";
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
     public static final String AUTHENTICATION_REQUESTED_PAGE = "__authentication_requested_page";
+    public static final String AUTHENTICATION_REDIRECT_URL = "__authentication_redirect_url";
     public static final String AUTHENTICATION_REQUESTED_PAGE_TIME = "__authentication_requested_page_time";
     public static final long REQUESTED_PAGE_MAX_AGE_MILLIS = 5L * 60 * 1000;
 
@@ -288,6 +289,29 @@ public class AuthenticationSession {
      */
     public String getErrorMessage() {
         return (String) session.getAttribute(AUTHENTICATION_ERROR_MESSAGE);
+    }
+
+    /**
+     * Records the redirect url requested during a login, to send the user to once authentication succeeds.  This is
+     * kept on the session rather than the UserLogin, as login pages may start a new UserLogin when they are displayed.
+     * @param redirectUrl the requested redirect url
+     */
+    public void setRedirectUrl(String redirectUrl) {
+        session.setAttribute(AUTHENTICATION_REDIRECT_URL, redirectUrl);
+    }
+
+    /**
+     * Removes any previously recorded redirect url from the session
+     */
+    public void removeRedirectUrl() {
+        session.removeAttribute(AUTHENTICATION_REDIRECT_URL);
+    }
+
+    /**
+     * @return the redirect url previously requested during the login
+     */
+    public String getRedirectUrl() {
+        return (String) session.getAttribute(AUTHENTICATION_REDIRECT_URL);
     }
 
     /**

@@ -393,7 +393,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			MockHttpServletRequest primary = primaryRequest("admin", "test");
 			primary.setParameter("redirect", "/patientDashboard.htm?patientId=2");
 			submit(primary);
-			assertEquals("/patientDashboard.htm?patientId=2", userLogin().getRedirectUrl(),
+			assertEquals("/patientDashboard.htm?patientId=2", httpSession.getAttribute(AuthenticationSession.AUTHENTICATION_REDIRECT_URL),
 					"The requested page should be retained while the second factor is outstanding");
 
 			MockHttpServletResponse response = submit(secondaryRequest(VALID_CODE));
@@ -401,7 +401,7 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
 			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
 					"A successful login should return the user to the page they asked for at the start");
-			assertNull(userLogin().getRedirectUrl(), "The requested page should be cleared once used");
+			assertNull(httpSession.getAttribute(AuthenticationSession.AUTHENTICATION_REDIRECT_URL), "The requested page should be cleared once used");
 		}
 
 		/**
@@ -466,6 +466,28 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
 			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
 					"A failed attempt should not lose the page that sent the user to log in");
+		}
+
+		@Test
+		@DisplayName("should return to the requested redirect after a failed attempt and the second factor")
+		void shouldReturnToRequestedRedirectAfterFailedPrimaryFactor() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			// a login page opened with a redirect posts back to its own url, so the redirect comes with the factor
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "a_wrong_password",
+					"redirect", "/owa/myapp/index.html"));
+			// authenticationui answers a mistyped password by sending the user to the home page, from there to its
+			// login page without the redirect, which starts a new login when displayed
+			submit(pageRequest("/index.htm", null));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "test"));
+			submit(pageRequest("/index.htm", null));
+			MockHttpServletResponse response = submit(formPost(SECONDARY_LOGIN_PAGE, "code", VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/owa/myapp/index.html", response.getRedirectedUrl(),
+					"A failed attempt should not lose the redirect requested at the start of the login");
 		}
 
 		/**
