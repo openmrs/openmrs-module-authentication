@@ -187,13 +187,11 @@ public class AuthenticationFilter implements Filter {
 
 	/**
 	 * Records a page that an unauthenticated user loads in the browser, so they can be returned to it after login.
-	 * The first one is kept, and none is recorded once a login is under way, as login pages send the user through
-	 * protected pages themselves (eg. the home page after a failed attempt).
+	 * The first one is kept, as login pages send the user through protected pages themselves (eg. the home page after
+	 * a failed attempt).
 	 */
 	protected void saveRequestedPage(HttpServletRequest request, AuthenticationSession session) {
-		UserLogin userLogin = session.getUserLogin();
-		boolean loginInProgress = userLogin.getUser() != null && userLogin.getLoginDate() == null;
-		if (StringUtils.isNotBlank(session.getRequestedPage()) || loginInProgress) {
+		if (StringUtils.isNotBlank(session.getRequestedPage())) {
 			return;
 		}
 		if (!"GET".equalsIgnoreCase(request.getMethod()) || !isPageNavigation(request)) {

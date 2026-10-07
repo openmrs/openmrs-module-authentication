@@ -365,6 +365,12 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		image.addHeader("Sec-Fetch-Mode", "no-cors");
 		image.addHeader("Sec-Fetch-Dest", "image");
 		filter.doFilter(image, new MockHttpServletResponse(), chain);
+		MockHttpServletRequest frame = new MockHttpServletRequest("GET", "/patientDashboard.htm");
+		frame.setContextPath("/");
+		frame.setSession(session);
+		frame.addHeader("Sec-Fetch-Mode", "navigate");
+		frame.addHeader("Sec-Fetch-Dest", "iframe");
+		filter.doFilter(frame, new MockHttpServletResponse(), chain);
 		MockHttpServletRequest withoutFetchMetadata = new MockHttpServletRequest("GET", "/patientDashboard.htm");
 		withoutFetchMetadata.setContextPath("/");
 		withoutFetchMetadata.setSession(session);
@@ -459,15 +465,6 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 		encodedLogout.setServletPath("/ms/logout");
 		filter.doFilter(encodedLogout, response, chain);
 		assertThat(authenticationSession.getRequestedPage(), nullValue());
-	}
-
-	@Test
-	public void shouldSaveRequestedPageIfAnEarlierLoginInThisSessionCompleted() throws Exception {
-		setupTestThatInvokesAuthenticationCheck();
-		userLogin.setUser(user);
-		userLogin.loginSuccessful();
-		filter.doFilter(pageRequestAt("/openmrs", "/openmrs/patientDashboard.htm", "patientId=2"), response, chain);
-		assertThat(authenticationSession.getRequestedPage(), equalTo("/openmrs/patientDashboard.htm?patientId=2"));
 	}
 
 	@AfterEach
