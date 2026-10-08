@@ -528,18 +528,27 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 		 * factor is still needed, so the attempt can't be seen from the credentials or the url
 		 */
 		@Test
-		@DisplayName("should not replace the saved page after a primary factor sent to the session endpoint")
-		void shouldNotReplaceSavedPageAfterPrimaryFactorOnSessionEndpoint() throws Exception {
+		@DisplayName("should not replace the saved page after a failed primary factor sent to the session endpoint")
+		void shouldNotReplaceSavedPageAfterFailedPrimaryFactorOnSessionEndpoint() throws Exception {
 			applyConfig(twoFactorProperties());
 
 			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
 			submit(primaryRequest("admin", "a_wrong_password"));
 			submit(pageRequest("/index.htm", null));
+
 			assertEquals("/patientDashboard.htm?patientId=2", httpSession.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE),
 					"A failed primary factor should lock the saved page");
+		}
 
+		@Test
+		@DisplayName("should not replace the saved page after an accepted primary factor sent to the session endpoint")
+		void shouldNotReplaceSavedPageAfterAcceptedPrimaryFactorOnSessionEndpoint() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
 			submit(primaryRequest("admin", "test"));
 			submit(pageRequest("/index.htm", null));
+
 			assertEquals("/patientDashboard.htm?patientId=2", httpSession.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE),
 					"An accepted primary factor should lock the saved page while the second factor is outstanding");
 		}
