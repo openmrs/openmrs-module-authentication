@@ -483,6 +483,46 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 					"A failed attempt should not lose the page that sent the user to log in");
 		}
 
+		/**
+		 * Logging out redirects to the home page, which is saved as the user is no longer logged in, before they open
+		 * the page they want
+		 */
+		@Test
+		@DisplayName("should return to the page opened after logging out, rather than the home page logout sent them to")
+		void shouldReturnToPageOpenedAfterLogout() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/", null));
+			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "test"));
+			submit(pageRequest("/index.htm", null));
+			MockHttpServletResponse response = submit(formPost(SECONDARY_LOGIN_PAGE, "code", VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
+					"A successful login should return the user to the page they opened after logging out");
+		}
+
+		@Test
+		@DisplayName("should return to the most recent page opened, when an earlier one was abandoned before logging in")
+		void shouldReturnToMostRecentPageWhenEarlierOneWasAbandoned() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/owa/myapp/index.html", null));
+			submit(pageRequest("/", null));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "test"));
+			submit(pageRequest("/index.htm", null));
+			MockHttpServletResponse response = submit(formPost(SECONDARY_LOGIN_PAGE, "code", VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/", response.getRedirectedUrl(),
+					"A successful login should return the user to the page they opened last, not one they abandoned");
+		}
+
 		@Test
 		@DisplayName("should return to the requested redirect after a failed attempt and the second factor")
 		void shouldReturnToRequestedRedirectAfterFailedPrimaryFactor() throws Exception {

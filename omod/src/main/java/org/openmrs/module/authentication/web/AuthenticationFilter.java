@@ -138,6 +138,10 @@ public class AuthenticationFilter implements Filter {
 					if (credentials != null || loginPageRequest) {
 						saveRequestedRedirect(request, session);
 					}
+					// A failed attempt may leave no credentials (eg. a two-factor primary factor), so lock on any post
+					if (credentials != null || (loginPageRequest && "POST".equalsIgnoreCase(request.getMethod()))) {
+						session.lockRequestedPage();
+					}
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
@@ -200,11 +204,11 @@ public class AuthenticationFilter implements Filter {
 
 	/**
 	 * Records a page that an unauthenticated user loads in the browser, so they can be returned to it after login.
-	 * The first one is kept, as login pages send the user through protected pages themselves (eg. the home page after
-	 * a failed attempt).
+	 * The most recent one replaces any saved earlier, unless the user has since submitted a login attempt, as login
+	 * pages send the user through protected pages themselves (eg. the home page after a failed attempt).
 	 */
 	protected void saveRequestedPage(HttpServletRequest request, AuthenticationSession session) {
-		if (StringUtils.isNotBlank(session.getRequestedPage())) {
+		if (session.isRequestedPageLocked()) {
 			return;
 		}
 		if (!"GET".equalsIgnoreCase(request.getMethod()) || !isPageNavigation(request)) {
