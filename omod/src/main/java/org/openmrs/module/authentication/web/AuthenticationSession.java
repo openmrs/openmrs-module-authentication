@@ -54,6 +54,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_ERROR_MESSAGE = "__authentication_error_message";
     public static final String AUTHENTICATION_REQUESTED_PAGE = "__authentication_requested_page";
     public static final String AUTHENTICATION_REQUESTED_PAGE_TIME = "__authentication_requested_page_time";
+    public static final String AUTHENTICATION_REQUESTED_PAGE_LOCKED = "__authentication_requested_page_locked";
     public static final long REQUESTED_PAGE_MAX_AGE_MILLIS = 5L * 60 * 1000;
 
     private HttpSession session;
@@ -298,6 +299,25 @@ public class AuthenticationSession {
     public void setRequestedPage(String requestedPage) {
         session.setAttribute(AUTHENTICATION_REQUESTED_PAGE, requestedPage);
         session.setAttribute(AUTHENTICATION_REQUESTED_PAGE_TIME, System.currentTimeMillis());
+        session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE_LOCKED);
+    }
+
+    /**
+     * Locks the recorded requested page, if any, once the user submits a login attempt for it, so that pages that
+     * login pages send the user through (eg. the home page after a failed attempt) don't replace it
+     */
+    public void lockRequestedPage() {
+        if (getRequestedPage() != null) {
+            session.setAttribute(AUTHENTICATION_REQUESTED_PAGE_LOCKED, Boolean.TRUE);
+        }
+    }
+
+    /**
+     * @return true if a requested page is recorded, and the user has submitted a login attempt since it was recorded
+     */
+    public boolean isRequestedPageLocked() {
+        Object locked = session.getAttribute(AUTHENTICATION_REQUESTED_PAGE_LOCKED);
+        return getRequestedPage() != null && Boolean.TRUE.equals(locked);
     }
 
     /**
@@ -306,6 +326,7 @@ public class AuthenticationSession {
     public void removeRequestedPage() {
         session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE);
         session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE_TIME);
+        session.removeAttribute(AUTHENTICATION_REQUESTED_PAGE_LOCKED);
     }
 
     /**

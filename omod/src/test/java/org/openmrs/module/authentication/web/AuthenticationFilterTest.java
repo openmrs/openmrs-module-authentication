@@ -340,11 +340,77 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
-	public void shouldNotReplaceSavedPageWithLaterProtectedPage() throws Exception {
+	public void shouldReplaceSavedPageWithLaterProtectedPage() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
 		filter.doFilter(pageRequest("GET", "/findPatient.htm", null, true), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/findPatient.htm"));
+	}
+
+	/**
+	 * Logging out redirects to the home page, which is saved, as the user is no longer logged in
+	 */
+	@Test
+	public void shouldReplaceHomePageSavedAfterLogoutWithPageRequestedNext() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/", null, true), response, chain);
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), new MockHttpServletResponse(), chain);
 		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldNotReplaceSavedPageAfterFailedLoginAttempt() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		filter.doFilter(loginPost("username", "admin", "password", "wrongPassword"), new MockHttpServletResponse(), chain);
+		filter.doFilter(pageRequest("GET", "/index.htm", null, true), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	/**
+	 * A failed attempt doesn't always leave credentials (eg. a two-factor scheme's primary factor)
+	 */
+	@Test
+	public void shouldNotReplaceSavedPageAfterPostToLoginPageWithoutCredentials() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		filter.doFilter(loginPost(), new MockHttpServletResponse(), chain);
+		filter.doFilter(pageRequest("GET", "/index.htm", null, true), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	@Test
+	public void shouldReplaceLockedPageWithRedirectRequestedOfTheLoginPage() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
+		filter.doFilter(loginPost("username", "admin", "password", "wrongPassword"), new MockHttpServletResponse(), chain);
+		MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", null, true);
+		loginPage.addParameter("redirect", "/owa/myapp/index.html");
+		filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/owa/myapp/index.html"));
+		assertThat(authenticationSession.isRequestedPageLocked(), equalTo(false));
+	}
+
+	@Test
+	public void shouldNotLockWhenNoPageIsSaved() throws Exception {
+		setupTestThatInvokesAuthenticationCheck();
+		filter.doFilter(loginPost("username", "admin", "password", "wrongPassword"), response, chain);
+		filter.doFilter(pageRequest("GET", "/index.htm", null, true), new MockHttpServletResponse(), chain);
+		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+	}
+
+	/**
+	 * @return a form post to the login page, with the given parameter names and values
+	 */
+	private MockHttpServletRequest loginPost(String... namesAndValues) {
+		MockHttpServletRequest loginPost = new MockHttpServletRequest("POST", "/login.htm");
+		loginPost.setContextPath("/");
+		loginPost.setSession(session);
+		for (int i = 0; i < namesAndValues.length; i += 2) {
+			loginPost.addParameter(namesAndValues[i], namesAndValues[i + 1]);
+		}
+		return loginPost;
 	}
 
 	@Test
