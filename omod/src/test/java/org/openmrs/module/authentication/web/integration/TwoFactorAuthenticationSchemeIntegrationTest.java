@@ -523,6 +523,58 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 					"A successful login should return the user to the page they opened last, not one they abandoned");
 		}
 
+		/**
+		 * A two-factor scheme tries the primary factor itself, and returns no credentials if it fails or the second
+		 * factor is still needed, so the attempt can't be seen from the credentials or the url
+		 */
+		@Test
+		@DisplayName("should not replace the saved page after a failed primary factor sent to the session endpoint")
+		void shouldNotReplaceSavedPageAfterFailedPrimaryFactorOnSessionEndpoint() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
+			submit(primaryRequest("admin", "a_wrong_password"));
+			submit(pageRequest("/index.htm", null));
+
+			assertEquals("/patientDashboard.htm?patientId=2", httpSession.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE),
+					"A failed primary factor should lock the saved page");
+		}
+
+		@Test
+		@DisplayName("should not replace the saved page after an accepted primary factor sent to the session endpoint")
+		void shouldNotReplaceSavedPageAfterAcceptedPrimaryFactorOnSessionEndpoint() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
+			submit(primaryRequest("admin", "test"));
+			submit(pageRequest("/index.htm", null));
+
+			assertEquals("/patientDashboard.htm?patientId=2", httpSession.getAttribute(AuthenticationSession.AUTHENTICATION_REQUESTED_PAGE),
+					"An accepted primary factor should lock the saved page while the second factor is outstanding");
+		}
+
+		@Test
+		@DisplayName("should return to the saved page after a failed primary factor posted to a url other than the login page")
+		void shouldReturnToSavedPageAfterFailedPrimaryFactorPostedElsewhere() throws Exception {
+			applyConfig(twoFactorProperties());
+
+			submit(pageRequest("/patientDashboard.htm", "patientId=2"));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			// eg. legacyui's login page posts to /ms/legacyui/loginServlet
+			submit(formPost("/ms/legacyui/loginServlet", "username", "admin", "password", "a_wrong_password"));
+			submit(pageRequest("/index.htm", null));
+			httpSession.removeAttribute(AuthenticationSession.AUTHENTICATION_USER_LOGIN);
+
+			submit(formPost(PRIMARY_LOGIN_PAGE, "username", "admin", "password", "test"));
+			submit(pageRequest("/index.htm", null));
+			MockHttpServletResponse response = submit(formPost(SECONDARY_LOGIN_PAGE, "code", VALID_CODE));
+
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
+			assertEquals("/patientDashboard.htm?patientId=2", response.getRedirectedUrl(),
+					"A failed attempt should not lose the page that sent the user to log in");
+		}
+
 		@Test
 		@DisplayName("should return to the requested redirect after a failed attempt and the second factor")
 		void shouldReturnToRequestedRedirectAfterFailedPrimaryFactor() throws Exception {

@@ -138,10 +138,6 @@ public class AuthenticationFilter implements Filter {
 					if (credentials != null || loginPageRequest) {
 						saveRequestedRedirect(request, session);
 					}
-					// A failed attempt may leave no credentials (eg. a two-factor primary factor), so lock on any post
-					if (credentials != null || (loginPageRequest && "POST".equalsIgnoreCase(request.getMethod()))) {
-						session.lockRequestedPage();
-					}
 					if (credentials != null) {
 						try {
 							session.removeErrorMessage();
@@ -199,6 +195,10 @@ public class AuthenticationFilter implements Filter {
 		String redirect = getRequestedRedirectUrl(request);
 		if (StringUtils.isNotBlank(redirect) && isValidReturnUrl(request, redirect)) {
 			session.setRequestedPage(redirect);
+			// A scheme may have already attempted a login for this request (eg. a two-factor primary factor)
+			if (session.isLoginAttemptedOnRequest()) {
+				session.lockRequestedPage();
+			}
 		}
 	}
 
