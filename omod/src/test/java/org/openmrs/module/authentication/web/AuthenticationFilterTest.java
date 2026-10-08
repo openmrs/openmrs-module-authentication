@@ -362,28 +362,28 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	public void shouldNotReplaceSavedPageAfterFailedLoginAttempt() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
-		filter.doFilter(loginPost("username", "admin", "password", "wrongPassword"), new MockHttpServletResponse(), chain);
+		postToLoginPage("username", "admin", "password", "wrongPassword");
 		filter.doFilter(pageRequest("GET", "/index.htm", null, true), new MockHttpServletResponse(), chain);
 		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
 	}
 
 	/**
-	 * A failed attempt doesn't always leave credentials (eg. a two-factor scheme's primary factor)
+	 * A post to the login page that isn't a login attempt (eg. an empty form, or a change of language) doesn't lock it
 	 */
 	@Test
-	public void shouldNotReplaceSavedPageAfterPostToLoginPageWithoutCredentials() throws Exception {
+	public void shouldReplaceSavedPageAfterPostToLoginPageWithoutLoginAttempt() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
-		filter.doFilter(loginPost(), new MockHttpServletResponse(), chain);
-		filter.doFilter(pageRequest("GET", "/index.htm", null, true), new MockHttpServletResponse(), chain);
-		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
+		postToLoginPage();
+		filter.doFilter(pageRequest("GET", "/findPatient.htm", null, true), new MockHttpServletResponse(), chain);
+		assertThat(authenticationSession.getRequestedPage(), equalTo("/findPatient.htm"));
 	}
 
 	@Test
 	public void shouldReplaceLockedPageWithRedirectRequestedOfTheLoginPage() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
 		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), response, chain);
-		filter.doFilter(loginPost("username", "admin", "password", "wrongPassword"), new MockHttpServletResponse(), chain);
+		postToLoginPage("username", "admin", "password", "wrongPassword");
 		MockHttpServletRequest loginPage = pageRequest("GET", "/login.htm", null, true);
 		loginPage.addParameter("redirect", "/owa/myapp/index.html");
 		filter.doFilter(loginPage, new MockHttpServletResponse(), new MockFilterChain());
@@ -394,23 +394,26 @@ public class AuthenticationFilterTest extends BaseWebAuthenticationTest {
 	@Test
 	public void shouldNotLockWhenNoPageIsSaved() throws Exception {
 		setupTestThatInvokesAuthenticationCheck();
-		filter.doFilter(loginPost("username", "admin", "password", "wrongPassword"), response, chain);
+		postToLoginPage("username", "admin", "password", "wrongPassword");
 		filter.doFilter(pageRequest("GET", "/index.htm", null, true), new MockHttpServletResponse(), chain);
 		filter.doFilter(pageRequest("GET", "/patientDashboard.htm", "patientId=2", true), new MockHttpServletResponse(), chain);
 		assertThat(authenticationSession.getRequestedPage(), equalTo("/patientDashboard.htm?patientId=2"));
 	}
 
 	/**
-	 * @return a form post to the login page, with the given parameter names and values
+	 * Posts the given parameter names and values to the login page, as a login attempt.  This uses the request the
+	 * authentication session was created with, as schemes read credentials from it, and resets it afterwards.
 	 */
-	private MockHttpServletRequest loginPost(String... namesAndValues) {
-		MockHttpServletRequest loginPost = new MockHttpServletRequest("POST", "/login.htm");
-		loginPost.setContextPath("/");
-		loginPost.setSession(session);
+	private void postToLoginPage(String... namesAndValues) throws Exception {
+		request.setMethod("POST");
+		request.setRequestURI("/login.htm");
 		for (int i = 0; i < namesAndValues.length; i += 2) {
-			loginPost.addParameter(namesAndValues[i], namesAndValues[i + 1]);
+			request.addParameter(namesAndValues[i], namesAndValues[i + 1]);
 		}
-		return loginPost;
+		filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+		request.removeAllParameters();
+		request.clearAttributes();
+		request.setMethod("GET");
 	}
 
 	@Test

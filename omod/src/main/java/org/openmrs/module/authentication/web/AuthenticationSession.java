@@ -55,6 +55,7 @@ public class AuthenticationSession {
     public static final String AUTHENTICATION_REQUESTED_PAGE = "__authentication_requested_page";
     public static final String AUTHENTICATION_REQUESTED_PAGE_TIME = "__authentication_requested_page_time";
     public static final String AUTHENTICATION_REQUESTED_PAGE_LOCKED = "__authentication_requested_page_locked";
+    public static final String AUTHENTICATION_LOGIN_ATTEMPTED = "__authentication_login_attempted";
     public static final long REQUESTED_PAGE_MAX_AGE_MILLIS = 5L * 60 * 1000;
 
     private HttpSession session;
@@ -161,6 +162,11 @@ public class AuthenticationSession {
      */
     public Authenticated authenticate(WebAuthenticationScheme scheme, AuthenticationCredentials credentials) {
         Authenticated authenticated;
+        // Every login attempt comes through here, including each factor of a multi-factor login, whether it succeeds or not
+        if (request != null) {
+            request.setAttribute(AUTHENTICATION_LOGIN_ATTEMPTED, Boolean.TRUE);
+        }
+        lockRequestedPage();
         try {
             String schemeId = scheme.getSchemeId();
             scheme.beforeAuthentication(this);
@@ -303,7 +309,7 @@ public class AuthenticationSession {
     }
 
     /**
-     * Locks the recorded requested page, if any, once the user submits a login attempt for it, so that pages that
+     * Locks the recorded requested page, if any, once the user makes a login attempt for it, so that pages that
      * login pages send the user through (eg. the home page after a failed attempt) don't replace it
      */
     public void lockRequestedPage() {
@@ -313,11 +319,18 @@ public class AuthenticationSession {
     }
 
     /**
-     * @return true if a requested page is recorded, and the user has submitted a login attempt since it was recorded
+     * @return true if a requested page is recorded, and the user has made a login attempt since it was recorded
      */
     public boolean isRequestedPageLocked() {
         Object locked = session.getAttribute(AUTHENTICATION_REQUESTED_PAGE_LOCKED);
         return getRequestedPage() != null && Boolean.TRUE.equals(locked);
+    }
+
+    /**
+     * @return true if a login attempt was made while handling the current request
+     */
+    public boolean isLoginAttemptedOnRequest() {
+        return request != null && Boolean.TRUE.equals(request.getAttribute(AUTHENTICATION_LOGIN_ATTEMPTED));
     }
 
     /**
