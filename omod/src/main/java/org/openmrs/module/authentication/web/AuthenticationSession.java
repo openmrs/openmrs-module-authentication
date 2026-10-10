@@ -70,13 +70,7 @@ public class AuthenticationSession {
      * @param session the HttpSession to use to construct this AuthenticationSession
      */
     public AuthenticationSession(HttpSession session) {
-        this.session = session;
-        userLogin = (UserLogin) session.getAttribute(AUTHENTICATION_USER_LOGIN);
-        if (userLogin == null) {
-            userLogin = new UserLogin();
-            session.setAttribute(AUTHENTICATION_USER_LOGIN, userLogin);
-        }
-        userLogin.setHttpSessionId(session.getId());
+        this(session, null, null);
     }
 
     /**
@@ -88,16 +82,29 @@ public class AuthenticationSession {
      * @param response the HttpServletResponse to use to construct this AuthenticationSession
      */
     public AuthenticationSession(HttpServletRequest request, HttpServletResponse response) {
-        this(request.getSession());
+        this(request.getSession(), request, response);
+    }
+
+    /**
+     * Sets up the UserLogin in the given HttpSession, and records the IP address of the request, if there is one
+     */
+    private AuthenticationSession(HttpSession session, HttpServletRequest request, HttpServletResponse response) {
+        this.session = session;
         this.request = request;
         this.response = response;
+        userLogin = (UserLogin) session.getAttribute(AUTHENTICATION_USER_LOGIN);
+        if (userLogin == null) {
+            userLogin = new UserLogin();
+            session.setAttribute(AUTHENTICATION_USER_LOGIN, userLogin);
+        }
+        userLogin.setHttpSessionId(session.getId());
 
-        if (userLogin.getIpAddress() != null) {
-            if (!userLogin.getIpAddress().equals(request.getRemoteAddr())) {
+        if (request != null) {
+            if (userLogin.getIpAddress() != null && !userLogin.getIpAddress().equals(request.getRemoteAddr())) {
                 log.warn("IP Address change detected: '" + userLogin.getIpAddress() + "' -> '" + request.getRemoteAddr() + "'");
             }
+            userLogin.setIpAddress(request.getRemoteAddr());
         }
-        userLogin.setIpAddress(request.getRemoteAddr());
     }
 
     /**

@@ -100,8 +100,16 @@ public class BasicWebAuthenticationScheme extends WebAuthenticationScheme {
                 try {
                     authHeader = authHeader.substring(6); // remove the leading "Basic "
                     String decodedAuthHeader = new String(Base64.decodeBase64(authHeader), StandardCharsets.UTF_8);
-                    String[] userAndPass = decodedAuthHeader.split(":");
-                    credentials = new BasicCredentials(userAndPass[0], userAndPass[1]);
+                    // The username cannot contain a colon, but the password can (RFC 7617)
+                    String[] userAndPass = decodedAuthHeader.split(":", 2);
+                    if (userAndPass.length == 2 && StringUtils.isNotBlank(userAndPass[0])
+                            && StringUtils.isNotBlank(userAndPass[1])) {
+                        credentials = new BasicCredentials(userAndPass[0], userAndPass[1]);
+                    }
+                    else {
+                        session.setErrorMessage("authentication.error.invalidCredentials");
+                        log.warn("Authentication header does not contain a username and password");
+                    }
                 }
                 catch (Exception e) {
                     session.setErrorMessage("authentication.error.invalidCredentials");
