@@ -18,6 +18,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
@@ -71,6 +74,46 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 		response = newResponse();
 		authenticationSession = new MockAuthenticationSession(request, response);
 		return authenticationScheme.getCredentials(authenticationSession);
+	}
+
+	protected AuthenticationCredentials getCredentialsFromHeader(String headerValue) {
+		request = newPostRequest("192.168.1.1", "/login");
+		request.addHeader(BasicWebAuthenticationScheme.AUTHORIZATION_HEADER, headerValue);
+		request.setSession(session);
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
+		return authenticationScheme.getCredentials(authenticationSession);
+	}
+
+	protected String basicHeader(String token) {
+		return "Basic " + Base64.getEncoder().encodeToString(token.getBytes(StandardCharsets.UTF_8));
+	}
+
+	@Test
+	public void shouldGetCredentialsFromBasicAuthorizationHeader() {
+		AuthenticationCredentials credentials = getCredentialsFromHeader(basicHeader("admin:adminPassword"));
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("admin"));
+		assertThat(((BasicWebAuthenticationScheme.BasicCredentials) credentials).getPassword(), equalTo("adminPassword"));
+		assertThat(authenticationSession.getErrorMessage(), nullValue());
+	}
+
+	@Test
+	public void shouldKeepColonsInThePasswordOfABasicAuthorizationHeader() {
+		// RFC 7617: the user-id cannot contain a colon, so only the first colon separates it from the password
+		AuthenticationCredentials credentials = getCredentialsFromHeader(basicHeader("admin:admin:Pass:"));
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("admin"));
+		assertThat(((BasicWebAuthenticationScheme.BasicCredentials) credentials).getPassword(), equalTo("admin:Pass:"));
+	}
+
+	@Test
+	public void shouldRejectABasicAuthorizationHeaderWithoutAUsernameAndPassword() {
+		for (String token : new String[] { "admin", "admin:", ":adminPassword", ":", "" }) {
+			session.removeAttribute(AuthenticationSession.AUTHENTICATION_ERROR_MESSAGE);
+			assertThat(token, getCredentialsFromHeader(basicHeader(token)), nullValue());
+			assertThat(token, authenticationSession.getErrorMessage(), equalTo("authentication.error.invalidCredentials"));
+		}
 	}
 
 	@Test
