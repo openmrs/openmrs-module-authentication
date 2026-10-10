@@ -9,7 +9,7 @@
  */
 package org.openmrs.module.authentication.web.mocks;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.openmrs.User;
 import org.openmrs.module.authentication.web.TotpAuthenticationScheme;
 
