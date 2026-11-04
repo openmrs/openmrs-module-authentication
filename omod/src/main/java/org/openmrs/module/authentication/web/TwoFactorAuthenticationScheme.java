@@ -337,6 +337,21 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	public void setSecondaryAuthenticationSchemeIdsForUser(User user, List<String> schemeIds) {
 		Context.getUserService().setUserProperty(user, USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
 	}
+	
+	public void removeSecondaryAuthenticationSchemeForUser(User user, String schemeId) {
+		if (user == null) {
+			return;
+		}
+		
+		List<String> schemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
+		if (schemeIds.remove(schemeId)) {
+			if (schemeIds.isEmpty()) {
+				Context.getUserService().removeUserProperty(user, USER_PROPERTY_SECONDARY_TYPE);
+			} else {
+				Context.getUserService().setUserProperty(user, USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
+			}
+		}
+	}
 
 	/**
 	 * @return the primary authentication scheme options configured

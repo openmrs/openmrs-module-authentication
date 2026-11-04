@@ -44,6 +44,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Properties;
@@ -106,6 +107,51 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			User savedUser = Context.getUserService().getUser(1);
 			String savedProperty = savedUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE);
 			assertEquals("totp", savedProperty);
+		}
+	}
+	
+	@Nested
+	@DisplayName("removeSecondaryAuthenticationSchemeForUser")
+	class RemoveSecondaryAuthenticationSchemeForUser {
+		
+		@Test
+		@DisplayName("should remove the scheme from the database when it is the only scheme")
+		void shouldRemoveSchemeFromDatabaseWhenItIsTheOnlyOneScheme() {
+			User user = Context.getUserService().getUser(1);
+			user.getUserProperties().size();
+			Context.evictFromSession(user);
+			
+			scheme.addSecondaryAuthenticationSchemeForUser(user, "totp");
+			Context.flushSession();
+			Context.clearSession();
+			
+			User userWithScheme = Context.getUserService().getUser(1);
+			scheme.removeSecondaryAuthenticationSchemeForUser(userWithScheme, "totp");
+			Context.flushSession();
+			Context.clearSession();
+			
+			User savedUser = Context.getUserService().getUser(1);
+			assertFalse(savedUser.getUserProperties().containsKey(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE));
+		}
+		
+		@Test
+		@DisplayName("should keep remaining schemes in the database when multiple schemes exist")
+		void shouldKeepRemainingSchemesInDatabaseWhenMultipleSchemesExist() {
+			User user = Context.getUserService().getUser(1);
+			user.getUserProperties().size();
+			Context.evictFromSession(user);
+			
+			scheme.setSecondaryAuthenticationSchemeIdsForUser(user, Arrays.asList("totp", "email"));
+			Context.flushSession();
+			Context.clearSession();
+			
+			User userWithSchemes = Context.getUserService().getUser(1);
+			scheme.removeSecondaryAuthenticationSchemeForUser(userWithSchemes, "totp");
+			Context.flushSession();
+			Context.clearSession();
+			
+			User savedUser = Context.getUserService().getUser(1);
+			assertEquals("email", savedUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE));
 		}
 	}
 
@@ -595,6 +641,20 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			assertTrue(Context.isAuthenticated(), "User should be fully authenticated");
 			assertEquals("/owa/myapp/index.html", response.getRedirectedUrl(),
 					"A failed attempt should not lose the redirect requested at the start of the login");
+		}
+		
+		@Test
+		@DisplayName("should authenticate on primary factor alone after secondary scheme removed")
+		void shouldAuthenticateOnPrimaryFactorAloneAfterSecondarySchemeRemoved() throws Exception {
+			scheme.removeSecondaryAuthenticationSchemeForUser(user, "totp");
+			Context.flushSession();
+			Context.clearSession();
+			
+			applyConfig(twoFactorProperties());
+			
+			submit(primaryRequest("admin", "test"));
+			assertTrue(Context.isAuthenticated(), "User should be fully authenticated with only username and password");
+			assertEquals(user, Context.getAuthenticatedUser());
 		}
 
 		/**

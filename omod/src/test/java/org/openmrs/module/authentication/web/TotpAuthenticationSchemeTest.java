@@ -58,6 +58,10 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 						String k = (String) args[1];
 						String v = (String) args[2];
 						u.setUserProperty(k, v);
+					} else if ("removeUserProperty".equals(method.getName())) {
+						User u = (User) args[0];
+						String k = (String) args[1];
+						u.removeUserProperty(k);
 					}
 					return null;
 				}
@@ -161,8 +165,8 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	
 	@Test
 	public void shouldVerifyEnrollmentSuccessfully() {
-		AuthenticationConfig.setProperty("authentication.scheme", "twofactor");
-		AuthenticationConfig.setProperty("authentication.scheme.twofactor.type",
+		AuthenticationConfig.setProperty("authentication.scheme", "twoFactor");
+		AuthenticationConfig.setProperty("authentication.scheme.twoFactor.type",
 				MockTwoFactorAuthenticationScheme.class.getName());
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		
@@ -325,5 +329,78 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	public void shouldAcceptVerificationCodeContainingSpaces() {
 		boolean isValid = authenticationScheme.verifyCode("123456", " 123 456 ");
 		assertThat(isValid, equalTo(true));
+	}
+	
+	@Test
+	public void shouldRemoveEnrollmentWhenTwoFactorAuthenticated() throws EnrollmentException {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		candidateUser.setUserProperty(authenticationScheme.getSecretUserPropertyName(), "encrypted_secret");
+		
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET, "test_secret");
+		request.getSession().setAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME, System.currentTimeMillis());
+		
+		authenticationScheme.removeEnrollment(request);
+		
+		assertThat(candidateUser.getUserProperties().containsKey(authenticationScheme.getSecretUserPropertyName()), equalTo(false));
+		assertThat(request.getSession().getAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_SECRET), nullValue());
+		assertThat(request.getSession().getAttribute(TotpAuthenticationScheme.PENDING_ENROLLMENT_TIME), nullValue());
+	}
+	
+	@Test
+	public void shouldDeleteEnrollmentAndClearRememberMeTokens() {
+		AuthenticationConfig.setProperty("authentication.scheme", "twoFactor");
+		AuthenticationConfig.setProperty("authentication.scheme.twoFactor.type", MockTwoFactorAuthenticationScheme.class.getName());
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		
+		Context.setUserContext(new MockUserContext(candidateUser));
+		candidateUser.setUserProperty(authenticationScheme.getSecretUserPropertyName(), "encrypted_secret");
+		candidateUser.setUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE, "totp");
+		candidateUser.setUserProperty("authentication.twoFactor.rememberMe.series123", "hash:123456");
+		
+		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
+		SimpleObject result = controller.deleteEnrollment("totp", request);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.get("success"), equalTo(true));
+		assertThat(candidateUser.getUserProperties().containsKey(authenticationScheme.getSecretUserPropertyName()), equalTo(false));
+		assertThat(candidateUser.getUserProperties().containsKey(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE), equalTo(false));
+		assertThat(candidateUser.getUserProperties().containsKey("authentication.twoFactor.rememberMe.series123"), equalTo(false));
+	}
+	
+	@Test
+	public void shouldThrowExceptionUnauthenticatedInRemoveEnrollment() {
+		Context.setUserContext(new UserContext(null));
+		
+		assertThrows(APIAuthenticationException.class, () -> {
+			authenticationScheme.removeEnrollment(request);
+		});
+	}
+	
+	@Test
+	public void shouldThrowExceptionIfNoSecretConfiguredInRemoveEnrollment() {
+		Context.setUserContext(new MockUserContext(candidateUser));
+		
+		assertThrows(EnrollmentException.class, () -> {
+			authenticationScheme.removeEnrollment(request);
+		});
+	}
+	
+	@Test
+	public void shouldKeepRemainingSecondarySchemesWhenOneIsDeleted() {
+		AuthenticationConfig.setProperty("authentication.scheme", "twoFactor");
+		AuthenticationConfig.setProperty("authentication.scheme.twoFactor.type", MockTwoFactorAuthenticationScheme.class.getName());
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		
+		Context.setUserContext(new MockUserContext(candidateUser));
+		candidateUser.setUserProperty(authenticationScheme.getSecretUserPropertyName(), "encrypted_secret");
+		candidateUser.setUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE, "totp,email");
+		
+		TwoFactorEnrollmentController controller = new TwoFactorEnrollmentController();
+		SimpleObject result = controller.deleteEnrollment("totp", request);
+		
+		assertThat(result, notNullValue());
+		assertThat(result.get("success"), equalTo(true));
+		assertThat(candidateUser.getUserProperties().containsKey(authenticationScheme.getSecretUserPropertyName()), equalTo(false));
+		assertThat(candidateUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE), equalTo("email"));
 	}
 }

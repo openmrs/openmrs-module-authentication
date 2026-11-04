@@ -43,4 +43,12 @@ public interface EnrollableAuthenticationScheme {
 	 * @throws EnrollmentException if validation fails (e.g., expired session or incorrect code)
 	 */
 	void verifyEnrollment(Map<String, Object> payload, HttpServletRequest request) throws EnrollmentException;
+	
+	/**
+	 * Removes the enrolled authentication scheme credentials and configurations from the user.
+	 *
+	 * @param request the current HTTP request
+	 * @throws EnrollmentException if the enrollment cannot be removed.
+	 */
+	void removeEnrollment(HttpServletRequest request) throws EnrollmentException;
 }
