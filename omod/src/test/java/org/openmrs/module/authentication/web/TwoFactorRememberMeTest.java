@@ -395,4 +395,22 @@ public class TwoFactorRememberMeTest extends BaseWebAuthenticationTest {
 				.filter(k -> k.startsWith("authentication.2fa.rememberMe.")).count();
 		assertThat(count, equalTo(2L));
 	}
+	
+	@Test
+	public void shouldClearAllRememberMeTokens() {
+		primary("tester", "primaryPw", null);
+		AuthenticationCredentials creds1 = secondary("tester", "secondaryPw", "true");
+		authenticationSession.authenticate(authenticationScheme, creds1);
+		
+		newHttpSession();
+		primary("tester", "primaryPw", null);
+		AuthenticationCredentials creds2 = secondary("tester", "secondaryPw", "true");
+		authenticationSession.authenticate(authenticationScheme, creds2);
+		
+		User user = userLogin.getUser();
+		assertThat(user.getUserProperties().keySet().stream().anyMatch(k -> k.startsWith("authentication.2fa.rememberMe.")), equalTo(true));
+		
+		authenticationScheme.clearAllRememberMeTokens(user);
+		assertThat(user.getUserProperties().keySet().stream().anyMatch(k -> k.startsWith("authentication.2fa.rememberMe.")), equalTo(false));
+	}
 }

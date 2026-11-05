@@ -10,14 +10,18 @@
 package org.openmrs.module.authentication.web.integration;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.openmrs.User;
 import org.openmrs.api.context.Context;
+import org.openmrs.module.Module;
+import org.openmrs.module.ModuleFactory;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.module.authentication.AuthenticationEvent;
+import org.openmrs.module.authentication.AuthenticationModuleActivator;
 import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.module.authentication.web.AuthenticationFilter;
 import org.openmrs.module.authentication.web.AuthenticationSession;
@@ -43,6 +47,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -60,6 +65,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebContextSensitiveTest {
 
 	private TwoFactorAuthenticationScheme scheme;
+	
+	@BeforeAll
+	static void initDaemonToken() throws Exception {
+		Module module = new Module("authentication");
+		module.setModuleId("authentication");
+		module.setModuleActivator(new AuthenticationModuleActivator());
+		Method passDaemonToken = ModuleFactory.class.getDeclaredMethod("passDaemonToken", Module.class);
+		passDaemonToken.setAccessible(true);
+		passDaemonToken.invoke(null, module);
+	}
 
 	@BeforeEach
 	void setUp() {
@@ -152,6 +167,37 @@ public class TwoFactorAuthenticationSchemeIntegrationTest extends BaseModuleWebC
 			
 			User savedUser = Context.getUserService().getUser(1);
 			assertEquals("email", savedUser.getUserProperty(TwoFactorAuthenticationScheme.USER_PROPERTY_SECONDARY_TYPE));
+		}
+	}
+	
+	@Nested
+	@DisplayName("clearAllRememberMeTokens")
+	class ClearAllRememberMeTokens {
+		
+		@Test
+		@DisplayName("should clear remember-me tokens issued after session login from database")
+		void shouldClearRememberMeTokensIssuedAfterSessionLogin() throws Exception {
+			scheme.configure("2fa", new Properties());
+			
+			User sessionUser = Context.getUserService().getUser(1);
+			sessionUser.getUserProperties().size();
+			Context.evictFromSession(sessionUser);
+			
+			User separateUserCopy = Context.getUserService().getUser(1);
+			String tokenKey = "authentication.2fa.rememberMe.series123";
+			Context.getUserService().setUserProperty(separateUserCopy, tokenKey, "tokenHash");
+			Context.flushSession();
+			Context.clearSession();
+			getConnection().commit();
+			
+			assertFalse(sessionUser.getUserProperties().containsKey(tokenKey));
+			
+			scheme.clearAllRememberMeTokens(sessionUser);
+			Context.flushSession();
+			Context.clearSession();
+			
+			User freshUser = Context.getUserService().getUser(1);
+			assertFalse(freshUser.getUserProperties().containsKey(tokenKey));
 		}
 	}
 

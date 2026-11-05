@@ -165,8 +165,8 @@ public class TotpAuthenticationSchemeTest extends BaseWebAuthenticationTest {
 	
 	@Test
 	public void shouldVerifyEnrollmentSuccessfully() {
-		AuthenticationConfig.setProperty("authentication.scheme", "twoFactor");
-		AuthenticationConfig.setProperty("authentication.scheme.twoFactor.type",
+		AuthenticationConfig.setProperty("authentication.scheme", "twofactor");
+		AuthenticationConfig.setProperty("authentication.scheme.twofactor.type",
 				MockTwoFactorAuthenticationScheme.class.getName());
 		setRuntimeProperties(AuthenticationConfig.getConfig());
 		
