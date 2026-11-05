@@ -337,6 +337,21 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 	public void setSecondaryAuthenticationSchemeIdsForUser(User user, List<String> schemeIds) {
 		Context.getUserService().setUserProperty(user, USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
 	}
+	
+	public void removeSecondaryAuthenticationSchemeForUser(User user, String schemeId) {
+		if (user == null) {
+			return;
+		}
+		
+		List<String> schemeIds = getSecondaryAuthenticationSchemeIdsForUser(user);
+		if (schemeIds.remove(schemeId)) {
+			if (schemeIds.isEmpty()) {
+				Context.getUserService().removeUserProperty(user, USER_PROPERTY_SECONDARY_TYPE);
+			} else {
+				Context.getUserService().setUserProperty(user, USER_PROPERTY_SECONDARY_TYPE, String.join(",", schemeIds));
+			}
+		}
+	}
 
 	/**
 	 * @return the primary authentication scheme options configured
@@ -603,19 +618,33 @@ public class TwoFactorAuthenticationScheme extends WebAuthenticationScheme {
 		if (user == null) {
 			return;
 		}
-		String prefix = getRememberMeUserPropertyPrefix();
-		List<String> toRemove = new ArrayList<>();
-		Map<String, String> userProperties = user.getUserProperties();
-		if (userProperties != null) {
-			for (String key : userProperties.keySet()) {
-				if (key != null && key.startsWith(prefix)) {
-					toRemove.add(key.substring(prefix.length()));
-				}
-			}
-		}
-		for (String seriesId : toRemove) {
+		for (String seriesId : findRememberMeSeriesIds(user)) {
 			removeRememberMeToken(user, seriesId);
 		}
+		String prefix = getRememberMeUserPropertyPrefix();
+		Map<String, String> userProperties = user.getUserProperties();
+		if (userProperties != null) {
+			userProperties.keySet().removeIf(key -> key != null && key.startsWith(prefix));
+		}
+	}
+	
+	/**
+	 * @return the series ids of the user's remember-me entries as stored now, which the given User may predate
+	 */
+	protected List<String> findRememberMeSeriesIds(User user) {
+		String prefix = getRememberMeUserPropertyPrefix();
+		List<String> seriesIds = new ArrayList<>();
+		Daemon.runInDaemonThreadAndWait(() -> {
+			User currentUser = Context.getUserService().getUser(user.getUserId());
+			if (currentUser != null && currentUser.getUserProperties() != null) {
+				for (String key : currentUser.getUserProperties().keySet()) {
+					if (key != null && key.startsWith(prefix)) {
+						seriesIds.add(key.substring(prefix.length()));
+					}
+				}
+			}
+		}, daemonToken);
+		return seriesIds;
 	}
 
 	/**

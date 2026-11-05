@@ -12,6 +12,9 @@ package org.openmrs.module.authentication.web.mocks;
 import org.openmrs.User;
 import org.openmrs.module.authentication.web.TwoFactorAuthenticationScheme;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Test double that bypasses Context-backed persistence of remember-me tokens.  In production the scheme
  * persists via {@code Context.getUserService().setUserProperty(...)}; tests exercise the in-memory User only.
@@ -26,5 +29,19 @@ public class MockTwoFactorAuthenticationScheme extends TwoFactorAuthenticationSc
     @Override
     protected void removeRememberMeToken(User user, String seriesId) {
         user.removeUserProperty(getRememberMeUserPropertyName(seriesId));
+    }
+    
+    @Override
+    protected List<String> findRememberMeSeriesIds(User user) {
+        List<String> seriesIds = new ArrayList<String>();
+        String prefix = getRememberMeUserPropertyPrefix();
+        if (user != null && user.getUserProperties() != null) {
+            for (String key : user.getUserProperties().keySet()) {
+                if (key != null && key.startsWith(prefix)) {
+                    seriesIds.add(key.substring(prefix.length()));
+                }
+            }
+        }
+        return seriesIds;
     }
 }

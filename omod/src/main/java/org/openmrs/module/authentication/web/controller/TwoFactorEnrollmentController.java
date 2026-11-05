@@ -85,6 +85,32 @@ public class TwoFactorEnrollmentController extends BaseRestController {
 		return response;
 	}
 	
+	@RequestMapping(method = RequestMethod.DELETE, value = "/enrollment")
+	@ResponseBody
+	public SimpleObject deleteEnrollment(@PathVariable("schemeId") String schemeId, HttpServletRequest request) {
+		EnrollableAuthenticationScheme enrollableScheme = getEnrollableAuthenticationScheme(schemeId);
+		AuthenticationScheme configuredAuthScheme = AuthenticationConfig.getAuthenticationScheme();
+		
+		if (!(configuredAuthScheme instanceof TwoFactorAuthenticationScheme)) {
+			throw new IllegalRequestException("authentication.error.twoFactorNotConfigured");
+		}
+		TwoFactorAuthenticationScheme twoFactorAuthScheme = (TwoFactorAuthenticationScheme) configuredAuthScheme;
+		
+		try {
+			enrollableScheme.removeEnrollment(request);
+		} catch (EnrollmentException e) {
+			throw new IllegalRequestException(e.getMessage());
+		}
+		
+		User user = Context.getAuthenticatedUser();
+		twoFactorAuthScheme.removeSecondaryAuthenticationSchemeForUser(user, schemeId);
+		twoFactorAuthScheme.clearAllRememberMeTokens(user);
+		
+		SimpleObject response = new SimpleObject();
+		response.put("success", true);
+		return response;
+	}
+	
 	private EnrollableAuthenticationScheme getEnrollableAuthenticationScheme(String schemeId) {
 		AuthenticationScheme authScheme = AuthenticationConfig.getAuthenticationScheme(schemeId);
 		

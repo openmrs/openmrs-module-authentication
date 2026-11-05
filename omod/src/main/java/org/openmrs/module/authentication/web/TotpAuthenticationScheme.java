@@ -38,6 +38,7 @@ import org.openmrs.module.authentication.UserLogin;
 import org.openmrs.util.Security;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -315,5 +316,35 @@ public class TotpAuthenticationScheme extends WebAuthenticationScheme implements
 	
 	protected void saveSecretToUserProperties(User user, String encryptedSecret) {
 		Context.getUserService().setUserProperty(user, getSecretUserPropertyName(), encryptedSecret);
+	}
+	
+	/**
+	 * Removes the user's configured TOTP secret by un-enrolling them from TOTP two-factor authentication.
+	 * Also, removes any in-progress pending enrollment session attributes.
+	 */
+	@Override
+	public void removeEnrollment(HttpServletRequest request) throws EnrollmentException {
+		User user = Context.getAuthenticatedUser();
+		if (user == null) {
+			throw new APIAuthenticationException("authentication.error.mustBeAuthenticatedToEnroll");
+		}
+		
+		if (isUserConfigurationRequired(user)) {
+			throw new EnrollmentException("authentication.error.noSecretConfiguredForUser");
+		}
+		
+		removeSecretFromUserProperties(user);
+		
+		if (request != null) {
+			HttpSession session = request.getSession(false);
+			if (session != null) {
+				session.removeAttribute(PENDING_ENROLLMENT_SECRET);
+				session.removeAttribute(PENDING_ENROLLMENT_TIME);
+			}
+		}
+	}
+	
+	protected void removeSecretFromUserProperties(User user) {
+		Context.getUserService().removeUserProperty(user, getSecretUserPropertyName());
 	}
 }
