@@ -1,5 +1,6 @@
 package org.openmrs.module.authentication.web;
 
+import org.apache.commons.codec.binary.Base64;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,8 @@ import org.openmrs.module.authentication.web.mocks.MockBasicWebAuthenticationSch
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -122,5 +125,64 @@ public class BasicWebAuthenticationSchemeTest extends BaseWebAuthenticationTest 
 	public void shouldFailToAuthenticateIfCredentialsAreIncorrectType() {
 		TestAuthenticationCredentials creds = new TestAuthenticationCredentials("test", new User());
 		assertThrows(ContextAuthenticationException.class, () -> authenticationScheme.authenticate(creds));
+	}
+
+	@Test
+	public void shouldReadCredentialsFromBasicAuthorizationHeader() {
+		AuthenticationCredentials credentials = getCredentialsFromHeader(basic("admin:adminPassword"));
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("admin"));
+		assertThat(credentials.getAuthenticationScheme(), equalTo("basic"));
+	}
+
+	@Test
+	public void shouldAcceptLowercaseBasicScheme() {
+		AuthenticationCredentials credentials = getCredentialsFromHeader("basic " + encoded("admin:adminPassword"));
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("admin"));
+	}
+
+	@Test
+	public void shouldAcceptMixedCaseBasicScheme() {
+		AuthenticationCredentials credentials = getCredentialsFromHeader("BaSiC " + encoded("admin:adminPassword"));
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("admin"));
+	}
+
+	@Test
+	public void shouldPreserveColonsInPassword() {
+		AuthenticationCredentials credentials = getCredentialsFromHeader(basic("admin:pa:ss:word"));
+		assertThat(credentials, notNullValue());
+		assertThat(credentials.getClientName(), equalTo("admin"));
+		assertThat(((BasicWebAuthenticationScheme.BasicCredentials) credentials).getPassword(), equalTo("pa:ss:word"));
+	}
+
+	@Test
+	public void shouldIgnoreNonBasicAuthorizationScheme() {
+		assertThat(getCredentialsFromHeader("Bearer someOpaqueToken"), nullValue());
+	}
+
+	@Test
+	public void shouldReturnNullForMalformedBasicHeaderWithoutColon() {
+		assertThat(getCredentialsFromHeader("Basic " + encoded("nocolonhere")), nullValue());
+	}
+
+	protected AuthenticationCredentials getCredentialsFromHeader(String authHeader) {
+		request = newPostRequest("192.168.1.1", "/login");
+		if (authHeader != null) {
+			request.addHeader("Authorization", authHeader);
+		}
+		request.setSession(session);
+		response = newResponse();
+		authenticationSession = new MockAuthenticationSession(request, response);
+		return authenticationScheme.getCredentials(authenticationSession);
+	}
+
+	private static String basic(String userAndPass) {
+		return "Basic " + encoded(userAndPass);
+	}
+
+	private static String encoded(String userAndPass) {
+		return new String(Base64.encodeBase64(userAndPass.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 	}
 }
