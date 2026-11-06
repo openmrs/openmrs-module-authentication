@@ -158,7 +158,7 @@ public class AuthenticationFilter implements Filter {
 						}
 						// If authentication fails, redirect back to re-initiate auth
 						catch (Exception e) {
-							log.debug("Authentication failed: " + request.getRequestURI());
+							log.warn("Authentication failed: " + request.getRequestURI());
 							handleAuthenticationFailure(request, response, challengeUrl);
 						}
 					}
