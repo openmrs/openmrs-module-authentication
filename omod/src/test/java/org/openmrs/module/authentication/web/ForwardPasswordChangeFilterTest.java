@@ -22,6 +22,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
+import javax.servlet.http.HttpServletResponse;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -134,6 +136,37 @@ public class ForwardPasswordChangeFilterTest extends BaseWebAuthenticationTest {
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(false));
 		assertThat(response.getRedirectedUrl(), equalTo(null));
+	}
+
+	@Test
+	public void shouldRedirectForPageRequestOutsideNonRedirectUrlsPattern() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		user.setUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, "true");
+		request.setMethod("GET");
+		request.setRequestURI("/patientDashboard.htm");
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getRedirectedUrl(), equalTo("/passwordChange.htm"));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_MOVED_TEMPORARILY));
+	}
+
+	@Test
+	public void shouldReturnUnauthorizedWithLocationHeaderForRequestInNonRedirectUrlsPattern() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		user.setUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, "true");
+		request.setMethod("GET");
+		request.setRequestURI("/ws/rest/v1/user");
+		filter.doFilter(request, response, chain);
+		assertThat(response.getHeader("Location"), equalTo("/passwordChange.htm"));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
 	}
 
 	@Test

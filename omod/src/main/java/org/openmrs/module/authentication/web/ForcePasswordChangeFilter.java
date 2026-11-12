@@ -60,7 +60,12 @@ public class ForcePasswordChangeFilter implements Filter {
 			if (user != null) {
 				if (Boolean.parseBoolean(user.getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD))) {
 					String redirectUrl = WebUtil.contextualizeUrl(request, changePasswordUrl);
-					response.sendRedirect(redirectUrl);
+					if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+						response.setHeader("Location", redirectUrl);
+						response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+					} else {
+						response.sendRedirect(redirectUrl);
+					}
 				}
 			}
 		}
