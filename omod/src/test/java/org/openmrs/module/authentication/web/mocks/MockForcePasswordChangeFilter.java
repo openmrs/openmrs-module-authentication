@@ -23,6 +23,8 @@ public class MockForcePasswordChangeFilter extends ForcePasswordChangeFilter {
 
 	private User authenticatedUser;
 
+	private boolean forcedPasswordChangeCompleted = false;
+
 	public MockForcePasswordChangeFilter(FilterConfig filterConfig) {
 		super();
 		init(filterConfig);
@@ -35,5 +37,14 @@ public class MockForcePasswordChangeFilter extends ForcePasswordChangeFilter {
 
 	public void setAuthenticatedUser(User authenticatedUser) {
 		this.authenticatedUser = authenticatedUser;
+	}
+
+	@Override
+	protected void completeForcedPasswordChange(HttpServletRequest request, HttpServletResponse response, User user) {
+		forcedPasswordChangeCompleted = true;
+	}
+
+	public boolean isForcedPasswordChangeCompleted() {
+		return forcedPasswordChangeCompleted;
 	}
 }

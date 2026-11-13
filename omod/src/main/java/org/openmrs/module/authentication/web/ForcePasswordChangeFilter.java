@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.openmrs.User;
+import org.openmrs.api.context.Context;
 import org.openmrs.module.authentication.AuthenticationConfig;
 import org.openmrs.util.OpenmrsConstants;
 
@@ -26,6 +27,7 @@ public class ForcePasswordChangeFilter implements Filter {
 
 	private boolean supportForcedPasswordChange;
 	private List<String> whiteList;
+	private List<String> completionUrls;
 	String changePasswordUrl;
 
 	private final Log log = LogFactory.getLog(getClass());
@@ -40,6 +42,7 @@ public class ForcePasswordChangeFilter implements Filter {
 				supportForcedPasswordChange = false;
 			}
 			whiteList = AuthenticationConfig.getPasswordChangeWhiteList();
+			completionUrls = AuthenticationConfig.getPasswordChangeCompletionUrls();
 		}
 	}
 
@@ -48,6 +51,7 @@ public class ForcePasswordChangeFilter implements Filter {
 		supportForcedPasswordChange = false;
 		changePasswordUrl = null;
 		whiteList = null;
+		completionUrls = null;
 	}
 
 	@Override
@@ -55,17 +59,26 @@ public class ForcePasswordChangeFilter implements Filter {
 		HttpServletRequest request = (HttpServletRequest) servletRequest;
 		HttpServletResponse response = (HttpServletResponse) servletResponse;
 
-		if (supportForcedPasswordChange && !WebUtil.urlMatchesAnyPattern(request, whiteList)) {
+		if (supportForcedPasswordChange) {
 			User user = getAuthenticatedUser(request, response);
-			if (user != null) {
-				if (Boolean.parseBoolean(user.getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD))) {
-					String redirectUrl = WebUtil.contextualizeUrl(request, changePasswordUrl);
-					if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
-						response.setHeader("Location", redirectUrl);
-						response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-					} else {
-						response.sendRedirect(redirectUrl);
-					}
+			boolean pendingPasswordChange = user != null
+					&& Boolean.parseBoolean(user.getUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD));
+
+			if (pendingPasswordChange && WebUtil.urlMatchesAnyPattern(request, completionUrls)) {
+				chain.doFilter(request, response);
+				if (isSuccessful(response)) {
+					completeForcedPasswordChange(request, response, user);
+				}
+				return;
+			}
+
+			if (pendingPasswordChange && !WebUtil.urlMatchesAnyPattern(request, whiteList)) {
+				String redirectUrl = WebUtil.contextualizeUrl(request, changePasswordUrl);
+				if (WebUtil.urlMatchesAnyPattern(request, AuthenticationConfig.getNonRedirectUrls())) {
+					response.setHeader("Location", redirectUrl);
+					response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+				} else {
+					response.sendRedirect(redirectUrl);
 				}
 			}
 		}
@@ -84,5 +97,18 @@ public class ForcePasswordChangeFilter implements Filter {
 			return session.getUserLogin().getUser();
 		}
 		return null;
+	}
+
+	protected boolean isSuccessful(HttpServletResponse response) {
+		return response.getStatus() >= 200 && response.getStatus() < 300;
+	}
+
+	/**
+	 * Clears the flag that required the given user to change their password, now that they have successfully
+	 * done so, and ensures the UserLogin tracked for this session reflects the update.
+	 */
+	protected void completeForcedPasswordChange(HttpServletRequest request, HttpServletResponse response, User user) {
+		Context.getUserService().removeUserProperty(user, OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD);
+		new AuthenticationSession(request, response).refreshAuthenticatedUser();
 	}
 }

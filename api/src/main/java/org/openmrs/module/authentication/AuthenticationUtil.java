@@ -11,11 +11,9 @@ package org.openmrs.module.authentication;
 
 import org.apache.commons.lang.StringUtils;
 
-import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -24,58 +22,6 @@ import java.util.Properties;
  * This class provides utility methods for the authentication module
  */
 public class AuthenticationUtil {
-
-    // Excludes visually ambiguous characters (I/l/1, O/0)
-    private static final String UPPER_CASE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-
-    private static final String LOWER_CASE_CHARS = "abcdefghijkmnopqrstuvwxyz";
-
-    private static final String DIGIT_CHARS = "23456789";
-
-    private static final String ALL_CHARS = UPPER_CASE_CHARS + LOWER_CASE_CHARS + DIGIT_CHARS;
-
-    private static final int DEFAULT_PASSWORD_LENGTH = 20;
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
-    /**
-     * Generates a random password of {@link #DEFAULT_PASSWORD_LENGTH} characters, suitable for use whenever a
-     * user is created or has their password reset without a password being supplied directly.
-     *
-     * @return a randomly-generated password containing at least one upper-case letter, one lower-case letter,
-     *         and one digit
-     */
-    public static String generateRandomPassword() {
-        return generateRandomPassword(DEFAULT_PASSWORD_LENGTH);
-    }
-
-    /**
-     * @param length the length of the password to generate, which must be at least 3
-     * @return a randomly-generated password of the given length, containing at least one upper-case letter,
-     *         one lower-case letter, and one digit
-     */
-    public static String generateRandomPassword(int length) {
-        if (length < 3) {
-            throw new IllegalArgumentException("length must be at least 3");
-        }
-        List<Character> passwordChars = new ArrayList<>(length);
-        passwordChars.add(randomCharFrom(UPPER_CASE_CHARS));
-        passwordChars.add(randomCharFrom(LOWER_CASE_CHARS));
-        passwordChars.add(randomCharFrom(DIGIT_CHARS));
-        while (passwordChars.size() < length) {
-            passwordChars.add(randomCharFrom(ALL_CHARS));
-        }
-        Collections.shuffle(passwordChars, SECURE_RANDOM);
-        StringBuilder password = new StringBuilder(passwordChars.size());
-        for (Character c : passwordChars) {
-            password.append(c.charValue());
-        }
-        return password.toString();
-    }
-
-    private static char randomCharFrom(String chars) {
-        return chars.charAt(SECURE_RANDOM.nextInt(chars.length()));
-    }
 
     /**
      * @param val the value to parse
