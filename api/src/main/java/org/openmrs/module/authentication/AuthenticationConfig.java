@@ -91,6 +91,14 @@ public class AuthenticationConfig implements Serializable {
     public static final String PASSWORD_CHANGE_WHITE_LIST = "authentication.passwordChangeWhiteList";
 
     /**
+     * URLs that perform the actual submission of a new password for a user who has been flagged to change
+     * their password. A request matching one of these URLs is let through regardless of the password change
+     * white list, and if it completes with a successful (2xx) response, the flag requiring the password
+     * change is cleared for that user.
+     */
+    public static final String PASSWORD_CHANGE_COMPLETION_URLS = "authentication.passwordChangeCompletionUrls";
+
+    /**
      * All AuthenticationScheme instances must be configured with, at minimum, a property that maps a particular
      * {schemeId} to a particular AuthenticationScheme class fully-specified name
      * Eg `authentication.scheme.basic.type = org.openmrs.module.authentication.web.BasicWebAuthenticationScheme`
@@ -293,6 +301,14 @@ public class AuthenticationConfig implements Serializable {
         whiteList.addAll(getStringList(PASSWORD_CHANGE_WHITE_LIST));
         whiteList.add(getChangePasswordUrl());  // Add the change password URL to the whitelist
         return whiteList;
+    }
+
+    /**
+     * @return the List of url patterns that, upon a successful response, complete a pending forced password
+     *         change by clearing the flag that required it
+     */
+    public static List<String> getPasswordChangeCompletionUrls() {
+        return getStringList(PASSWORD_CHANGE_COMPLETION_URLS);
     }
 
     public static String getChangePasswordUrl() {

@@ -22,6 +22,8 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockHttpSession;
 
+import javax.servlet.http.HttpServletResponse;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -137,6 +139,37 @@ public class ForwardPasswordChangeFilterTest extends BaseWebAuthenticationTest {
 	}
 
 	@Test
+	public void shouldRedirectForPageRequestOutsideNonRedirectUrlsPattern() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		user.setUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, "true");
+		request.setMethod("GET");
+		request.setRequestURI("/patientDashboard.htm");
+		filter.doFilter(request, response, chain);
+		assertThat(response.isCommitted(), equalTo(true));
+		assertThat(response.getRedirectedUrl(), equalTo("/passwordChange.htm"));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_MOVED_TEMPORARILY));
+	}
+
+	@Test
+	public void shouldReturnUnauthorizedWithLocationHeaderForRequestInNonRedirectUrlsPattern() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		user.setUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, "true");
+		request.setMethod("GET");
+		request.setRequestURI("/ws/rest/v1/user");
+		filter.doFilter(request, response, chain);
+		assertThat(response.getHeader("Location"), equalTo("/passwordChange.htm"));
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_UNAUTHORIZED));
+	}
+
+	@Test
 	public void shouldForcePasswordChangeForAuthenticatedUserIfUrlIsWhitelisted() throws Exception {
 		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
 		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
@@ -150,6 +183,60 @@ public class ForwardPasswordChangeFilterTest extends BaseWebAuthenticationTest {
 		filter.doFilter(request, response, chain);
 		assertThat(response.isCommitted(), equalTo(false));
 		assertThat(response.getRedirectedUrl(), equalTo(null));
+	}
+
+	@Test
+	public void shouldCompleteForcedPasswordChangeOnSuccessfulSubmissionToCompletionUrl() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_COMPLETION_URLS, "/ws/rest/v1/password");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		user.setUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, "true");
+		request.setMethod("POST");
+		request.setRequestURI("/ws/rest/v1/password");
+		filter.doFilter(request, response, chain);
+		assertThat(chain.getRequest(), equalTo(request));
+		assertThat(filter.isForcedPasswordChangeCompleted(), equalTo(true));
+	}
+
+	@Test
+	public void shouldNotCompleteForcedPasswordChangeOnFailedSubmissionToCompletionUrl() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_COMPLETION_URLS, "/ws/rest/v1/password");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		user.setUserProperty(OpenmrsConstants.USER_PROPERTY_CHANGE_PASSWORD, "true");
+		request.setMethod("POST");
+		request.setRequestURI("/ws/rest/v1/password");
+		MockFilterChain failingChain = new MockFilterChain() {
+			@Override
+			public void doFilter(javax.servlet.ServletRequest req, javax.servlet.ServletResponse res) throws java.io.IOException, javax.servlet.ServletException {
+				((HttpServletResponse) res).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+				super.doFilter(req, res);
+			}
+		};
+		filter.doFilter(request, response, failingChain);
+		assertThat(response.getStatus(), equalTo(HttpServletResponse.SC_BAD_REQUEST));
+		assertThat(filter.isForcedPasswordChangeCompleted(), equalTo(false));
+	}
+
+	@Test
+	public void shouldNotBlockSubmissionToCompletionUrlWhenNoPasswordChangeIsPending() throws Exception {
+		AuthenticationConfig.setProperty(AuthenticationConfig.SUPPORT_FORCED_PASSWORD_CHANGE, "true");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_URL, "/passwordChange.htm");
+		AuthenticationConfig.setProperty(AuthenticationConfig.PASSWORD_CHANGE_COMPLETION_URLS, "/ws/rest/v1/password");
+		setRuntimeProperties(AuthenticationConfig.getConfig());
+		filter.init(null);
+		filter.setAuthenticatedUser(user);
+		request.setMethod("POST");
+		request.setRequestURI("/ws/rest/v1/password");
+		filter.doFilter(request, response, chain);
+		assertThat(chain.getRequest(), equalTo(request));
+		assertThat(filter.isForcedPasswordChangeCompleted(), equalTo(false));
 	}
 
 	@AfterEach

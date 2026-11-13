@@ -74,6 +74,48 @@ authentication.whiteList=/login.htm,/ms/legacyui/loginServlet,/csrfguard,*.js,*.
 
 To determine whether a particular url is leading to redirection, one can enable DEBUG logging on `org.openmrs.module.authentication.web.AuthenticationFilter` and look for a message in the logs indicating `Authentication required: [method] [uri]`
 
+### Forced Password Change
+
+The included `ForcePasswordChangeFilter` checks every request made by an already-authenticated user and, if that user has been flagged to change their password (`user.getUserProperty("forcePassword")`), directs them to a configured password-change page before letting the request through.
+
+```properties
+authentication.supportForcedPasswordChange=true
+authentication.passwordChangeUrl=/passwordChange.htm
+authentication.passwordChangeWhiteList=
+```
+
+For requests that match `authentication.nonRedirectUrls` (which, as described above, always includes `/ws/**/*`), this results in a `401` response with a `Location` header set to the `passwordChangeUrl`, rather than a raw redirect, so that REST/SPA clients (such as O3) can react to it themselves instead of trying to follow a redirect to an HTML page.
+
+Because the password-change page itself needs to be reachable by a user who is still flagged to change their password, its URL (`authentication.passwordChangeUrl`) is automatically included in the password-change white list.
+
+The URL that the password-change page submits the new password *to*, however, is a different matter entirely. Core's own password-change API (`UserService.changePassword`) does not clear this flag - it only updates the password. Left unhandled, that submission would either be blocked by this same filter (if not whitelisted) or, even if whitelisted and successful, leave the user stuck: flagged to change their password forever, since nothing ever clears the flag. To handle this, configure `authentication.passwordChangeCompletionUrls` with the URL(s) that perform this submission. A request matching one of these URLs is let through regardless of the white list, and if it completes successfully (a `2xx` response), the filter itself clears the flag on the user, bypassing the need for every consumer of this feature to remember to do so themselves.
+
+```properties
+authentication.passwordChangeCompletionUrls=/myModule/submitNewPassword.form
+```
+
+#### Configuring this for O3
+
+O3's login app already includes a password-change page at `{spaPath}/change-password` (where `{spaPath}` is whatever path the SPA is served from, e.g. `/openmrs/spa` - this is a frontend routing path, not something this module can resolve, so it must be written out literally in the runtime properties below, not as a template placeholder). That page submits the new password to `/ws/rest/v1/password`. To wire forced password change into O3, assuming an SPA path of `/openmrs/spa`:
+
+```properties
+authentication.supportForcedPasswordChange=true
+authentication.passwordChangeUrl=/openmrs/spa/change-password
+authentication.passwordChangeCompletionUrls=/ws/rest/v1/password
+```
+
+In addition, O3's own `openmrsFetch` only follows the `Location` header from a `401` response if its `@openmrs/esm-api` `redirectAuthFailure.url` config value is blank (by default it is set to the login page, which takes priority over any `Location` header). This same config property governs redirects for any `401`, including session timeouts, so this is expected to be set once for the whole frontend configuration, not specifically for this feature.
+
+```json
+{
+  "@openmrs/esm-api": {
+    "redirectAuthFailure": {
+      "url": ""
+    }
+  }
+}
+```
+
 ### Provided Authentication Schemes
 
 Implementations, in dependent modules, can define their own `WebAuthenticationScheme` instances to best meet their needs and workflows.  There are several `WebAuthenticationScheme` types built into this module that will meet some of the most common needs and also provide examples to follow for customization.
